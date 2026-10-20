@@ -46,12 +46,6 @@ fun RegisterScreen(
 
     Scaffold(
         containerColor = DesertSand,
-        topBar = {
-            TopAppBar(
-                title = { Text("Реєстрація у HelpRadar", color = CharcoalDark, fontWeight = FontWeight.Bold) },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = DesertSand)
-            )
-        }
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -62,9 +56,20 @@ fun RegisterScreen(
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             Text(
+                text = "Реєстрація у HelpRadar",
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold,
+                color = CharcoalDark,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                modifier = Modifier.fillMaxWidth().padding(top = 16.dp)
+            )
+
+            Text(
                 text = "Створіть обліковий запис для надання або отримання допомоги",
                 fontSize = 14.sp,
-                color = CharcoalDark
+                color = CharcoalDark,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)
             )
 
             // Ім'я та Прізвище
