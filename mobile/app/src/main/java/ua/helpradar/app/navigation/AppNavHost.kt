@@ -8,6 +8,7 @@ import androidx.navigation.compose.composable
 import ua.helpradar.app.presentation.auth.LoginScreen
 import ua.helpradar.app.presentation.auth.RegisterScreen
 import ua.helpradar.app.presentation.feed.FeedScreen
+import ua.helpradar.app.presentation.request.CreateRequestScreen
 
 @Composable
 fun AppNavHost(
@@ -49,6 +50,19 @@ fun AppNavHost(
             FeedScreen(
                 onCreateRequestClick = {
                     navController.navigate(Screen.CreateRequest.route)
+                }
+            )
+        }
+
+        composable(Screen.CreateRequest.route) {
+            CreateRequestScreen(
+                onNavigateBack = {
+                    navController.popBackStack()
+                },
+                onRequestCreated = {
+                    navController.navigate(Screen.Feed.route) {
+                        popUpTo(Screen.Feed.route) { inclusive = true }
+                    }
                 }
             )
         }
