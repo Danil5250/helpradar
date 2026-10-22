@@ -20,11 +20,19 @@
 </template>
 
 <script setup lang="ts">
+// Props
 const props = defineProps<{ isOpen: boolean; title: string; message: string }>();
+
+// Emits
 const emit = defineEmits<{ confirm: []; close: [] }>();
+
+// Utils
 const { t } = useI18n();
 
+// Data
 const dialog = ref<HTMLElement | null>(null);
+
+// Watchers
 watch(
   () => props.isOpen,
   async (open) => {

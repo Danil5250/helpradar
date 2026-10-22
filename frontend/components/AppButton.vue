@@ -12,6 +12,7 @@
 </template>
 
 <script setup lang="ts">
+// Props
 const props = withDefaults(
   defineProps<{
     hasBorder?: boolean;
@@ -23,8 +24,11 @@ const props = withDefaults(
   }>(),
   { hasBorder: false, hasOutline: false, isFilled: false, type: 'button', disabled: false, loading: false },
 );
+
+// Emits
 const emit = defineEmits<{ click: [event: MouseEvent] }>();
 
+// Computed
 const looks = computed(() => {
   const classes = ['text-charcoal', 'xl:text-pl', 'px-5', 'py-2', 'transition', 'disabled:opacity-60', 'disabled:cursor-not-allowed'];
   if (props.hasBorder) {

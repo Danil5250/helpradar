@@ -13,5 +13,6 @@
 </template>
 
 <script setup lang="ts">
+// Utils
 const { t } = useI18n();
 </script>

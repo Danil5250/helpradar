@@ -78,5 +78,6 @@
 </template>
 
 <script setup lang="ts">
+// Props
 defineProps<{ name: 'eye' | 'eye-off' | 'menu' | 'close' | 'pin' | 'calendar' | 'user' | 'chevron-down' | 'trash' | 'plus' | 'camera' | 'check' | 'alert' | 'clock' | 'crosshair' }>();
 </script>

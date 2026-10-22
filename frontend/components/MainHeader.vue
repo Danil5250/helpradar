@@ -40,24 +40,31 @@
 </template>
 
 <script setup lang="ts">
-const { t } = useI18n();
+// Composables
 const { user, isAuthenticated, logout: doLogout } = useAuth();
 const { show } = useFlash();
+
+// Utils
+const { t } = useI18n();
 const route = useRoute();
 
+// Data
 const isMobileMenuOpen = ref(false);
 const isVisible = ref(true);
 const lastScrollY = ref(0);
 
+// Computed
+const navItems = computed(() => [
+  { text: t('advertisementUPPER'), to: '/main' },
+  ...(isAuthenticated.value ? [{ text: t('my_announcementsUPPER'), to: '/my-announcements' }] : []),
+]);
+
+// Methods
 function handleScroll() {
   const current = window.scrollY;
   isVisible.value = current < lastScrollY.value || current === 0;
   lastScrollY.value = current;
 }
-
-onMounted(() => window.addEventListener('scroll', handleScroll, { passive: true }));
-onBeforeUnmount(() => window.removeEventListener('scroll', handleScroll));
-watch(() => route.fullPath, () => (isMobileMenuOpen.value = false));
 
 async function logout() {
   isMobileMenuOpen.value = false;
@@ -66,8 +73,10 @@ async function logout() {
   await navigateTo('/main');
 }
 
-const navItems = computed(() => [
-  { text: t('advertisementUPPER'), to: '/main' },
-  ...(isAuthenticated.value ? [{ text: t('my_announcementsUPPER'), to: '/my-announcements' }] : []),
-]);
+// Watchers
+watch(() => route.fullPath, () => (isMobileMenuOpen.value = false));
+
+// Lifecycle
+onMounted(() => window.addEventListener('scroll', handleScroll, { passive: true }));
+onBeforeUnmount(() => window.removeEventListener('scroll', handleScroll));
 </script>

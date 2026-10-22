@@ -10,12 +10,15 @@
 </template>
 
 <script setup lang="ts">
+// Imports
 import engImg from '~/assets/images/eng_img.png';
 import ukrImg from '~/assets/images/ukr_img.png';
 import { LANGUAGE_KEY } from '~/plugins/i18n';
 
+// Utils
 const { locale } = useI18n();
 
+// Methods
 function changeLanguage(lng: 'uk' | 'en') {
   locale.value = lng;
   try {
