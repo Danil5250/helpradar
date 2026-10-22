@@ -15,6 +15,7 @@
 </template>
 
 <script setup lang="ts">
-withDefaults(defineProps<{ text?: string; to: string; isLast?: boolean }>(), { text: '', isLast: false });
+// Utils
 const route = useRoute();
+withDefaults(defineProps<{ text?: string; to: string; isLast?: boolean }>(), { text: '', isLast: false });
 </script>

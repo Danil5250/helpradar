@@ -16,20 +16,16 @@
 </template>
 
 <script setup lang="ts">
+// Composables
 const { message, clear } = useFlash();
+
+// Utils
 const { t } = useI18n();
 
+// Constants
 let timer: ReturnType<typeof setTimeout> | undefined;
-watch(
-  message,
-  (current) => {
-    if (timer) clearTimeout(timer);
-    if (current) timer = setTimeout(clear, 7000);
-  },
-  { immediate: true },
-);
-onBeforeUnmount(() => timer && clearTimeout(timer));
 
+// Computed
 const look = computed(() => {
   switch (message.value?.kind) {
     case 'alert':
@@ -40,4 +36,17 @@ const look = computed(() => {
       return 'border-olive bg-almost-white';
   }
 });
+
+// Watchers
+watch(
+  message,
+  (current) => {
+    if (timer) clearTimeout(timer);
+    if (current) timer = setTimeout(clear, 7000);
+  },
+  { immediate: true },
+);
+
+// Lifecycle
+onBeforeUnmount(() => timer && clearTimeout(timer));
 </script>

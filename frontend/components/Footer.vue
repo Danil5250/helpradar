@@ -23,7 +23,12 @@
 </template>
 
 <script setup lang="ts">
-const { t } = useI18n();
+// Composables
 const { isAuthenticated } = useAuth();
+
+// Utils
+const { t } = useI18n();
+
+// Constants
 const year = new Date().getFullYear();
 </script>

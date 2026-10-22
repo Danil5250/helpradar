@@ -6,9 +6,13 @@
 </template>
 
 <script setup lang="ts">
+// Imports
 import backArrow from '~/assets/images/Back.svg';
 import backArrowMini from '~/assets/images/back_arrow_mini.svg';
 
+// Emits
 const emit = defineEmits<{ click: [] }>();
+
+// Utils
 const { t } = useI18n();
 </script>

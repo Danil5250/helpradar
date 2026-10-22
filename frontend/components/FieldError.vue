@@ -3,5 +3,6 @@
 </template>
 
 <script setup lang="ts">
+// Props
 defineProps<{ id?: string; text?: string }>();
 </script>

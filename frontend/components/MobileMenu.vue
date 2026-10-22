@@ -23,8 +23,15 @@
 </template>
 
 <script setup lang="ts">
+// Props
 defineProps<{ isOpen: boolean; navItems: { text: string; to: string }[] }>();
+
+// Emits
 const emit = defineEmits<{ logout: [] }>();
-const { t } = useI18n();
+
+// Composables
 const { user, isAuthenticated } = useAuth();
+
+// Utils
+const { t } = useI18n();
 </script>

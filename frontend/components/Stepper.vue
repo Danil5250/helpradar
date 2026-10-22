@@ -15,6 +15,9 @@
 </template>
 
 <script setup lang="ts">
-withDefaults(defineProps<{ currentStep: number; steps?: number }>(), { steps: 3 });
+// Emits
 const emit = defineEmits<{ stepChange: [step: number] }>();
+
+// Utils
+withDefaults(defineProps<{ currentStep: number; steps?: number }>(), { steps: 3 });
 </script>

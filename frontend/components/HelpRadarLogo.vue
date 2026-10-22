@@ -28,6 +28,7 @@
 </template>
 
 <script setup lang="ts">
+// Utils
 withDefaults(defineProps<{ variant?: 'dark' | 'light'; iconOnly?: boolean }>(), {
   variant: 'dark',
   iconOnly: false,
