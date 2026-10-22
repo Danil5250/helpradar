@@ -50,6 +50,11 @@ fun AppNavHost(
             FeedScreen(
                 onCreateRequestClick = {
                     navController.navigate(Screen.CreateRequest.route)
+                },
+                onSignOutClick = {
+                    navController.navigate(Screen.Login.route) {
+                        popUpTo(0) { inclusive = true }
+                    }
                 }
             )
         }
