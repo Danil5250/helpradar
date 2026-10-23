@@ -70,15 +70,20 @@
 </template>
 
 <script setup lang="ts">
+// Imports
 import { validateLogin, type LoginForm } from '~/utils/validation';
 
-const { t, locale } = useI18n();
+// Composables
 const { login } = useAuth();
 const { show } = useFlash();
+
+// Utils
+const { t, locale } = useI18n();
 const route = useRoute();
 const errorText = useApiErrorText();
 const fieldText = useFieldErrorText();
 
+// Data
 const form = reactive<LoginForm>({ email: '', password: '' });
 const showPassword = ref(false);
 const errors = ref<Partial<Record<keyof LoginForm, string>>>({});
@@ -87,7 +92,11 @@ const loading = ref(false);
 const unverifiedEmail = ref('');
 const resendMessage = ref('');
 const resendCooldown = ref(0);
+
+// Constants
 let cooldownTimer: ReturnType<typeof setInterval> | undefined;
+
+// Methods
 function redirectTarget(): string {
   const target = route.query.redirect;
   return typeof target === 'string' && target.startsWith('/') && !target.startsWith('//') && !target.startsWith('/login')
@@ -141,5 +150,7 @@ async function resendEmail() {
     resendMessage.value = errorText(toApiError(error), 'errors.EMAIL_SERVICE_ERROR');
   }
 }
+
+// Lifecycle
 onBeforeUnmount(() => cooldownTimer && clearInterval(cooldownTimer));
 </script>

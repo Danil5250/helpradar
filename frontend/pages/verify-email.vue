@@ -20,38 +20,25 @@
 </template>
 
 <script setup lang="ts">
-definePageMeta({ layout: 'auth' });
-const { t, locale } = useI18n();
-const route = useRoute();
+// Composables
 const { verifyEmail } = useAuth();
 const { show } = useFlash();
+
+// Utils
+const { t, locale } = useI18n();
+const route = useRoute();
 const errorText = useApiErrorText();
+definePageMeta({ layout: 'auth' });
 useHead({ title: computed(() => t('helmet_verify')) });
 
+// Data
 const state = ref<'loading' | 'failed'>('loading');
 const errorMessage = ref('');
-
 const resendEmail = ref('');
 const resendInfo = ref('');
 const resendBusy = ref(false);
 
-onMounted(async () => {
-  const token = typeof route.query.token === 'string' ? route.query.token : '';
-  if (!token) {
-    state.value = 'failed';
-    errorMessage.value = t('errors.LINK_INVALID');
-    return;
-  }
-  try {
-    const result = await verifyEmail(token);
-    show(t('account_activated', { name: result.user.firstName }));
-    await navigateTo('/main', { replace: true });
-  } catch (error) {
-    state.value = 'failed';
-    errorMessage.value = errorText(toApiError(error), 'errors.LINK_INVALID');
-  }
-});
-
+// Methods
 async function resend() {
   resendInfo.value = '';
   if (!resendEmail.value.trim()) return;
@@ -68,4 +55,22 @@ async function resend() {
     resendBusy.value = false;
   }
 }
+
+// Lifecycle
+onMounted(async () => {
+  const token = typeof route.query.token === 'string' ? route.query.token : '';
+  if (!token) {
+    state.value = 'failed';
+    errorMessage.value = t('errors.LINK_INVALID');
+    return;
+  }
+  try {
+    const result = await verifyEmail(token);
+    show(t('account_activated', { name: result.user.firstName }));
+    await navigateTo('/main', { replace: true });
+  } catch (error) {
+    state.value = 'failed';
+    errorMessage.value = errorText(toApiError(error), 'errors.LINK_INVALID');
+  }
+});
 </script>

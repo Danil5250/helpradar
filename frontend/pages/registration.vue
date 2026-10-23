@@ -52,6 +52,7 @@
 </template>
 
 <script setup lang="ts">
+// Imports
 import firstShag from '~/assets/images/FirstShag.svg';
 import personInNeedSecond from '~/assets/images/VictimSecond.svg';
 import volunteerSecond from '~/assets/images/VolunteerSecond.svg';
@@ -64,11 +65,13 @@ import {
   type Role,
 } from '~/utils/validation';
 
-definePageMeta({ layout: 'auth', middleware: 'guest' });
+// Utils
 const { t, locale } = useI18n();
 const errorText = useApiErrorText();
+definePageMeta({ layout: 'auth', middleware: 'guest' });
 useHead({ title: computed(() => t('helmet_register')), meta: [{ name: 'description', content: computed(() => t('register_description')) }] });
 
+// Data
 const currentStep = ref(1);
 const form = reactive<RegistrationForm>({
   role: '',
@@ -88,6 +91,15 @@ const submitting = ref(false);
 const submitError = ref('');
 const result = ref<{ code: string; emailQueued: boolean } | null>(null);
 
+// Computed
+const stepImage = computed(() => {
+  if (currentStep.value === 2) return firstShag;
+  if (currentStep.value === 3) return form.role === 'volunteer' ? volunteerSecond : personInNeedSecond;
+  if (currentStep.value === 4) return emailAccept;
+  return null;
+});
+
+// Methods
 function selectRole(role: Role) {
   form.role = role;
   currentStep.value = 2;
@@ -141,13 +153,6 @@ async function submitRegistration() {
     submitting.value = false;
   }
 }
-
-const stepImage = computed(() => {
-  if (currentStep.value === 2) return firstShag;
-  if (currentStep.value === 3) return form.role === 'volunteer' ? volunteerSecond : personInNeedSecond;
-  if (currentStep.value === 4) return emailAccept;
-  return null;
-});
 </script>
 
 <style scoped>

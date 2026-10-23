@@ -34,12 +34,18 @@
 </template>
 
 <script setup lang="ts">
+// Imports
 import volunteerImg from '~/assets/images/Volunteer.svg';
 import personInNeedImg from '~/assets/images/Victim.svg';
 import type { Role } from '~/utils/validation';
 
+// Props
 defineProps<{ error?: string }>();
+
+// Emits
 const emit = defineEmits<{ selectRole: [role: Role] }>();
+
+// Utils
 const { t } = useI18n();
 const fieldText = useFieldErrorText();
 </script>

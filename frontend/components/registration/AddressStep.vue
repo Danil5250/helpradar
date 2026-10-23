@@ -74,23 +74,37 @@
 </template>
 
 <script setup lang="ts">
+// Imports
 import { REGISTRATION_STEP3, validateRegistration, type RegistrationField, type RegistrationForm } from '~/utils/validation';
 
+// Props
 const form = defineModel<RegistrationForm>({ required: true });
 const props = defineProps<{
   serverErrors: Partial<Record<RegistrationField, string>>;
   submitting: boolean;
   submitError: string;
 }>();
+
+// Emits
 const emit = defineEmits<{ submit: [] }>();
 
+// Utils
 const { t } = useI18n();
 const fieldText = useFieldErrorText();
+
+// Data
 const errors = ref<Partial<Record<RegistrationField, string>>>({});
 const cityOpen = ref(false);
 const activeIndex = ref(-1);
+
+// Constants
+const inputClass = 'w-full p-3 border-2 rounded-lg outline-none bg-almost-white border-sage focus:border-forest';
+const shown = (field: RegistrationField) => errors.value[field] ?? props.serverErrors[field];
+
+// Computed
 const options = computed(() => (cityOpen.value ? searchCities(form.value.city) : []));
 
+// Methods
 function onCityInput() {
   form.value.region = '';
   cityOpen.value = true;
@@ -129,7 +143,4 @@ function handleSubmit() {
   if (known) form.value.region = known.region;
   if (Object.keys(errors.value).length === 0) emit('submit');
 }
-
-const inputClass = 'w-full p-3 border-2 rounded-lg outline-none bg-almost-white border-sage focus:border-forest';
-const shown = (field: RegistrationField) => errors.value[field] ?? props.serverErrors[field];
 </script>
