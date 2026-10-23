@@ -33,11 +33,13 @@
 </template>
 
 <script setup lang="ts">
+// Imports
 import loginMain from '~/assets/images/LoginMain.svg';
 import loginMainSmMd from '~/assets/images/LoginMainSMMD.svg';
 
-definePageMeta({ layout: 'auth', middleware: 'guest' });
+// Utils
 const { t } = useI18n();
+definePageMeta({ layout: 'auth', middleware: 'guest' });
 useHead({ title: computed(() => t('helmet_login')), meta: [{ name: 'description', content: computed(() => t('login_description')) }] });
 </script>
 

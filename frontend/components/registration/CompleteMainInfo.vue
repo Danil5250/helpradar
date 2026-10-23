@@ -52,25 +52,34 @@
 </template>
 
 <script setup lang="ts">
+// Imports
 import { REGISTRATION_STEP2, validateRegistration, type RegistrationField, type RegistrationForm } from '~/utils/validation';
 
-const form = defineModel<RegistrationForm>({ required: true });
+// Props
 defineProps<{ serverErrors: Partial<Record<RegistrationField, string>> }>();
+const form = defineModel<RegistrationForm>({ required: true });
+
+// Emits
 const emit = defineEmits<{ next: [] }>();
 
+// Utils
 const { t } = useI18n();
 const fieldText = useFieldErrorText();
+
+// Data
 const showPassword = ref(false);
 const showConfirm = ref(false);
 const errors = ref<Partial<Record<RegistrationField, string>>>({});
 
+// Constants
+const inputClass = 'w-full p-3 border-2 rounded-lg outline-none bg-almost-white border-sage focus:border-forest';
+const shown = (field: RegistrationField, server?: Partial<Record<RegistrationField, string>>) => errors.value[field] ?? server?.[field];
+
+// Methods
 function handleSubmit() {
   const all = validateRegistration(form.value);
   errors.value = {};
   for (const field of REGISTRATION_STEP2) if (all[field]) errors.value[field] = all[field];
   if (Object.keys(errors.value).length === 0) emit('next');
 }
-
-const inputClass = 'w-full p-3 border-2 rounded-lg outline-none bg-almost-white border-sage focus:border-forest';
-const shown = (field: RegistrationField, server?: Partial<Record<RegistrationField, string>>) => errors.value[field] ?? server?.[field];
 </script>

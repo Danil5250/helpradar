@@ -15,15 +15,23 @@
 </template>
 
 <script setup lang="ts">
+// Props
 const props = defineProps<{ email: string; queued: boolean }>();
+
+// Utils
 const { t, locale } = useI18n();
 const errorText = useApiErrorText();
+startCooldown();
 
+// Data
 const message = ref(props.queued ? t('errors.EMAIL_QUEUED') : t('check_email'));
 const info = ref('');
 const cooldown = ref(0);
+
+// Constants
 let timer: ReturnType<typeof setInterval> | undefined;
 
+// Methods
 function startCooldown() {
   cooldown.value = 60;
   timer = setInterval(() => {
@@ -31,8 +39,6 @@ function startCooldown() {
     if (cooldown.value <= 0 && timer) clearInterval(timer);
   }, 1000);
 }
-onBeforeUnmount(() => timer && clearInterval(timer));
-startCooldown();
 
 async function handleResend() {
   info.value = '';
@@ -47,4 +53,7 @@ async function handleResend() {
     info.value = errorText(toApiError(error), 'errors.EMAIL_SERVICE_ERROR');
   }
 }
+
+// Lifecycle
+onBeforeUnmount(() => timer && clearInterval(timer));
 </script>
