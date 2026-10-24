@@ -6,14 +6,23 @@
 </template>
 
 <script setup lang="ts">
+// Imports
 import type { GeoPoint } from '~/types/announcement';
 
+// Props
 const props = defineProps<{ approx: GeoPoint; exact?: GeoPoint | null }>();
+
+// Utils
 const { t } = useI18n();
 const config = useRuntimeConfig();
+
+// Data
 const element = ref<HTMLElement | null>(null);
+
+// Constants
 let map: import('leaflet').Map | null = null;
 
+// Lifecycle
 onMounted(async () => {
   const imported = await import('leaflet');
   const L: typeof import('leaflet') = (imported as any).default ?? imported;
@@ -34,7 +43,6 @@ onMounted(async () => {
   }
   map.fitBounds(circle.getBounds().pad(0.3));
 });
-
 onBeforeUnmount(() => {
   map?.remove();
   map = null;

@@ -21,10 +21,14 @@
 </template>
 
 <script setup lang="ts">
+// Imports
 import type { Category } from '~/types/announcement';
 
+// Props
 defineProps<{ categories: Category[]; error?: string }>();
 const model = defineModel<number | null>({ required: true });
+
+// Utils
 const { t } = useI18n();
 const fieldText = useFieldErrorText();
 </script>

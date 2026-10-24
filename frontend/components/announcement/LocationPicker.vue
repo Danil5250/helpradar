@@ -59,36 +59,42 @@
 </template>
 
 <script setup lang="ts">
+// Imports
 import type { Map as LeafletMap, Marker } from 'leaflet';
 import type { LocationValue, PlaceSuggestion } from '~/types/announcement';
 
+// Props
 const model = defineModel<LocationValue>({ required: true });
 const props = withDefaults(defineProps<{ error?: string; autoLocate?: boolean }>(), { error: undefined, autoLocate: false });
 
+// Composables
+const announcements = useAnnouncements();
+
+// Utils
 const { t } = useI18n();
 const config = useRuntimeConfig();
-const announcements = useAnnouncements();
 const errorText = useApiErrorText();
 const fieldText = useFieldErrorText();
 
+// Data
 const mapElement = ref<HTMLElement | null>(null);
-let leaflet: typeof import('leaflet') | null = null;
-let map: LeafletMap | null = null;
-let marker: Marker | null = null;
-
 const suggestions = ref<PlaceSuggestion[]>([]);
 const listOpen = ref(false);
 const activeIndex = ref(-1);
 const searchError = ref('');
 const locating = ref(false);
 const locationHint = ref('');
+
+// Constants
+let leaflet: typeof import('leaflet') | null = null;
+let map: LeafletMap | null = null;
+let marker: Marker | null = null;
 let searchTimer: ReturnType<typeof setTimeout> | undefined;
 let searchToken = 0;
-
 const UKRAINE_CENTER: [number, number] = [48.38, 31.17];
-
 const pin = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 40" width="32" height="40"><path d="M16 1C8 1 2 7 2 15c0 10 14 24 14 24s14-14 14-24C30 7 24 1 16 1z" fill="#FF8C00" stroke="#1A2421" stroke-width="2"/><circle cx="16" cy="15" r="5.5" fill="#1A2421"/></svg>`;
 
+// Methods
 function placeMarker(latitude: number, longitude: number, fly: boolean) {
   if (!leaflet || !map) return;
   if (!marker) {
@@ -109,6 +115,7 @@ function placeMarker(latitude: number, longitude: number, fly: boolean) {
   }
   if (fly) map.setView([latitude, longitude], Math.max(map.getZoom(), 15));
 }
+
 async function setPoint(latitude: number, longitude: number, options: { fly?: boolean; reverse?: boolean } = {}) {
   const lat = Math.round(latitude * 1e6) / 1e6;
   const lng = Math.round(longitude * 1e6) / 1e6;
@@ -141,6 +148,7 @@ function useMyLocation(silent = false) {
     { enableHighAccuracy: false, timeout: 8000, maximumAge: 60_000 },
   );
 }
+
 function onAddressInput() {
   if (model.value.latitude !== null) {
     model.value = { ...model.value, latitude: null, longitude: null };
@@ -195,6 +203,19 @@ function onAddressKeydown(event: KeyboardEvent) {
   }
 }
 
+// Watchers
+watch(
+  () => [model.value.latitude, model.value.longitude] as const,
+  ([latitude, longitude]) => {
+    if (latitude === null || longitude === null) return;
+    const current = marker?.getLatLng();
+    if (!current || Math.abs(current.lat - latitude) > 1e-7 || Math.abs(current.lng - longitude) > 1e-7) {
+      placeMarker(latitude, longitude, true);
+    }
+  },
+);
+
+// Lifecycle
 onMounted(async () => {
   const imported = await import('leaflet');
   leaflet = (imported as any).default ?? imported;
@@ -208,17 +229,6 @@ onMounted(async () => {
   if (hasPoint) placeMarker(latitude, longitude, false);
   else if (props.autoLocate) useMyLocation(true);
 });
-watch(
-  () => [model.value.latitude, model.value.longitude] as const,
-  ([latitude, longitude]) => {
-    if (latitude === null || longitude === null) return;
-    const current = marker?.getLatLng();
-    if (!current || Math.abs(current.lat - latitude) > 1e-7 || Math.abs(current.lng - longitude) > 1e-7) {
-      placeMarker(latitude, longitude, true);
-    }
-  },
-);
-
 onBeforeUnmount(() => {
   if (searchTimer) clearTimeout(searchTimer);
   map?.remove();

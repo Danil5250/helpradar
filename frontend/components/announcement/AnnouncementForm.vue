@@ -77,6 +77,7 @@
 </template>
 
 <script setup lang="ts">
+// Imports
 import type { AnnouncementDetails, AnnouncementPayload, Category, LocationValue, Photo } from '~/types/announcement';
 import {
   LIMITS,
@@ -85,20 +86,21 @@ import {
   type AnnouncementFormValues,
 } from '~/utils/validation';
 
+// Props
 const props = defineProps<{ mode: 'create' | 'edit'; categories: Category[]; initial?: AnnouncementDetails | null }>();
 
-const { t } = useI18n();
+// Composables
 const { role, sessionEnded } = useAuth();
-const route = useRoute();
 const { show } = useFlash();
 const announcements = useAnnouncements();
+
+// Utils
+const { t } = useI18n();
+const route = useRoute();
 const errorText = useApiErrorText();
 const fieldText = useFieldErrorText();
 
-const DRAFT_KEY = 'hr_announcement_draft_v1';
-const isEdit = computed(() => props.mode === 'edit');
-const isHelpRequest = computed(() => (props.initial ? props.initial.type === 'HelpRequest' : role.value === 'person_in_need'));
-
+// Data
 const values = reactive<AnnouncementFormValues>({
   title: '',
   description: '',
@@ -109,6 +111,22 @@ const values = reactive<AnnouncementFormValues>({
   expiryDays: LIMITS.expiryDefault,
   isUrgent: false,
 });
+const newPhotos = ref<File[]>([]);
+const existingPhotos = ref<Photo[]>([]);
+const removedPhotoIds = ref<number[]>([]);
+const errors = ref<Partial<Record<AnnouncementField, string>>>({});
+const generalError = ref('');
+const submitting = ref(false);
+
+// Constants
+const DRAFT_KEY = 'hr_announcement_draft_v1';
+let initialExpiryDays: number = LIMITS.expiryDefault;
+let draftTimer: ReturnType<typeof setTimeout> | undefined;
+const inputClass = 'w-full p-3 border-2 rounded-lg outline-none bg-almost-white border-sage focus:border-forest';
+
+// Computed
+const isEdit = computed(() => props.mode === 'edit');
+const isHelpRequest = computed(() => (props.initial ? props.initial.type === 'HelpRequest' : role.value === 'person_in_need'));
 const location = computed<LocationValue>({
   get: () => ({ address: values.address, latitude: values.latitude, longitude: values.longitude }),
   set: (value) => {
@@ -118,13 +136,7 @@ const location = computed<LocationValue>({
   },
 });
 
-const newPhotos = ref<File[]>([]);
-const existingPhotos = ref<Photo[]>([]);
-const removedPhotoIds = ref<number[]>([]);
-const errors = ref<Partial<Record<AnnouncementField, string>>>({});
-const generalError = ref('');
-const submitting = ref(false);
-let initialExpiryDays: number = LIMITS.expiryDefault;
+// Methods
 function applyInitial(details: AnnouncementDetails) {
   values.title = details.title;
   values.description = details.description;
@@ -138,39 +150,6 @@ function applyInitial(details: AnnouncementDetails) {
   values.expiryDays = initialExpiryDays;
   existingPhotos.value = [...details.photos];
 }
-
-watch(
-  () => props.initial,
-  (details) => {
-    if (details) applyInitial(details);
-  },
-  { immediate: true },
-);
-
-onMounted(() => {
-  if (isEdit.value) return;
-  try {
-    const raw = localStorage.getItem(DRAFT_KEY);
-    if (raw) Object.assign(values, JSON.parse(raw));
-  } catch {
-  }
-});
-let draftTimer: ReturnType<typeof setTimeout> | undefined;
-watch(
-  values,
-  () => {
-    if (isEdit.value) return;
-    if (draftTimer) clearTimeout(draftTimer);
-    draftTimer = setTimeout(() => {
-      try {
-        localStorage.setItem(DRAFT_KEY, JSON.stringify({ ...values }));
-      } catch {
-      }
-    }, 500);
-  },
-  { deep: true },
-);
-onBeforeUnmount(() => draftTimer && clearTimeout(draftTimer));
 
 function clearDraft() {
   if (draftTimer) clearTimeout(draftTimer);
@@ -257,5 +236,37 @@ async function submit() {
   }
 }
 
-const inputClass = 'w-full p-3 border-2 rounded-lg outline-none bg-almost-white border-sage focus:border-forest';
+// Watchers
+watch(
+  () => props.initial,
+  (details) => {
+    if (details) applyInitial(details);
+  },
+  { immediate: true },
+);
+watch(
+  values,
+  () => {
+    if (isEdit.value) return;
+    if (draftTimer) clearTimeout(draftTimer);
+    draftTimer = setTimeout(() => {
+      try {
+        localStorage.setItem(DRAFT_KEY, JSON.stringify({ ...values }));
+      } catch {
+      }
+    }, 500);
+  },
+  { deep: true },
+);
+
+// Lifecycle
+onMounted(() => {
+  if (isEdit.value) return;
+  try {
+    const raw = localStorage.getItem(DRAFT_KEY);
+    if (raw) Object.assign(values, JSON.parse(raw));
+  } catch {
+  }
+});
+onBeforeUnmount(() => draftTimer && clearTimeout(draftTimer));
 </script>
