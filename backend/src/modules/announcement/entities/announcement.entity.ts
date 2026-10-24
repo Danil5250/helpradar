@@ -11,8 +11,8 @@ import {
 } from 'typeorm';
 import { numericTransformer } from '../../../common/transformers';
 import { Category } from '../../categories/category.entity';
-import { User } from '../../user/entities/user.entity';
-import { Volunteer } from '../../user/entities/volunteer.entity';
+import { User } from '../../users/entities/user.entity';
+import { Volunteer } from '../../users/entities/volunteer.entity';
 import { AnnouncementPhoto } from './announcement-photo.entity';
 import { AnnouncementStatus } from '../enums/announcement-status.enum';
 import { AnnouncementType } from '../enums/announcement-type.enum';
