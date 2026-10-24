@@ -43,12 +43,16 @@
 </template>
 
 <script setup lang="ts">
+// Imports
 import type { AnnouncementListItem, AnnouncementStatus } from '~/types/announcement';
 
+// Props
 const props = defineProps<{ announcement: AnnouncementListItem; showStatus?: boolean }>();
+
+// Utils
 const { t, locale } = useI18n();
 
-const a = computed(() => props.announcement);
+// Constants
 const statusLook: Record<AnnouncementStatus, string> = {
   Active: 'bg-olive text-charcoal',
   InProgress: 'bg-sage text-almost-white',
@@ -57,4 +61,7 @@ const statusLook: Record<AnnouncementStatus, string> = {
   Closed: 'bg-sand-dark text-charcoal',
   Deleted: 'bg-sand-dark text-charcoal',
 };
+
+// Computed
+const a = computed(() => props.announcement);
 </script>

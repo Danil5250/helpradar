@@ -21,21 +21,30 @@
 </template>
 
 <script setup lang="ts">
+// Imports
 import type { AnnouncementAction, AnnouncementDetails } from '~/types/announcement';
 
+// Props
 const props = defineProps<{ id: number; actions: AnnouncementAction[] }>();
+
+// Emits
 const emit = defineEmits<{ updated: [announcement: AnnouncementDetails]; deleted: [] }>();
 
-const { t } = useI18n();
+// Composables
 const { sessionEnded } = useAuth();
-const route = useRoute();
 const { show } = useFlash();
 const announcements = useAnnouncements();
+
+// Utils
+const { t } = useI18n();
+const route = useRoute();
 const errorText = useApiErrorText();
 
+// Data
 const busy = ref<AnnouncementAction | null>(null);
 const confirming = ref<'close' | 'delete' | null>(null);
 
+// Methods
 async function run(action: AnnouncementAction) {
   busy.value = action;
   try {

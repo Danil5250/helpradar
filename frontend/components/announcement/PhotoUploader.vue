@@ -31,22 +31,31 @@
 </template>
 
 <script setup lang="ts">
+// Imports
 import deleteImg from '~/assets/images/DeleteImg.svg';
 import type { Photo } from '~/types/announcement';
 import { LIMITS, PHOTO_TYPES, validatePhoto } from '~/utils/validation';
 
-const props = defineProps<{ existing?: Photo[] }>();
+// Props
 const files = defineModel<File[]>({ required: true });
+const props = defineProps<{ existing?: Photo[] }>();
+
+// Emits
 const emit = defineEmits<{ removeExisting: [photoId: number] }>();
+
+// Utils
 const { t } = useI18n();
 const fieldText = useFieldErrorText();
 
+// Data
 const input = ref<HTMLInputElement | null>(null);
 const error = ref('');
 const previews = ref(new Map<File, string>());
 
+// Computed
 const total = computed(() => files.value.length + (props.existing?.length ?? 0));
 
+// Methods
 function preview(file: File): string {
   let url = previews.value.get(file);
   if (!url) {
@@ -81,5 +90,6 @@ function remove(file: File) {
   error.value = '';
 }
 
+// Lifecycle
 onBeforeUnmount(() => previews.value.forEach((url) => URL.revokeObjectURL(url)));
 </script>
