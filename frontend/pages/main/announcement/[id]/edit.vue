@@ -10,20 +10,26 @@
 </template>
 
 <script setup lang="ts">
+// Imports
 import type { AnnouncementDetails, Category } from '~/types/announcement';
 
-definePageMeta({ middleware: 'auth' });
+// Composables
+const announcements = useAnnouncements();
+
+// Utils
 const { t } = useI18n();
 const route = useRoute();
-const announcements = useAnnouncements();
 const errorText = useApiErrorText();
+definePageMeta({ middleware: 'auth' });
 useHead({ title: computed(() => t('helmet_edit')) });
 
+// Data
 const details = ref<AnnouncementDetails | null>(null);
 const categories = ref<Category[]>([]);
 const loading = ref(true);
 const problem = ref('');
 
+// Lifecycle
 onMounted(async () => {
   try {
     [details.value, categories.value] = await Promise.all([announcements.get(String(route.params.id)), announcements.categories()]);

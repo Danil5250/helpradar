@@ -97,17 +97,30 @@
 </template>
 
 <script setup lang="ts">
+// Imports
 import type { AnnouncementDetails } from '~/types/announcement';
 
+// Composables
+const announcements = useAnnouncements();
+
+// Utils
 const { t, locale } = useI18n();
 const route = useRoute();
-const announcements = useAnnouncements();
 const errorText = useApiErrorText();
+useHead({ title: computed(() => (details.value ? `${details.value.title} - HelpRadar` : t('helmet_details'))) });
 
+// Data
 const details = ref<AnnouncementDetails | null>(null);
 const loading = ref(true);
 const problem = ref<{ code: string; text: string } | null>(null);
+const selectedImage = ref(0);
+const viewerOpen = ref(false);
 
+// Computed
+const photos = computed(() => details.value?.photos ?? []);
+const hoursToExpiry = computed(() => (details.value ? hoursLeft(details.value.expiresAt) : 0));
+
+// Methods
 async function load() {
   loading.value = true;
   problem.value = null;
@@ -120,23 +133,23 @@ async function load() {
     loading.value = false;
   }
 }
-onMounted(load);
-useHead({ title: computed(() => (details.value ? `${details.value.title} - HelpRadar` : t('helmet_details'))) });
-const selectedImage = ref(0);
-const viewerOpen = ref(false);
-const photos = computed(() => details.value?.photos ?? []);
+
 function prevImage() {
   selectedImage.value = (selectedImage.value - 1 + photos.value.length) % photos.value.length;
 }
+
 function nextImage() {
   selectedImage.value = (selectedImage.value + 1) % photos.value.length;
 }
 
-const hoursToExpiry = computed(() => (details.value ? hoursLeft(details.value.expiresAt) : 0));
 function updated(announcement: AnnouncementDetails) {
   details.value = announcement;
 }
+
 async function deleted() {
   await navigateTo('/my-announcements');
 }
+
+// Lifecycle
+onMounted(load);
 </script>

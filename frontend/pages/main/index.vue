@@ -68,14 +68,19 @@
 </template>
 
 <script setup lang="ts">
+// Imports
 import type { AnnouncementListItem, AnnouncementSort } from '~/types/announcement';
 
-const { t } = useI18n();
+// Composables
 const { user, isAuthenticated, role, canPublish } = useAuth();
 const announcements = useAnnouncements();
+
+// Utils
+const { t } = useI18n();
 const errorText = useApiErrorText();
 useHead({ title: computed(() => t('helmet_main')), meta: [{ name: 'description', content: computed(() => t('main_description')) }] });
 
+// Data
 const items = ref<AnnouncementListItem[]>([]);
 const page = ref(1);
 const hasMore = ref(true);
@@ -86,7 +91,17 @@ const sort = ref<AnnouncementSort>('newest');
 const dropdownOpen = ref(false);
 const position = ref<{ lat: number; lng: number } | null>(null);
 const locationNote = ref('');
+const sentinel = ref<HTMLElement | null>(null);
 
+// Constants
+let observer: IntersectionObserver | null = null;
+const sortOptions: { value: AnnouncementSort; label: string }[] = [
+  { value: 'newest', label: 'sort_newest' },
+  { value: 'urgent', label: 'sort_urgent' },
+  { value: 'nearest', label: 'sort_nearest' },
+];
+
+// Methods
 function useProfileCity(): boolean {
   const coordinates = cityCoordinates(user.value?.city);
   if (coordinates) position.value = coordinates;
@@ -147,12 +162,11 @@ async function chooseSort(next: AnnouncementSort) {
   await load(true);
 }
 
+// Lifecycle
 onMounted(async () => {
   if (isAuthenticated.value) useProfileCity();
   await load(true);
 });
-const sentinel = ref<HTMLElement | null>(null);
-let observer: IntersectionObserver | null = null;
 onMounted(() => {
   observer = new IntersectionObserver((entries) => {
     if (entries.some((entry) => entry.isIntersecting) && hasMore.value && !loading.value && loadedOnce.value && !loadError.value) {
@@ -165,10 +179,4 @@ onMounted(() => {
   }, { immediate: true });
 });
 onBeforeUnmount(() => observer?.disconnect());
-
-const sortOptions: { value: AnnouncementSort; label: string }[] = [
-  { value: 'newest', label: 'sort_newest' },
-  { value: 'urgent', label: 'sort_urgent' },
-  { value: 'nearest', label: 'sort_nearest' },
-];
 </script>
