@@ -1,0 +1,26 @@
+# dependencies
+node_modules/
+
+# Nuxt build and generated type declarations
+.nuxt/
+.output/
+dist/
+
+# test output and tooling caches
+coverage/
+.vitest/
+.cache/
+
+# local environment and logs
+.env
+.env.*
+!.env.example
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# editor and OS files
+.DS_Store
+.idea/
+.vscode/
