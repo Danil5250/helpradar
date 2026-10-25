@@ -10,19 +10,25 @@
 </template>
 
 <script setup lang="ts">
+// Imports
 import type { Category } from '~/types/announcement';
 
-definePageMeta({ middleware: 'auth' });
-const { t } = useI18n();
+// Composables
 const { canPublish } = useAuth();
 const announcements = useAnnouncements();
+
+// Utils
+const { t } = useI18n();
 const errorText = useApiErrorText();
+definePageMeta({ middleware: 'auth' });
 useHead({ title: computed(() => t('helmet_create')) });
 
+// Data
 const categories = ref<Category[]>([]);
 const loading = ref(true);
 const loadError = ref('');
 
+// Lifecycle
 onMounted(async () => {
   try {
     categories.value = await announcements.categories();

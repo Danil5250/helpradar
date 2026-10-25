@@ -36,19 +36,28 @@
 </template>
 
 <script setup lang="ts">
+// Imports
 import type { AnnouncementDetails, OwnAnnouncementItem } from '~/types/announcement';
 
-definePageMeta({ middleware: 'auth' });
-const { t, locale } = useI18n();
+// Composables
 const { canPublish, role, sessionEnded } = useAuth();
 const announcements = useAnnouncements();
+
+// Utils
+const { t, locale } = useI18n();
 const errorText = useApiErrorText();
+definePageMeta({ middleware: 'auth' });
 useHead({ title: computed(() => t('helmet_mine')) });
 
+// Data
 const items = ref<OwnAnnouncementItem[]>([]);
 const loading = ref(true);
 const loadError = ref('');
 
+// Computed
+const activeCount = computed(() => items.value.filter((item) => item.status === 'Active').length);
+
+// Methods
 async function load() {
   loading.value = true;
   loadError.value = '';
@@ -66,11 +75,11 @@ async function load() {
     loading.value = false;
   }
 }
-onMounted(load);
-
-const activeCount = computed(() => items.value.filter((item) => item.status === 'Active').length);
 
 function updated(_announcement: AnnouncementDetails) {
   void load();
 }
+
+// Lifecycle
+onMounted(load);
 </script>

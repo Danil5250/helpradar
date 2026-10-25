@@ -16,8 +16,10 @@
 </template>
 
 <script setup lang="ts">
+// Imports
 import notFound404 from '~/assets/images/NotFound404.svg';
 
+// Utils
 const { t } = useI18n();
 useHead({ title: computed(() => t('helmet_not_found')), meta: [{ name: 'robots', content: 'noindex, nofollow' }] });
 </script>
