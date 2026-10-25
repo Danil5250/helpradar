@@ -5,6 +5,9 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import appConfig from './config/app.config';
 import { ConfigModule, ConfigType } from '@nestjs/config';
 import { buildDataSourceOptions } from './config/database.config';
+import { UsersModule } from './modules/users/users.module';
+import { AuthModule } from './modules/auth/auth.module';
+import { CommonModule } from './common/common.module';
 
 @Module({
   imports: [
@@ -22,6 +25,9 @@ import { buildDataSourceOptions } from './config/database.config';
         retryDelay: 1000,
       }),
     }),
+    CommonModule,
+    UsersModule,
+    AuthModule,
   ],
   controllers: [AppController],
   providers: [AppService],
