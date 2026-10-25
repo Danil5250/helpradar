@@ -1,6 +1,8 @@
 import { registerAs } from '@nestjs/config';
 import './env';
 
+export type MailDriver = 'log' | 'smtp' | 'memory';
+
 export interface AppConfig {
   nodeEnv: string;
   isProduction: boolean;
@@ -22,7 +24,18 @@ export interface AppConfig {
     migrationsRun: boolean;
     allowRemote: boolean;
   };
+  mail: {
+    driver: MailDriver;
+    from: string;
+    service: string | undefined;
+    host: string | undefined;
+    port: number;
+    secure: boolean;
+    user: string | undefined;
+    password: string | undefined;
+  };
   storage: { dir: string; urlSecret: string };
+  geocoder: { baseUrl: string; userAgent: string; countryCodes: string };
   /** Extra stop words (comma separated STOP_WORDS) on top of the built-in list. */
   extraStopWords: string[];
 }
@@ -74,6 +87,15 @@ export function loadAppConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     );
   }
 
+  const mailDriver = (env.MAIL_DRIVER ?? 'log').trim().toLowerCase();
+  if (!['log', 'smtp', 'memory'].includes(mailDriver)) {
+    throw new Error(
+      `MAIL_DRIVER must be one of: log, smtp, memory (got "${mailDriver}").`,
+    );
+  }
+
+  const mailUser = env.SMTP_USER || env.EMAIL_USER || undefined;
+
   return {
     nodeEnv,
     isProduction,
@@ -98,9 +120,28 @@ export function loadAppConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
       migrationsRun: bool(env.DB_MIGRATIONS_RUN, true),
       allowRemote: bool(env.ALLOW_REMOTE_DB, false),
     },
+    mail: {
+      driver: mailDriver as MailDriver,
+      from:
+        env.MAIL_FROM?.trim() ||
+        `HelpRadar Team <${mailUser && mailUser.includes('@') ? mailUser : 'no-reply@localhost'}>`,
+      service: env.EMAIL_SERVICE || undefined,
+      host: env.SMTP_HOST || undefined,
+      port: int(env.SMTP_PORT, 587),
+      secure: bool(env.SMTP_SECURE, false),
+      user: mailUser,
+      password: env.SMTP_PASSWORD || env.EMAIL_PASSWORD || undefined,
+    },
     storage: {
       dir: env.STORAGE_DIR?.trim() || './storage',
       urlSecret: fileUrlSecret || DEV_FILE_URL_SECRET,
+    },
+    geocoder: {
+      baseUrl: (
+        env.GEOCODER_BASE_URL ?? 'https://nominatim.openstreetmap.org'
+      ).replace(/\/+$/, ''),
+      userAgent: env.GEOCODER_USER_AGENT?.trim() || 'HelpRadar/1.1',
+      countryCodes: env.GEOCODER_COUNTRY_CODES?.trim() || 'ua',
     },
     extraStopWords: list(env.STOP_WORDS, []),
   };
