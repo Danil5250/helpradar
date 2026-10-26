@@ -1,13 +1,16 @@
 import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import appConfig, { AppConfig } from './config/app.config';
 import { SESSION_COOKIE } from './modules/auth/auth.constants';
+import { configureApp } from './app.setup';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
   const config = app.get<AppConfig>(appConfig.KEY);
+  configureApp(app, config);
   // SRS 3.5.5: the REST API is described in the OpenAPI 3 format
   const document = SwaggerModule.createDocument(
     app,
