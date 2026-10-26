@@ -1,8 +1,8 @@
 package ua.helpradar.app.presentation.feed
 
 enum class AnnouncementType {
-    REQUEST, // Запит про допомогу
-    OFFER    // Пропозиція допомоги
+    REQUEST,
+    OFFER
 }
 
 data class AnnouncementItem(
