@@ -56,6 +56,11 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     debugImplementation(libs.androidx.compose.ui.tooling)
 
+    // Retrofit & OkHttp
+    implementation(libs.retrofit)
+    implementation(libs.retrofit.converter.gson)
+    implementation(libs.okhttp.logging)
+
     // Navigation Compose
     implementation("androidx.navigation:navigation-compose:2.8.3")
 
