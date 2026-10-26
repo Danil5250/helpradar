@@ -1,0 +1,101 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@font-face {
+  font-family: "Montserrat-Medium";
+  src: local("Montserrat-Medium"), url("../fonts/Montserrat/Montserrat-Medium.ttf") format('truetype');
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Montserrat-Regular";
+  font-weight: 400;
+  src: local("Montserrat-Regular"), url("../fonts/Montserrat/Montserrat-Regular.ttf") format('truetype');
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Montserrat-Regular";
+  font-weight: 700;
+  src: local("Montserrat-Bold"), url("../fonts/Montserrat/Montserrat-Bold.ttf") format('truetype');
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Kharkiv Tone";
+  src: local("Kharkiv Tone"), url("../fonts/Kharkiv_Tone.ttf") format('truetype');
+  font-display: swap;
+}
+
+@layer base {
+  body {
+    @apply bg-sand text-charcoal font-montserratRegular;
+    margin: 0;
+    padding: 0;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* keep keyboard focus visible. */
+  :focus-visible {
+    outline: 3px solid theme('colors.olive');
+    outline-offset: 2px;
+  }
+
+  svg {
+    display: flex;
+    align-items: center;
+  }
+}
+
+.header {
+  transition: transform 0.3s ease-in-out, background-color 0.3s ease-in-out;
+}
+
+.header-slide-in {
+  transform: translateY(0);
+}
+
+.header-slide-out {
+  transform: translateY(-100%);
+}
+
+.transition-background-color {
+  transition: background-color 0.3s ease-in-out;
+}
+
+/* draw the radar overlay on dark panels. */
+.radar-grid {
+  background-color: theme('colors.forest');
+  background-image:
+    repeating-radial-gradient(circle at 30% 70%, transparent 0, transparent 54px, rgba(255, 255, 255, 0.09) 55px, rgba(255, 255, 255, 0.09) 56px),
+    linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: auto, 56px 56px, 56px 56px;
+}
+
+@keyframes radar-sweep {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.radar-sweep {
+  transform-origin: 50% 50%;
+  animation: radar-sweep 6s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .radar-sweep { animation: none; }
+  .header { transition: none; }
+}
+
+::-webkit-scrollbar {
+  width: 7px;
+  background-color: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: #afafaf;
+  border-radius: 6px;
+}
