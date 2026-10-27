@@ -21,7 +21,6 @@ const props = defineProps<{ email: string; queued: boolean }>();
 // Utils
 const { t, locale } = useI18n();
 const errorText = useApiErrorText();
-startCooldown();
 
 // Data
 const message = ref(props.queued ? t('errors.EMAIL_QUEUED') : t('check_email'));
@@ -56,4 +55,5 @@ async function handleResend() {
 
 // Lifecycle
 onBeforeUnmount(() => timer && clearInterval(timer));
+startCooldown();
 </script>
