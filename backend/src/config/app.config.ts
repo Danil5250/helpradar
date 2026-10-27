@@ -35,6 +35,12 @@ export interface AppConfig {
     password: string | undefined;
   };
   storage: { dir: string; urlSecret: string };
+  aws: {
+    region: string;
+    bucket: string;
+    accessKeyId: string;
+    secretAccessKey: string;
+  };
   geocoder: { baseUrl: string; userAgent: string; countryCodes: string };
   /** Extra stop words (comma separated STOP_WORDS) on top of the built-in list. */
   extraStopWords: string[];
@@ -135,6 +141,12 @@ export function loadAppConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     storage: {
       dir: env.STORAGE_DIR?.trim() || './storage',
       urlSecret: fileUrlSecret || DEV_FILE_URL_SECRET,
+    },
+    aws: {
+      region: env.AWS_REGION?.trim() || 'eu-north-1',
+      bucket: env.AWS_S3_BUCKET?.trim() || '',
+      accessKeyId: env.AWS_ACCESS_KEY_ID?.trim() || '',
+      secretAccessKey: env.AWS_SECRET_ACCESS_KEY?.trim() || '',
     },
     geocoder: {
       baseUrl: (
