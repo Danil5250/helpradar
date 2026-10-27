@@ -166,6 +166,27 @@ fun RegisterScreen(
                 placeholder = "Харків"
             )
 
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Поле 7: Область
+            CustomLabel("Область")
+            CustomInputField(
+                value = state.region,
+                onValueChange = viewModel::onRegionChange,
+                placeholder = "Харківська область"
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Поле 8: Номер телефону
+            CustomLabel("Номер телефону (необов'язково)")
+            CustomInputField(
+                value = state.phoneNumber,
+                onValueChange = viewModel::onPhoneNumberChange,
+                placeholder = "+380XXXXXXXXX",
+                keyboardType = KeyboardType.Phone
+            )
+
             Spacer(modifier = Modifier.height(16.dp))
 
             // Блок вибору ролі "Я хочу..."

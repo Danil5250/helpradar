@@ -22,6 +22,7 @@ class RegisterViewModel (private val authRepository: AuthRepository = AuthReposi
     fun onEmailChange(value: String) = _uiState.update { it.copy(email = value, emailError = null) }
     fun onPasswordChange(value: String) = _uiState.update { it.copy(password = value, passwordError = null) }
     fun onConfirmPasswordChange(value: String) = _uiState.update { it.copy(confirmPassword = value, confirmPasswordError = null) }
+    fun onRegionChange(value: String) = _uiState.update { it.copy(region = value) }
     fun onCityChange(value: String) = _uiState.update { it.copy(city = value) }
     fun onPhoneNumberChange(value: String) = _uiState.update { it.copy(phoneNumber = value) }
     fun onRoleSelect(role: UserRole) = _uiState.update { it.copy(selectedRole = role, roleError = null) }
@@ -71,6 +72,7 @@ class RegisterViewModel (private val authRepository: AuthRepository = AuthReposi
                 password = state.password,
                 passwordConfirm = state.confirmPassword,
                 role = backendRole,
+                region = state.region.trim().ifEmpty { null },
                 city = state.city.trim().ifEmpty { "Kyiv" },
                 phoneNumber = state.phoneNumber.trim().ifEmpty { null },
                 termsAccepted = true, // раз ми дійшли сюди, згода точно є
