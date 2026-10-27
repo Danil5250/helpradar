@@ -9,7 +9,11 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-class LoginViewModel : ViewModel() {
+import ua.helpradar.app.data.network.Resource
+import ua.helpradar.app.data.repository.AuthRepository
+
+
+class LoginViewModel(private val authRepository: AuthRepository = AuthRepository()) : ViewModel() {
 
     private val _uiState = MutableStateFlow(LoginFormState())
     val uiState: StateFlow<LoginFormState> = _uiState.asStateFlow()
@@ -50,26 +54,14 @@ class LoginViewModel : ViewModel() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, generalError = null) }
 
-            // Імітація виклику API бекенду
-            delay(1000)
-
-            // Демонстраційний сценарій перевірки (поки бекенд розробляється)
-            if (state.password.length < 8) {
-                failedAttempts++
-                val errorMsg = if (failedAttempts >= 5) {
-                    "Забагато спроб. Спробуйте знову через 15 хвилин."
-                } else {
-                    "Невірний email або пароль"
+            when (val result = authRepository.login(emailTrimmed, state.password)) {
+                is Resource.Success -> {
+                    val token = result.data
+                    _uiState.update { it.copy(isLoading = false, isSuccess = true) }
                 }
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        generalError = errorMsg
-                    )
+                is Resource.Error -> {
+                    _uiState.update { it.copy(isLoading = false, generalError = result.message) }
                 }
-            } else {
-                failedAttempts = 0
-                _uiState.update { it.copy(isLoading = false, isSuccess = true) }
             }
         }
     }
