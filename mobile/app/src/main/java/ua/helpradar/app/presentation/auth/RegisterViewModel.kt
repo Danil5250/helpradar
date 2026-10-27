@@ -2,14 +2,17 @@ package ua.helpradar.app.presentation.auth
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import ua.helpradar.app.data.network.Resource
+import ua.helpradar.app.data.network.dto.RegisterRequest
+import ua.helpradar.app.data.repository.AuthRepository
 
-class RegisterViewModel : ViewModel() {
+
+class RegisterViewModel (private val authRepository: AuthRepository = AuthRepository()) : ViewModel() {
 
     private val _uiState = MutableStateFlow(RegisterFormState())
     val uiState: StateFlow<RegisterFormState> = _uiState.asStateFlow()
@@ -56,10 +59,32 @@ class RegisterViewModel : ViewModel() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, generalError = null) }
 
-            // Імітація запиту доки бекенд розробляється
-            delay(1200)
+            val backendRole = when (state.selectedRole) {
+                UserRole.VOLUNTEER -> "volunteer"
+                UserRole.PERSON_IN_NEED -> "person_in_need"
+            }
 
-            _uiState.update { it.copy(isLoading = false, isSuccess = true) }
+            val request = RegisterRequest(
+                firstName = state.firstName.trim(),
+                lastName = state.lastName.trim(),
+                email = state.email.trim(),
+                password = state.password,
+                passwordConfirm = state.confirmPassword,
+                role = backendRole,
+                city = state.city.trim().ifEmpty { "Kyiv" },
+                phoneNumber = state.phoneNumber.trim().ifEmpty { null },
+                termsAccepted = true, // раз ми дійшли сюди, згода точно є
+                ageConfirmed = true   // раз ми дійшли сюди, вік 18+ підтверджено
+            )
+
+            when (val result = authRepository.register(request)) {
+                is Resource.Success -> {
+                    _uiState.update { it.copy(isLoading = false, isSuccess = true) }
+                }
+                is Resource.Error -> {
+                    _uiState.update { it.copy(isLoading = false, generalError = result.message) }
+                }
+            }
         }
     }
 }
