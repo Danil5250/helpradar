@@ -103,18 +103,18 @@ import type { AnnouncementDetails } from '~/types/announcement';
 // Composables
 const announcements = useAnnouncements();
 
-// Utils
-const { t, locale } = useI18n();
-const route = useRoute();
-const errorText = useApiErrorText();
-useHead({ title: computed(() => (details.value ? `${details.value.title} - HelpRadar` : t('helmet_details'))) });
-
 // Data
 const details = ref<AnnouncementDetails | null>(null);
 const loading = ref(true);
 const problem = ref<{ code: string; text: string } | null>(null);
 const selectedImage = ref(0);
 const viewerOpen = ref(false);
+
+// Utils
+const { t, locale } = useI18n();
+const route = useRoute();
+const errorText = useApiErrorText();
+useHead({ title: computed(() => (details.value ? `${details.value.title} - HelpRadar` : t('helmet_details'))) });
 
 // Computed
 const photos = computed(() => details.value?.photos ?? []);
