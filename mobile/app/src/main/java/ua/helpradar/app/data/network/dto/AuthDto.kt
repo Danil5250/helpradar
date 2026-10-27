@@ -23,3 +23,23 @@ data class AuthResponse(
     @SerializedName("message") val message: String?,
     @SerializedName("expiresAt") val expiresAt: String?
 )
+
+data class RegisterRequest(
+    @SerializedName("firstName") val firstName: String,
+    @SerializedName("lastName") val lastName: String,
+    @SerializedName("email") val email: String,
+    @SerializedName("password") val password: String,
+    @SerializedName("passwordConfirm") val passwordConfirm: String,
+    @SerializedName("role") val role: String,
+    @SerializedName("city") val city: String,
+    @SerializedName("termsAccepted") val termsAccepted: Boolean = true,
+    @SerializedName("ageConfirmed") val ageConfirmed: Boolean = true,
+    @SerializedName("region") val region: String? = null,
+    @SerializedName("phoneNumber") val phoneNumber: String? = null
+)
+
+data class RegisterResponse(
+    @SerializedName("code") val code: String?,
+    @SerializedName("message") val message: String?,
+    @SerializedName("emailQueued") val emailQueued: Boolean?
+)
