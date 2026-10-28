@@ -1,6 +1,5 @@
 package ua.helpradar.app.presentation.request
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -15,7 +14,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -73,7 +71,7 @@ fun CreateRequestScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Попередження 112 з розділу 3.2.4.3
+            // Попередження 112 (SRS 3.2.4.3)
             Card(
                 colors = CardDefaults.cardColors(containerColor = RadarOrange.copy(alpha = 0.15f)),
                 shape = RoundedCornerShape(10.dp),
@@ -198,9 +196,22 @@ fun CreateRequestScreen(
                     Spacer(modifier = Modifier.width(8.dp))
                     Column {
                         Text("Терміновий запит", fontWeight = FontWeight.Bold, color = CharcoalDark)
-                        Text("Виділити оголошення червоним маячком для швидкого реагування", fontSize = 12.sp, color = Color.Gray)
+                        Text(
+                            "Виділити оголошення червоним маячком для швидкого реагування",
+                            fontSize = 12.sp,
+                            color = Color.Gray
+                        )
                     }
                 }
+            }
+
+            state.generalError?.let {
+                Text(
+                    text = it,
+                    color = MaterialTheme.colorScheme.error,
+                    fontSize = 14.sp,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
             }
 
             // Кнопка публікації

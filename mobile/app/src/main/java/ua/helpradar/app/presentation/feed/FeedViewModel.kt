@@ -7,79 +7,65 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import ua.helpradar.app.presentation.request.defaultCategories
+import ua.helpradar.app.data.network.Resource
+import ua.helpradar.app.data.repository.AnnouncementRepository
 
 data class FeedUiState(
     val searchQuery: String = "",
     val selectedCategory: String? = null,
     val selectedType: AnnouncementType? = null,
     val announcements: List<AnnouncementItem> = emptyList(),
-    val isLoading: Boolean = false
+    val isLoading: Boolean = false,
+    val errorMessage: String? = null
 )
 
-class FeedViewModel : ViewModel() {
+class FeedViewModel(
+    private val repository: AnnouncementRepository = AnnouncementRepository()
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow(FeedUiState())
     val uiState: StateFlow<FeedUiState> = _uiState.asStateFlow()
 
-    // Тестові дані згідно з категоріями Appendix A.2
-    private val mockAnnouncements = listOf(
-        AnnouncementItem(
-            id = 1,
-            title = "Потрібні теплі ковдри та обігрівач",
-            description = "Для літньої людини, мікрорайон Таврійський. Опалення поки нестабільне.",
-            categoryName = "Одяг та базові речі",
-            type = AnnouncementType.REQUEST,
-            distanceKm = 1.2,
-            postedTimeAgo = "15 хв тому",
-            authorName = "Олена М.",
-            authorRating = 4.9,
-            isUrgent = true
-        ),
-        AnnouncementItem(
-            id = 2,
-            title = "Доставка питної води у бутлях",
-            description = "Маю авто з великим багажником, можу привезти воду тим, хто не може дійти до свердловини.",
-            categoryName = "Продукти та вода",
-            type = AnnouncementType.OFFER,
-            distanceKm = 3.5,
-            postedTimeAgo = "1 год тому",
-            authorName = "Сергій В.",
-            authorRating = 5.0,
-            isUrgent = false
-        ),
-        AnnouncementItem(
-            id = 3,
-            title = "Терміново потрібен L-тироксин 100",
-            description = "Немає в наявності в найближчих аптеках. Потрібна хоча б одна пластинка.",
-            categoryName = "Ліки та охорона здоров'я",
-            type = AnnouncementType.REQUEST,
-            distanceKm = 0.8,
-            postedTimeAgo = "25 хв тому",
-            authorName = "Надія П.",
-            authorRating = 4.8,
-            isUrgent = true
-        ),
-        AnnouncementItem(
-            id = 4,
-            title = "Допомога з ремонтом вікон після вибухової хвилі",
-            description = "Є плівка, OSB-плити та інструменти. Допоможу закрити віконні отвори безкоштовно.",
-            categoryName = "Побутовий ремонт",
-            type = AnnouncementType.OFFER,
-            distanceKm = 4.1,
-            postedTimeAgo = "3 год тому",
-            authorName = "Микола К.",
-            authorRating = 4.95,
-            isUrgent = false
-        )
-    )
+    private var allLoadedAnnouncements = listOf<AnnouncementItem>()
 
     init {
         loadFeed()
     }
 
-    private fun loadFeed() {
-        _uiState.update { it.copy(announcements = mockAnnouncements) }
+    fun loadFeed() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            when (val result = repository.getAnnouncements()) {
+                is Resource.Success -> {
+                    val serverItems = result.data.orEmpty().map { dto ->
+                        val authorDisplayName = dto.author?.name
+                            ?: listOfNotNull(dto.author?.firstName, dto.author?.lastName).joinToString(" ").ifEmpty { "Користувач" }
+
+                        AnnouncementItem(
+                            id = dto.id,
+                            title = dto.title,
+                            description = dto.excerpt ?: dto.description ?: "",
+                            categoryName = dto.category?.name ?: "Загальне",
+                            type = if (dto.type.equals("HelpOffer", ignoreCase = true) || dto.type.equals("offer", ignoreCase = true)) {
+                                AnnouncementType.OFFER
+                            } else {
+                                AnnouncementType.REQUEST
+                            },
+                            distanceKm = dto.distanceKm ?: 0.0,
+                            postedTimeAgo = "Нещодавно",
+                            authorName = authorDisplayName,
+                            authorRating = dto.author?.rating ?: 5.0,
+                            isUrgent = dto.isUrgent
+                        )
+                    }
+                    allLoadedAnnouncements = serverItems
+                    _uiState.update { it.copy(isLoading = false, announcements = serverItems) }
+                }
+                is Resource.Error -> {
+                    _uiState.update { it.copy(isLoading = false, errorMessage = result.message) }
+                }
+            }
+        }
     }
 
     fun onSearchQueryChange(query: String) {
@@ -106,7 +92,7 @@ class FeedViewModel : ViewModel() {
         val category = _uiState.value.selectedCategory
         val type = _uiState.value.selectedType
 
-        val filtered = mockAnnouncements.filter { item ->
+        val filtered = allLoadedAnnouncements.filter { item ->
             val matchesQuery = query.isEmpty() ||
                     item.title.lowercase().contains(query) ||
                     item.description.lowercase().contains(query)
