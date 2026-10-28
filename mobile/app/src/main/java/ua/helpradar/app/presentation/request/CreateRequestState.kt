@@ -26,7 +26,7 @@ data class CreateRequestFormState(
     val location: String = "Харків",
     val expiryDays: Int = 14,
     val isUrgent: Boolean = false,
-    val type: String = "request",
+    val isVolunteer: Boolean = false, // Прапорець для динамічної адаптації UI
 
     val titleError: String? = null,
     val descriptionError: String? = null,

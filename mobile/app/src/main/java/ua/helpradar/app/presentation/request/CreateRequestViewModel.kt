@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import ua.helpradar.app.data.local.SessionManager
 import ua.helpradar.app.data.network.Resource
 import ua.helpradar.app.data.network.dto.CreateAnnouncementRequest
 import ua.helpradar.app.data.repository.AnnouncementRepository
@@ -15,25 +16,19 @@ class CreateRequestViewModel(
     private val repository: AnnouncementRepository = AnnouncementRepository()
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(CreateRequestFormState())
+    private val _uiState = MutableStateFlow(
+        CreateRequestFormState(
+            isVolunteer = SessionManager.isVolunteer
+        )
+    )
     val uiState: StateFlow<CreateRequestFormState> = _uiState.asStateFlow()
 
-    // Методи зміни полів форми
     fun onTitleChange(value: String) = _uiState.update { it.copy(title = value, titleError = null) }
     fun onDescriptionChange(value: String) = _uiState.update { it.copy(description = value, descriptionError = null) }
     fun onCategorySelect(category: HelpCategoryItem) = _uiState.update { it.copy(selectedCategory = category, categoryError = null) }
     fun onLocationChange(value: String) = _uiState.update { it.copy(location = value, locationError = null) }
     fun onExpiryDaysChange(days: Int) = _uiState.update { it.copy(expiryDays = days) }
     fun onUrgentToggle(urgent: Boolean) = _uiState.update { it.copy(isUrgent = urgent) }
-
-    fun onTypeChange(newType: String) {
-        _uiState.update {
-            it.copy(
-                type = newType,
-                isUrgent = if (newType == "offer") false else it.isUrgent
-            )
-        }
-    }
 
     fun submitRequest() {
         val state = _uiState.value
@@ -66,7 +61,7 @@ class CreateRequestViewModel(
                 latitude = 50.4501,
                 longitude = 30.5234,
                 expiryDays = state.expiryDays,
-                isUrgent = state.isUrgent
+                isUrgent = if (state.isVolunteer) false else state.isUrgent
             )
 
             when (val result = repository.createAnnouncement(request)) {

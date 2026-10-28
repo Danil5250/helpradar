@@ -13,9 +13,9 @@ import ua.helpradar.app.data.network.api.AuthApiService
 object ApiClient {
     private const val BASE_URL = "http://localhost:3000/"
 
-    private val cookieJar = object : CookieJar {
-        private val cookieStore = mutableMapOf<String, List<Cookie>>()
+    private val cookieStore = mutableMapOf<String, List<Cookie>>()
 
+    private val cookieJar = object : CookieJar {
         override fun saveFromResponse(url: HttpUrl, cookies: List<Cookie>) {
             cookieStore[url.host] = cookies
         }
@@ -23,6 +23,10 @@ object ApiClient {
         override fun loadForRequest(url: HttpUrl): List<Cookie> {
             return cookieStore[url.host] ?: emptyList()
         }
+    }
+
+    fun clearCookies() {
+        cookieStore.clear()
     }
 
     private val logging = HttpLoggingInterceptor().apply {
