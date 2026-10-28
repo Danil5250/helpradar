@@ -11,6 +11,7 @@ data class RegisterFormState(
     val email: String = "",
     val password: String = "",
     val confirmPassword: String = "",
+    val region: String = "",
     val city: String = "",
     val phoneNumber: String = "",
     val selectedRole: UserRole? = null,
