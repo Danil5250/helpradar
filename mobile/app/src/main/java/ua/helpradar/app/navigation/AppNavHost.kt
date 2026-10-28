@@ -9,6 +9,7 @@ import ua.helpradar.app.presentation.auth.LoginScreen
 import ua.helpradar.app.presentation.auth.RegisterScreen
 import ua.helpradar.app.presentation.feed.FeedScreen
 import ua.helpradar.app.presentation.request.CreateRequestScreen
+import ua.helpradar.app.data.repository.AuthRepository
 
 @Composable
 fun AppNavHost(
@@ -52,6 +53,7 @@ fun AppNavHost(
                     navController.navigate(Screen.CreateRequest.route)
                 },
                 onSignOutClick = {
+                    AuthRepository().logout()
                     navController.navigate(Screen.Login.route) {
                         popUpTo(0) { inclusive = true }
                     }

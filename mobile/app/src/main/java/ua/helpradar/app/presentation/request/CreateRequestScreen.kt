@@ -1,6 +1,5 @@
 package ua.helpradar.app.presentation.request
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -8,6 +7,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.WarningAmber
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -15,7 +15,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -34,6 +33,8 @@ fun CreateRequestScreen(
     val state by viewModel.uiState.collectAsState()
     var isCategoryDropdownExpanded by remember { mutableStateOf(false) }
 
+    val isVolunteer = state.isVolunteer
+
     LaunchedEffect(state.isSuccess) {
         if (state.isSuccess) {
             onRequestCreated()
@@ -46,7 +47,7 @@ fun CreateRequestScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = "Створити запит про допомогу",
+                        text = if (isVolunteer) "Створити пропозицію допомоги" else "Створити запит про допомогу",
                         color = CharcoalDark,
                         fontWeight = FontWeight.Bold,
                         fontSize = 20.sp
@@ -73,29 +74,58 @@ fun CreateRequestScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Попередження 112 з розділу 3.2.4.3
-            Card(
-                colors = CardDefaults.cardColors(containerColor = RadarOrange.copy(alpha = 0.15f)),
-                shape = RoundedCornerShape(10.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(
-                    modifier = Modifier.padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
+            // Верхній інформаційний блок відповідно до ролі
+            if (!isVolunteer) {
+                // Попередження 112 для людей у потребі
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = RadarOrange.copy(alpha = 0.15f)),
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.WarningAmber,
-                        contentDescription = null,
-                        tint = RadarOrange,
-                        modifier = Modifier.size(28.dp)
-                    )
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Text(
-                        text = "У разі загрози життю або здоров'ю негайно телефонуйте 112!",
-                        color = CharcoalDark,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.WarningAmber,
+                            contentDescription = null,
+                            tint = RadarOrange,
+                            modifier = Modifier.size(28.dp)
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text(
+                            text = "У разі загрози життю або здоров'ю негайно телефонуйте 112!",
+                            color = CharcoalDark,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
+            } else {
+                // Підказка для волонтера
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = OliveGreen.copy(alpha = 0.15f)),
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = null,
+                            tint = OliveGreen,
+                            modifier = Modifier.size(26.dp)
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text(
+                            text = "Опишіть ресурси, транспорт чи послуги, якими ви готові поділитися безоплатно.",
+                            color = CharcoalDark,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
                 }
             }
 
@@ -103,15 +133,20 @@ fun CreateRequestScreen(
             OutlinedTextField(
                 value = state.title,
                 onValueChange = viewModel::onTitleChange,
-                label = { Text("Короткий заголовок потреби *") },
-                placeholder = { Text("Наприклад: Потрібні теплі ковдри") },
+                label = { Text(if (isVolunteer) "Заголовок пропозиції *" else "Короткий заголовок потреби *") },
+                placeholder = {
+                    Text(
+                        if (isVolunteer) "Наприклад: Можу підвезти продукти на авто"
+                        else "Наприклад: Потрібні теплі ковдри"
+                    )
+                },
                 isError = state.titleError != null,
                 supportingText = state.titleError?.let { { Text(it, color = MaterialTheme.colorScheme.error) } },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
             )
 
-            // Поле 2: Вибір категорії
+            // Поле 2: Категорія
             ExposedDropdownMenuBox(
                 expanded = isCategoryDropdownExpanded,
                 onExpandedChange = { isCategoryDropdownExpanded = !isCategoryDropdownExpanded }
@@ -151,7 +186,12 @@ fun CreateRequestScreen(
                 value = state.description,
                 onValueChange = viewModel::onDescriptionChange,
                 label = { Text("Детальний опис *") },
-                placeholder = { Text("Опишіть ситуацію, необхідну кількість чи особливості...") },
+                placeholder = {
+                    Text(
+                        if (isVolunteer) "Вкажіть доступний час, спосіб зв'язку чи деталі вашої допомоги..."
+                        else "Опишіть ситуацію, необхідну кількість чи особливості..."
+                    )
+                },
                 isError = state.descriptionError != null,
                 supportingText = state.descriptionError?.let { { Text(it, color = MaterialTheme.colorScheme.error) } },
                 modifier = Modifier
@@ -160,50 +200,69 @@ fun CreateRequestScreen(
                 maxLines = 6
             )
 
-            // Поле 4: Адреса / населений пункт
+            // Поле 4: Адреса / локація
             OutlinedTextField(
                 value = state.location,
                 onValueChange = viewModel::onLocationChange,
-                label = { Text("Населений пункт / адреса *") },
+                label = { Text(if (isVolunteer) "Місто / район надання допомоги *" else "Населений пункт / адреса *") },
                 isError = state.locationError != null,
                 supportingText = {
                     if (state.locationError != null) {
                         Text(state.locationError!!, color = MaterialTheme.colorScheme.error)
                     } else {
-                        Text("Точна адреса буде видима лише підтвердженому волонтеру", fontSize = 11.sp)
+                        Text(
+                            if (isVolunteer) "Вкажіть зону або місто вашої діяльності"
+                            else "Точна адреса буде видима лише підтвердженому волонтеру",
+                            fontSize = 11.sp
+                        )
                     }
                 },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
             )
 
-            // Чекбокс: Терміновість
-            Card(
-                shape = RoundedCornerShape(10.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.7f)),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { viewModel.onUrgentToggle(!state.isUrgent) }
-                        .padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
+            // Чекбокс «Терміновий запит» відображається виключно для людини в біді
+            if (!isVolunteer) {
+                Card(
+                    shape = RoundedCornerShape(10.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.7f)),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Checkbox(
-                        checked = state.isUrgent,
-                        onCheckedChange = viewModel::onUrgentToggle,
-                        colors = CheckboxDefaults.colors(checkedColor = RadarOrange)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Column {
-                        Text("Терміновий запит", fontWeight = FontWeight.Bold, color = CharcoalDark)
-                        Text("Виділити оголошення червоним маячком для швидкого реагування", fontSize = 12.sp, color = Color.Gray)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { viewModel.onUrgentToggle(!state.isUrgent) }
+                            .padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Checkbox(
+                            checked = state.isUrgent,
+                            onCheckedChange = viewModel::onUrgentToggle,
+                            colors = CheckboxDefaults.colors(checkedColor = RadarOrange)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Column {
+                            Text("Терміновий запит", fontWeight = FontWeight.Bold, color = CharcoalDark)
+                            Text(
+                                "Виділити оголошення червоним маячком для швидкого реагування",
+                                fontSize = 12.sp,
+                                color = Color.Gray
+                            )
+                        }
                     }
                 }
             }
 
-            // Кнопка публікації
+            state.generalError?.let {
+                Text(
+                    text = it,
+                    color = MaterialTheme.colorScheme.error,
+                    fontSize = 14.sp,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+            }
+
+            // Кнопка відправки
             Button(
                 onClick = viewModel::submitRequest,
                 enabled = !state.isLoading,
@@ -217,7 +276,11 @@ fun CreateRequestScreen(
                 if (state.isLoading) {
                     CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
                 } else {
-                    Text("Опублікувати запит", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        text = if (isVolunteer) "Опублікувати пропозицію" else "Опублікувати запит",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             }
         }
