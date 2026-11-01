@@ -1,7 +1,6 @@
 package ua.helpradar.app.presentation.auth
 
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -10,7 +9,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Handshake
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
@@ -33,6 +31,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import ua.helpradar.app.R
 import ua.helpradar.app.ui.theme.*
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RegisterScreen(
     onNavigateToLogin: () -> Unit,
@@ -42,6 +41,9 @@ fun RegisterScreen(
     val state by viewModel.uiState.collectAsState()
     var isPasswordVisible by remember { mutableStateOf(false) }
     var isConfirmPasswordVisible by remember { mutableStateOf(false) }
+
+    var isRegionDropdownExpanded by remember { mutableStateOf(false) }
+    var isCityDropdownExpanded by remember { mutableStateOf(false) }
 
     LaunchedEffect(state.isSuccess) {
         if (state.isSuccess) {
@@ -63,7 +65,6 @@ fun RegisterScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Доданий векторний логотип HelpRadar
             Image(
                 painter = painterResource(id = R.drawable.helpradar_logo),
                 contentDescription = "HelpRadar Logo",
@@ -74,7 +75,6 @@ fun RegisterScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Заголовок
             Text(
                 text = "Приєднуйтесь до HelpRadar",
                 fontSize = 24.sp,
@@ -85,7 +85,6 @@ fun RegisterScreen(
 
             Spacer(modifier = Modifier.height(6.dp))
 
-            // Підзаголовок
             Text(
                 text = "Створіть обліковий запис для надання або отримання допомоги",
                 fontSize = 14.sp,
@@ -97,7 +96,7 @@ fun RegisterScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             // Поле 1: Ім'я
-            CustomLabel("Ім'я")
+            CustomLabel("Ім'я *")
             CustomInputField(
                 value = state.firstName,
                 onValueChange = viewModel::onFirstNameChange,
@@ -108,7 +107,7 @@ fun RegisterScreen(
             Spacer(modifier = Modifier.height(12.dp))
 
             // Поле 2: Прізвище
-            CustomLabel("Прізвище")
+            CustomLabel("Прізвище *")
             CustomInputField(
                 value = state.lastName,
                 onValueChange = viewModel::onLastNameChange,
@@ -119,7 +118,7 @@ fun RegisterScreen(
             Spacer(modifier = Modifier.height(12.dp))
 
             // Поле 3: Email
-            CustomLabel("Електронна пошта")
+            CustomLabel("Електронна пошта *")
             CustomInputField(
                 value = state.email,
                 onValueChange = viewModel::onEmailChange,
@@ -131,7 +130,7 @@ fun RegisterScreen(
             Spacer(modifier = Modifier.height(12.dp))
 
             // Поле 4: Пароль
-            CustomLabel("Пароль")
+            CustomLabel("Пароль *")
             CustomInputField(
                 value = state.password,
                 onValueChange = viewModel::onPasswordChange,
@@ -145,7 +144,7 @@ fun RegisterScreen(
             Spacer(modifier = Modifier.height(12.dp))
 
             // Поле 5: Підтвердження пароля
-            CustomLabel("Підтвердження пароля")
+            CustomLabel("Підтвердження пароля *")
             CustomInputField(
                 value = state.confirmPassword,
                 onValueChange = viewModel::onConfirmPasswordChange,
@@ -158,23 +157,120 @@ fun RegisterScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Поле 6: Місто
-            CustomLabel("Місто або населений пункт")
-            CustomInputField(
-                value = state.city,
-                onValueChange = viewModel::onCityChange,
-                placeholder = "Харків"
-            )
+            // Поле 6: Область (Dropdown)
+            CustomLabel("Область *")
+            ExposedDropdownMenuBox(
+                expanded = isRegionDropdownExpanded,
+                onExpandedChange = { isRegionDropdownExpanded = !isRegionDropdownExpanded },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                OutlinedTextField(
+                    value = state.region,
+                    onValueChange = {},
+                    readOnly = true,
+                    placeholder = {
+                        Text(
+                            text = "Оберіть область",
+                            color = PlaceholderSage,
+                            fontSize = 16.sp
+                        )
+                    },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = isRegionDropdownExpanded) },
+                    isError = state.regionError != null,
+                    supportingText = state.regionError?.let { { Text(it, color = MaterialTheme.colorScheme.error) } },
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = Color.White.copy(alpha = 0.8f),
+                        unfocusedContainerColor = Color.White.copy(alpha = 0.8f),
+                        focusedBorderColor = if (state.regionError != null) MaterialTheme.colorScheme.error else OliveGreen,
+                        unfocusedBorderColor = if (state.regionError != null) MaterialTheme.colorScheme.error else BorderSand,
+                        focusedTextColor = CharcoalDark,
+                        unfocusedTextColor = CharcoalDark
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .menuAnchor()
+                )
+
+                ExposedDropdownMenu(
+                    expanded = isRegionDropdownExpanded,
+                    onDismissRequest = { isRegionDropdownExpanded = false }
+                ) {
+                    regionsWithCities.keys.forEach { regionName ->
+                        DropdownMenuItem(
+                            text = { Text(regionName) },
+                            onClick = {
+                                viewModel.onRegionSelect(regionName)
+                                isRegionDropdownExpanded = false
+                            }
+                        )
+                    }
+                }
+            }
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Поле 7: Область
-            CustomLabel("Область")
-            CustomInputField(
-                value = state.region,
-                onValueChange = viewModel::onRegionChange,
-                placeholder = "Харківська область"
-            )
+            // Поле 7: Місто (Dropdown, залежить від обраної області)
+            CustomLabel("Місто або населений пункт *")
+            ExposedDropdownMenuBox(
+                expanded = isCityDropdownExpanded && state.availableCities.isNotEmpty(),
+                onExpandedChange = {
+                    if (state.availableCities.isNotEmpty()) {
+                        isCityDropdownExpanded = !isCityDropdownExpanded
+                    }
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                OutlinedTextField(
+                    value = state.city,
+                    onValueChange = {},
+                    readOnly = true,
+                    placeholder = {
+                        Text(
+                            text = if (state.region.isEmpty()) "Спочатку оберіть область" else "Оберіть місто",
+                            color = PlaceholderSage,
+                            fontSize = 16.sp
+                        )
+                    },
+                    trailingIcon = {
+                        if (state.availableCities.isNotEmpty()) {
+                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = isCityDropdownExpanded)
+                        }
+                    },
+                    enabled = state.availableCities.isNotEmpty(),
+                    isError = state.cityError != null,
+                    supportingText = state.cityError?.let { { Text(it, color = MaterialTheme.colorScheme.error) } },
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = Color.White.copy(alpha = 0.8f),
+                        unfocusedContainerColor = Color.White.copy(alpha = 0.8f),
+                        disabledContainerColor = Color.White.copy(alpha = 0.4f),
+                        focusedBorderColor = if (state.cityError != null) MaterialTheme.colorScheme.error else OliveGreen,
+                        unfocusedBorderColor = if (state.cityError != null) MaterialTheme.colorScheme.error else BorderSand,
+                        focusedTextColor = CharcoalDark,
+                        unfocusedTextColor = CharcoalDark,
+                        disabledTextColor = Color.Gray
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .menuAnchor()
+                )
+
+                ExposedDropdownMenu(
+                    expanded = isCityDropdownExpanded && state.availableCities.isNotEmpty(),
+                    onDismissRequest = { isCityDropdownExpanded = false }
+                ) {
+                    state.availableCities.forEach { cityName ->
+                        DropdownMenuItem(
+                            text = { Text(cityName) },
+                            onClick = {
+                                viewModel.onCitySelect(cityName)
+                                isCityDropdownExpanded = false
+                            }
+                        )
+                    }
+                }
+            }
 
             Spacer(modifier = Modifier.height(12.dp))
 
@@ -190,7 +286,7 @@ fun RegisterScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             // Блок вибору ролі "Я хочу..."
-            CustomLabel("Я хочу...")
+            CustomLabel("Я хочу... *")
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -277,9 +373,17 @@ fun RegisterScreen(
                 )
             }
 
+            state.generalError?.let {
+                Text(
+                    text = it,
+                    color = MaterialTheme.colorScheme.error,
+                    fontSize = 13.sp,
+                    modifier = Modifier.padding(vertical = 4.dp)
+                )
+            }
+
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Головна кнопка створення акаунта
             Button(
                 onClick = viewModel::submitRegistration,
                 enabled = !state.isLoading,
@@ -304,7 +408,6 @@ fun RegisterScreen(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Перехід на екран входу
             Row(
                 modifier = Modifier.padding(bottom = 32.dp),
                 horizontalArrangement = Arrangement.Center,

@@ -13,6 +13,7 @@ data class RegisterFormState(
     val confirmPassword: String = "",
     val region: String = "",
     val city: String = "",
+    val availableCities: List<String> = emptyList(),
     val phoneNumber: String = "",
     val selectedRole: UserRole? = null,
     val agreedToTerms: Boolean = false,
@@ -23,6 +24,8 @@ data class RegisterFormState(
     val emailError: String? = null,
     val passwordError: String? = null,
     val confirmPasswordError: String? = null,
+    val regionError: String? = null,
+    val cityError: String? = null,
     val roleError: String? = null,
     val termsError: String? = null,
 

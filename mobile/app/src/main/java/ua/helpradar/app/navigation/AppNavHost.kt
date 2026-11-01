@@ -39,8 +39,8 @@ fun AppNavHost(
                     navController.popBackStack()
                 },
                 onRegistrationSuccess = {
-                    navController.navigate(Screen.Feed.route) {
-                        popUpTo(Screen.Login.route) { inclusive = true }
+                    navController.navigate(Screen.Login.route) {
+                        popUpTo(Screen.Register.route) { inclusive = true }
                     }
                 }
             )
