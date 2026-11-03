@@ -36,7 +36,6 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
 import ua.helpradar.app.R
-import ua.helpradar.app.presentation.request.defaultCategories
 import ua.helpradar.app.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -58,7 +57,6 @@ fun FeedScreen(
                 drawerContainerColor = DesertSand,
                 modifier = Modifier.width(300.dp)
             ) {
-                // Шапка бургер-меню
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -82,7 +80,6 @@ fun FeedScreen(
                             .clip(RoundedCornerShape(10.dp))
                     )
 
-                    // Круглий аватар користувача
                     Box(
                         modifier = Modifier
                             .size(36.dp)
@@ -103,7 +100,6 @@ fun FeedScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Пункти навігації
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -152,7 +148,6 @@ fun FeedScreen(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Кнопка виходу з акаунта
                     NavigationDrawerItem(
                         icon = {
                             Icon(
@@ -182,7 +177,6 @@ fun FeedScreen(
         Scaffold(
             containerColor = DesertSand,
             topBar = {
-                // Кастомний верхній бар за новим дизайном
                 Surface(
                     color = DesertSand,
                     shadowElevation = 0.dp
@@ -217,7 +211,6 @@ fun FeedScreen(
                                 )
                             }
 
-                            // Аватар користувача
                             Box(
                                 modifier = Modifier
                                     .size(36.dp)
@@ -253,7 +246,7 @@ fun FeedScreen(
                     .fillMaxSize()
                     .padding(paddingValues)
             ) {
-                // Поле пошуку з напівпрозорим фоном
+                // Пошук
                 OutlinedTextField(
                     value = state.searchQuery,
                     onValueChange = viewModel::onSearchQueryChange,
@@ -331,7 +324,7 @@ fun FeedScreen(
                     )
                 }
 
-                // Горизонтальні категорії
+                // Динамічні категорії з бекенду
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -339,7 +332,7 @@ fun FeedScreen(
                         .padding(horizontal = 16.dp, vertical = 6.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    defaultCategories.forEach { category ->
+                    state.categories.forEach { category ->
                         val isSelected = state.selectedCategory == category.name
                         FilterChip(
                             selected = isSelected,
@@ -423,45 +416,68 @@ private fun DrawerItem(
 
 @Composable
 fun AnnouncementCard(item: AnnouncementItem) {
+    val isOffer = item.type == AnnouncementType.OFFER
+
+    // Візуальне кольорове розрізнення за типами
+    val cardBgColor = if (isOffer) SelectedRoleBg.copy(alpha = 0.9f) else Color.White.copy(alpha = 0.85f)
+    val cardBorderColor = if (isOffer) OliveGreen.copy(alpha = 0.4f) else BorderSand
+
     Card(
         shape = RoundedCornerShape(14.dp),
-        // Напівпрозорий білий фон за дизайном Figma
-        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.8f)),
+        colors = CardDefaults.cardColors(containerColor = cardBgColor),
         modifier = Modifier
             .fillMaxWidth()
-            .border(width = 1.dp, color = BorderSand, shape = RoundedCornerShape(14.dp))
+            .border(width = 1.dp, color = cardBorderColor, shape = RoundedCornerShape(14.dp))
     ) {
         Column(
             modifier = Modifier.padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            // Верхній рядок: категорія та терміновість
+            // Верхній рядок: бейдж типу (Пропозиція/Потреба), категорія та терміновість
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Surface(
-                    shape = RoundedCornerShape(6.dp),
-                    color = DeepSage.copy(alpha = 0.15f)
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = item.categoryName,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = DeepSage,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                    )
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = if (isOffer) OliveGreen else DeepSage.copy(alpha = 0.2f)
+                    ) {
+                        Text(
+                            text = if (isOffer) "Пропозиція" else "Потреба",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (isOffer) Color.White else CharcoalDark,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                        )
+                    }
+
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = DeepSage.copy(alpha = 0.12f)
+                    ) {
+                        Text(
+                            text = item.categoryName,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = DeepSage,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                        )
+                    }
                 }
 
-                if (item.isUrgent) {
+                if (item.isUrgent && !isOffer) {
                     Surface(
                         shape = RoundedCornerShape(6.dp),
                         color = RadarOrange.copy(alpha = 0.15f)
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                         ) {
                             Icon(
                                 imageVector = Icons.Default.WarningAmber,
@@ -481,7 +497,6 @@ fun AnnouncementCard(item: AnnouncementItem) {
                 }
             }
 
-            // Заголовок
             Text(
                 text = item.title,
                 fontSize = 17.sp,
@@ -491,7 +506,6 @@ fun AnnouncementCard(item: AnnouncementItem) {
                 overflow = TextOverflow.Ellipsis
             )
 
-            // Опис
             Text(
                 text = item.description,
                 fontSize = 14.sp,
@@ -502,7 +516,6 @@ fun AnnouncementCard(item: AnnouncementItem) {
 
             HorizontalDivider(color = BorderSand.copy(alpha = 0.6f), thickness = 1.dp)
 
-            // Інфопанель (дистанція, автор, рейтинг)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -512,7 +525,7 @@ fun AnnouncementCard(item: AnnouncementItem) {
                     Icon(
                         imageVector = Icons.Default.LocationOn,
                         contentDescription = null,
-                        tint = OliveGreen,
+                        tint = if (isOffer) OliveGreen else RadarOrange,
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
@@ -522,7 +535,6 @@ fun AnnouncementCard(item: AnnouncementItem) {
                         color = CharcoalDark
                     )
                 }
-
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = item.authorName,
@@ -546,17 +558,18 @@ fun AnnouncementCard(item: AnnouncementItem) {
                 }
             }
 
-            // Кнопка однакового темно-зеленого кольору OliveGreen
             Button(
-                onClick = { /* Дія перегляду деталей оголошення */ },
-                colors = ButtonDefaults.buttonColors(containerColor = OliveGreen),
+                onClick = { },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (isOffer) DeepSage else OliveGreen
+                ),
                 shape = RoundedCornerShape(10.dp),
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(44.dp)
             ) {
                 Text(
-                    text = if (item.type == AnnouncementType.REQUEST) "Допомогти" else "Зв'язатися",
+                    text = if (isOffer) "Зв'язатися з волонтером" else "Допомогти",
                     fontWeight = FontWeight.Bold,
                     fontSize = 14.sp,
                     color = Color.White

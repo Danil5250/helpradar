@@ -51,6 +51,10 @@ object ApiClient {
         .client(okHttpClient)
         .build()
 
+    val announcementApiService: AnnouncementApiService by lazy {
+        retrofit.create(AnnouncementApiService::class.java)
+    }
+
     val authService: AuthApiService = retrofit.create(AuthApiService::class.java)
     val announcementService: AnnouncementApiService = retrofit.create(AnnouncementApiService::class.java)
 }

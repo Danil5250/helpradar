@@ -1,27 +1,37 @@
 package ua.helpradar.app.presentation.request
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.AddPhotoAlternate
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.WarningAmber
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import ua.helpradar.app.ui.theme.CharcoalDark
-import ua.helpradar.app.ui.theme.DesertSand
-import ua.helpradar.app.ui.theme.OliveGreen
-import ua.helpradar.app.ui.theme.RadarOrange
+import coil.compose.rememberAsyncImagePainter
+import ua.helpradar.app.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -31,7 +41,16 @@ fun CreateRequestScreen(
     viewModel: CreateRequestViewModel = viewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
     var isCategoryDropdownExpanded by remember { mutableStateOf(false) }
+
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickMultipleVisualMedia(maxItems = 5)
+    ) { uris: List<Uri> ->
+        if (uris.isNotEmpty()) {
+            viewModel.onAddPhotos(context, uris)
+        }
+    }
 
     val isVolunteer = state.isVolunteer
 
@@ -74,9 +93,7 @@ fun CreateRequestScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Верхній інформаційний блок відповідно до ролі
             if (!isVolunteer) {
-                // Попередження 112 для людей у потребі
                 Card(
                     colors = CardDefaults.cardColors(containerColor = RadarOrange.copy(alpha = 0.15f)),
                     shape = RoundedCornerShape(10.dp),
@@ -102,7 +119,6 @@ fun CreateRequestScreen(
                     }
                 }
             } else {
-                // Підказка для волонтера
                 Card(
                     colors = CardDefaults.cardColors(containerColor = OliveGreen.copy(alpha = 0.15f)),
                     shape = RoundedCornerShape(10.dp),
@@ -146,7 +162,7 @@ fun CreateRequestScreen(
                 singleLine = true
             )
 
-            // Поле 2: Категорія
+            // Поле 2: Категорія (Динамічна з бекенду)
             ExposedDropdownMenuBox(
                 expanded = isCategoryDropdownExpanded,
                 onExpandedChange = { isCategoryDropdownExpanded = !isCategoryDropdownExpanded }
@@ -156,8 +172,16 @@ fun CreateRequestScreen(
                     onValueChange = {},
                     readOnly = true,
                     label = { Text("Категорія допомоги *") },
-                    placeholder = { Text("Оберіть категорію") },
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = isCategoryDropdownExpanded) },
+                    placeholder = {
+                        Text(if (state.isCategoriesLoading) "Завантаження категорій..." else "Оберіть категорію")
+                    },
+                    trailingIcon = {
+                        if (state.isCategoriesLoading) {
+                            CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                        } else {
+                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = isCategoryDropdownExpanded)
+                        }
+                    },
                     isError = state.categoryError != null,
                     supportingText = state.categoryError?.let { { Text(it, color = MaterialTheme.colorScheme.error) } },
                     modifier = Modifier
@@ -169,7 +193,7 @@ fun CreateRequestScreen(
                     expanded = isCategoryDropdownExpanded,
                     onDismissRequest = { isCategoryDropdownExpanded = false }
                 ) {
-                    defaultCategories.forEach { category ->
+                    state.categories.forEach { category ->
                         DropdownMenuItem(
                             text = { Text(category.name) },
                             onClick = {
@@ -200,6 +224,68 @@ fun CreateRequestScreen(
                 maxLines = 6
             )
 
+            // Блок додавання фотографій (до 5 шт.)
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    text = "Фотографії (до 5 шт.)",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = CharcoalDark
+                )
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    if (state.selectedPhotos.size < 5) {
+                        OutlinedButton(
+                            onClick = {
+                                photoPickerLauncher.launch(
+                                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                )
+                            },
+                            modifier = Modifier.size(80.dp),
+                            shape = RoundedCornerShape(10.dp),
+                            contentPadding = PaddingValues(0.dp)
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
+                            ) {
+                                Icon(Icons.Default.AddPhotoAlternate, contentDescription = "Додати фото", tint = OliveGreen)
+                                Text("Додати", fontSize = 11.sp, color = OliveGreen)
+                            }
+                        }
+                    }
+
+                    state.selectedPhotos.forEach { uri ->
+                        Box(
+                            modifier = Modifier
+                                .size(80.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                        ) {
+                            Image(
+                                painter = rememberAsyncImagePainter(uri),
+                                contentDescription = null,
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            )
+                            IconButton(
+                                onClick = { viewModel.onRemovePhoto(uri) },
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .size(24.dp)
+                                    .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+                            ) {
+                                Icon(Icons.Default.Close, contentDescription = "Видалити", tint = Color.White, modifier = Modifier.size(16.dp))
+                            }
+                        }
+                    }
+                }
+            }
+
             // Поле 4: Адреса / локація
             OutlinedTextField(
                 value = state.location,
@@ -221,7 +307,6 @@ fun CreateRequestScreen(
                 singleLine = true
             )
 
-            // Чекбокс «Терміновий запит» відображається виключно для людини в біді
             if (!isVolunteer) {
                 Card(
                     shape = RoundedCornerShape(10.dp),
@@ -262,9 +347,9 @@ fun CreateRequestScreen(
                 )
             }
 
-            // Кнопка відправки
+            // Кнопка публікації
             Button(
-                onClick = viewModel::submitRequest,
+                onClick = { viewModel.submitRequest(context) },
                 enabled = !state.isLoading,
                 colors = ButtonDefaults.buttonColors(containerColor = OliveGreen),
                 modifier = Modifier
