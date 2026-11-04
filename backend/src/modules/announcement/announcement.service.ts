@@ -146,7 +146,10 @@ export class AnnouncementService {
   // 3.2.6 Browsing the announcement list
   // ---------------------------------------------------------------------------------------------
 
-  async findAll(query: ListAnnouncementsQueryDto): Promise<AnnouncementPage> {
+  async findAll(
+    query: ListAnnouncementsQueryDto,
+    viewer?: AuthUser,
+  ): Promise<AnnouncementPage> {
     const page = query.page ?? 1;
     const hasPoint = query.lat !== undefined && query.lng !== undefined;
 
@@ -157,6 +160,8 @@ export class AnnouncementService {
       .leftJoinAndSelect('user.volunteer', 'volunteer')
       .where('a.status = :status', { status: AnnouncementStatus.Active })
       .andWhere('a.expiresAt > now()');
+
+    if (viewer) qb.andWhere('a.userId != :viewerId', { viewerId: viewer.id });
 
     if (query.type)
       qb.andWhere('a.type = :type', {
