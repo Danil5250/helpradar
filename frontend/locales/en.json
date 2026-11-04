@@ -203,6 +203,7 @@
     "VALIDATION_FAILED": "Please correct the highlighted fields.",
     "PAGE_INVALID": "Invalid page number.",
     "SORT_INVALID": "Invalid sort order.",
+    "TYPE_INVALID": "Invalid announcement type.",
     "URGENT_INVALID": "Invalid value.",
     "UNKNOWN_FIELD": "The request contains an unknown field."
   },

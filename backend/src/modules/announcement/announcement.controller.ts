@@ -48,9 +48,16 @@ export class AnnouncementController {
   // 3.2.6 Browsing the announcement list - also available to guests
   @Get()
   @UseGuards(OptionalSessionGuard)
-  @ApiOperation({ summary: 'Active announcements, 20 per page (SRS 3.2.6)' })
-  findAll(@Query() query: ListAnnouncementsQueryDto) {
-    return this.announcements.findAll(query);
+  @ApiOperation({
+    summary: 'Active announcements, 20 per page (SRS 3.2.6)',
+    description:
+      'For a signed-in user the list does not include their own announcements (those are under "My announcements").',
+  })
+  findAll(
+    @Query() query: ListAnnouncementsQueryDto,
+    @CurrentUser() user?: AuthUser,
+  ) {
+    return this.announcements.findAll(query, user);
   }
 
   // 3.2.5.3 step 1: "My announcements" (declared before ":id" so that it is not treated as an id)

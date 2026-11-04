@@ -3,6 +3,7 @@ import type {
   AnnouncementPage,
   AnnouncementPayload,
   AnnouncementSort,
+  AnnouncementTypeFilter,
   Category,
   OwnAnnouncementItem,
   Photo,
@@ -18,7 +19,7 @@ interface ActionResult {
 export const useAnnouncements = () => ({
   categories: async (): Promise<Category[]> => (await apiFetch<{ items: Category[] }>('/categories')).items,
 
-  list: (query: { page?: number; sort?: AnnouncementSort; lat?: number; lng?: number }): Promise<AnnouncementPage> =>
+  list: (query: { page?: number; sort?: AnnouncementSort; type?: AnnouncementTypeFilter; lat?: number; lng?: number }): Promise<AnnouncementPage> =>
     apiFetch<AnnouncementPage>('/announcements', { query }),
 
   mine: async (): Promise<OwnAnnouncementItem[]> =>
