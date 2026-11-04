@@ -105,7 +105,11 @@ const sortOptions: { value: AnnouncementSort; label: string }[] = [
 ];
 
 // Computed
-const listType = computed<AnnouncementTypeFilter | undefined>(() => (role.value === 'person_in_need' ? 'helpOffer' : undefined));
+const listType = computed<AnnouncementTypeFilter | undefined>(() => {
+  if (role.value === 'person_in_need') return 'helpOffer';
+  if (role.value === 'volunteer') return 'helpRequest';
+  return undefined;
+});
 const visibleSortOptions = computed(() => (listType.value === 'helpOffer' ? sortOptions.filter((option) => option.value !== 'urgent') : sortOptions));
 
 // Methods
