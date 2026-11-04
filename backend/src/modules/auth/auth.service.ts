@@ -12,7 +12,7 @@ import { PersonInNeed } from '../users/entities/person-in-need.entity';
 import { User } from '../users/entities/user.entity';
 import { Volunteer } from '../users/entities/volunteer.entity';
 import { Role } from '../users/enums/role.enum';
-import { UserView } from '../users/user.view';
+import { UserResponseDto } from '../users/dto/user.response.dto';
 import {
   blockedException,
   isBlocked,
@@ -35,7 +35,7 @@ import { LoginAttempt } from './entities/login-attempt.entity';
 import { SessionMeta, SessionService } from './session.service';
 
 export interface AuthResult {
-  user: UserView;
+  user: UserResponseDto;
   token: string;
   expiresAt: Date;
 }
@@ -241,7 +241,7 @@ export class AuthService {
     await this.sessions.revoke(sessionId);
   }
 
-  async me(userId: number): Promise<UserView> {
+  async me(userId: number): Promise<UserResponseDto> {
     const user = await this.users.findOneByOrFail({ id: userId });
     return this.usersService.toView(user);
   }

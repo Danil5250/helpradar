@@ -6,7 +6,7 @@ import { Role } from './enums/role.enum';
 import { PersonInNeed } from './entities/person-in-need.entity';
 import { User } from './entities/user.entity';
 import { Volunteer } from './entities/volunteer.entity';
-import { UserView } from './user.view';
+import { UserResponseDto } from './dto/user.response.dto';
 
 export const normalizeEmail = (email: string): string =>
   email.trim().toLowerCase();
@@ -52,7 +52,7 @@ export class UsersService {
     return null;
   }
 
-  async toView(user: User): Promise<UserView> {
+  async toView(user: User): Promise<UserResponseDto> {
     return {
       id: user.id,
       firstName: user.firstName,

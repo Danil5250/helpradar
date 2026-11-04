@@ -1,7 +1,7 @@
-import { Role } from './enums/role.enum';
+import { Role } from '../enums/role.enum';
 
 /** Public representation of the signed-in user (never contains the password hash). */
-export interface UserView {
+export class UserResponseDto {
   id: number;
   firstName: string;
   lastName: string;
