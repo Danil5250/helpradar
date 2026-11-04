@@ -12,7 +12,7 @@ import { PersonInNeed } from '../users/entities/person-in-need.entity';
 import { User } from '../users/entities/user.entity';
 import { Volunteer } from '../users/entities/volunteer.entity';
 import { Role } from '../users/enums/role.enum';
-import { UserView } from '../users/user.view';
+import { UserResponseDto } from '../users/dto/user.response.dto';
 import {
   blockedException,
   isBlocked,
@@ -27,23 +27,17 @@ import {
   UNVERIFIED_ACCOUNT_TTL_MS,
   VERIFICATION_TTL_MS,
 } from './auth.constants';
-import { LoginDto } from './dto/login.dto';
-import { RegisterDto } from './dto/register.dto';
+import { EmailSentResponseDto } from './dto/email-sent.response.dto';
+import { LoginRequestDto } from './dto/login.request.dto';
+import { RegisterRequestDto } from './dto/register.request.dto';
 import { EmailVerificationToken } from './entities/email-verification-token.entity';
 import { LoginAttempt } from './entities/login-attempt.entity';
 import { SessionMeta, SessionService } from './session.service';
 
 export interface AuthResult {
-  user: UserView;
+  user: UserResponseDto;
   token: string;
   expiresAt: Date;
-}
-
-export interface EmailSentResult {
-  /** CHECK_EMAIL: "Check your email – we have sent you an activation link."; EMAIL_QUEUED: delivery is delayed. */
-  code: 'CHECK_EMAIL' | 'EMAIL_QUEUED';
-  message: string;
-  emailQueued: boolean;
 }
 
 const CHECK_EMAIL_MESSAGE =
@@ -81,7 +75,7 @@ export class AuthService {
   // 3.2.1 Registration with role selection
   // ---------------------------------------------------------------------------------------------
 
-  async register(dto: RegisterDto): Promise<EmailSentResult> {
+  async register(dto: RegisterRequestDto): Promise<EmailSentResponseDto> {
     const email = normalizeEmail(dto.email);
     const passwordHash = await bcrypt.hash(
       dto.password,
@@ -175,7 +169,7 @@ export class AuthService {
   async resendVerification(
     rawEmail: string,
     locale: MailLocale = 'uk',
-  ): Promise<EmailSentResult> {
+  ): Promise<EmailSentResponseDto> {
     const email = normalizeEmail(rawEmail);
     const user = await this.users.findOneBy({ email });
     if (!user || user.isConfirmedEmail) return this.emailResult(true);
@@ -212,7 +206,7 @@ export class AuthService {
   // ---------------------------------------------------------------------------------------------
 
   async login(
-    dto: LoginDto,
+    dto: LoginRequestDto,
     meta: SessionMeta,
   ): Promise<AuthResult & { message: string }> {
     const email = normalizeEmail(dto.email);
@@ -247,7 +241,7 @@ export class AuthService {
     await this.sessions.revoke(sessionId);
   }
 
-  async me(userId: number): Promise<UserView> {
+  async me(userId: number): Promise<UserResponseDto> {
     const user = await this.users.findOneByOrFail({ id: userId });
     return this.usersService.toView(user);
   }
@@ -300,7 +294,7 @@ export class AuthService {
     return `${this.config.appUrl}/verify-email?token=${encodeURIComponent(token)}`;
   }
 
-  private emailResult(delivered: boolean): EmailSentResult {
+  private emailResult(delivered: boolean): EmailSentResponseDto {
     return delivered
       ? {
           code: 'CHECK_EMAIL',

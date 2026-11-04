@@ -6,6 +6,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
+import { ErrorResponseDto } from './dto/error.response.dto';
 import { AppException, ERR, ErrorCode } from './errors';
 
 const STATUS_TO_CODE: Record<number, ErrorCode> = {
@@ -29,7 +30,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
     if (response.headersSent) return;
 
     let status: number = ERR.INTERNAL_ERROR.status;
-    let body: Record<string, unknown> = {
+    let body: ErrorResponseDto = {
       statusCode: status,
       code: 'INTERNAL_ERROR',
       message: ERR.INTERNAL_ERROR.message,
@@ -43,7 +44,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
         payload !== null &&
         'code' in payload
       ) {
-        body = payload as Record<string, unknown>;
+        body = payload as ErrorResponseDto;
       } else {
         const code =
           STATUS_TO_CODE[status] ??

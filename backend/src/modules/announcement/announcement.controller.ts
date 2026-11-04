@@ -22,6 +22,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { memoryStorage } from 'multer';
+import { MessageResponseDto } from '../../common/dto/message.response.dto';
 import type { AuthUser } from '../auth/auth-user';
 import { CurrentUser } from '../auth/current-user.decorator';
 import {
@@ -30,13 +31,16 @@ import {
 } from '../auth/guards/session-auth.guard';
 import { MAX_PHOTO_BYTES } from '../storage/image-sanitizer.service';
 import { AnnouncementService } from './announcement.service';
-import {
-  ExtendAnnouncementDto,
-  RepublishAnnouncementDto,
-} from './dto/announcement-actions.dto';
-import { CreateAnnouncementDto } from './dto/create-announcement.dto';
-import { ListAnnouncementsQueryDto } from './dto/list-announcements.dto';
-import { UpdateAnnouncementDto } from './dto/update-announcement.dto';
+import { AnnouncementActionResultResponseDto } from './dto/announcement-action-result.response.dto';
+import { AnnouncementPageResponseDto } from './dto/announcement-page.response.dto';
+import { CreateAnnouncementRequestDto } from './dto/create-announcement.request.dto';
+import { ExtendAnnouncementRequestDto } from './dto/extend-announcement.request.dto';
+import { GetAnnouncementResponseDto } from './dto/get-announcement.response.dto';
+import { GetOwnAnnouncementsResponseDto } from './dto/get-own-announcements.response.dto';
+import { ListAnnouncementsRequestDto } from './dto/list-announcements.request.dto';
+import { RepublishAnnouncementRequestDto } from './dto/republish-announcement.request.dto';
+import { UpdateAnnouncementRequestDto } from './dto/update-announcement.request.dto';
+import { UploadAnnouncementPhotoResponseDto } from './dto/upload-announcement-photo.response.dto';
 import { ParseAnnouncementIdPipe } from './parse-announcement-id.pipe';
 import { PhotoUploadFilter } from './photo-upload.filter';
 
@@ -54,9 +58,9 @@ export class AnnouncementController {
       'For a signed-in user the list does not include their own announcements (those are under "My announcements").',
   })
   findAll(
-    @Query() query: ListAnnouncementsQueryDto,
+    @Query() query: ListAnnouncementsRequestDto,
     @CurrentUser() user?: AuthUser,
-  ) {
+  ): Promise<AnnouncementPageResponseDto> {
     return this.announcements.findAll(query, user);
   }
 
@@ -65,7 +69,9 @@ export class AnnouncementController {
   @UseGuards(SessionAuthGuard)
   @ApiCookieAuth()
   @ApiOperation({ summary: 'My announcements (SRS 3.2.5)' })
-  async findMine(@CurrentUser() user: AuthUser) {
+  async findMine(
+    @CurrentUser() user: AuthUser,
+  ): Promise<GetOwnAnnouncementsResponseDto> {
     return { items: await this.announcements.findMine(user) };
   }
 
@@ -76,7 +82,7 @@ export class AnnouncementController {
   async findOne(
     @Param('id', ParseAnnouncementIdPipe) id: number,
     @CurrentUser() user?: AuthUser,
-  ) {
+  ): Promise<GetAnnouncementResponseDto> {
     return { announcement: await this.announcements.getDetails(id, user) };
   }
 
@@ -90,8 +96,8 @@ export class AnnouncementController {
   })
   async create(
     @CurrentUser() user: AuthUser,
-    @Body() dto: CreateAnnouncementDto,
-  ) {
+    @Body() dto: CreateAnnouncementRequestDto,
+  ): Promise<AnnouncementActionResultResponseDto> {
     return {
       code: 'ANNOUNCEMENT_PUBLISHED',
       message: 'Your announcement has been published.',
@@ -107,8 +113,8 @@ export class AnnouncementController {
   async update(
     @CurrentUser() user: AuthUser,
     @Param('id', ParseAnnouncementIdPipe) id: number,
-    @Body() dto: UpdateAnnouncementDto,
-  ) {
+    @Body() dto: UpdateAnnouncementRequestDto,
+  ): Promise<AnnouncementActionResultResponseDto> {
     return {
       code: 'CHANGES_SAVED',
       message: 'Changes saved.',
@@ -124,7 +130,7 @@ export class AnnouncementController {
   async close(
     @CurrentUser() user: AuthUser,
     @Param('id', ParseAnnouncementIdPipe) id: number,
-  ) {
+  ): Promise<AnnouncementActionResultResponseDto> {
     return {
       code: 'ANNOUNCEMENT_CLOSED',
       message: 'Announcement closed.',
@@ -140,8 +146,8 @@ export class AnnouncementController {
   async extend(
     @CurrentUser() user: AuthUser,
     @Param('id', ParseAnnouncementIdPipe) id: number,
-    @Body() dto: ExtendAnnouncementDto,
-  ) {
+    @Body() dto: ExtendAnnouncementRequestDto,
+  ): Promise<AnnouncementActionResultResponseDto> {
     return {
       code: 'ANNOUNCEMENT_EXTENDED',
       message: 'Announcement extended.',
@@ -159,8 +165,8 @@ export class AnnouncementController {
   async republish(
     @CurrentUser() user: AuthUser,
     @Param('id', ParseAnnouncementIdPipe) id: number,
-    @Body() dto: RepublishAnnouncementDto,
-  ) {
+    @Body() dto: RepublishAnnouncementRequestDto,
+  ): Promise<AnnouncementActionResultResponseDto> {
     return {
       code: 'ANNOUNCEMENT_PUBLISHED',
       message: 'Your announcement has been published.',
@@ -180,7 +186,7 @@ export class AnnouncementController {
   async remove(
     @CurrentUser() user: AuthUser,
     @Param('id', ParseAnnouncementIdPipe) id: number,
-  ) {
+  ): Promise<MessageResponseDto> {
     await this.announcements.remove(user, id);
     return { code: 'ANNOUNCEMENT_DELETED', message: 'Announcement deleted.' };
   }
@@ -211,7 +217,7 @@ export class AnnouncementController {
     @CurrentUser() user: AuthUser,
     @Param('id', ParseAnnouncementIdPipe) id: number,
     @UploadedFile() file?: Express.Multer.File,
-  ) {
+  ): Promise<UploadAnnouncementPhotoResponseDto> {
     return { photo: await this.announcements.addPhoto(user, id, file) };
   }
 
@@ -224,7 +230,7 @@ export class AnnouncementController {
     @CurrentUser() user: AuthUser,
     @Param('id', ParseAnnouncementIdPipe) id: number,
     @Param('photoId', ParseAnnouncementIdPipe) photoId: number,
-  ) {
+  ): Promise<MessageResponseDto> {
     await this.announcements.removePhoto(user, id, photoId);
     return { code: 'PHOTO_REMOVED', message: 'Photo removed.' };
   }

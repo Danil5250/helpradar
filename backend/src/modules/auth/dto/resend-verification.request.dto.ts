@@ -9,7 +9,7 @@ import {
 } from 'class-validator';
 import { v } from '../../../common/validation';
 
-export class ResendVerificationDto {
+export class ResendVerificationRequestDto {
   @ApiProperty({ example: 'olena@example.com' })
   @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   @IsString(v('EMAIL_INVALID', 'Enter a valid email address.'))

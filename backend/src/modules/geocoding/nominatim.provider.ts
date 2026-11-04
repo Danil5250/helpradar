@@ -1,11 +1,8 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { ConfigType } from '@nestjs/config';
 import appConfig from '../../config/app.config';
-import {
-  GeocodingProvider,
-  PlaceSuggestion,
-  SearchOptions,
-} from './geocoding.provider';
+import { PlaceSuggestionResponseDto } from './dto/place-suggestion.response.dto';
+import { GeocodingProvider, SearchOptions } from './geocoding.provider';
 
 interface NominatimItem {
   lat: string;
@@ -33,7 +30,7 @@ export class NominatimProvider extends GeocodingProvider {
   async search(
     query: string,
     options: SearchOptions,
-  ): Promise<PlaceSuggestion[]> {
+  ): Promise<PlaceSuggestionResponseDto[]> {
     const params = new URLSearchParams({
       q: query,
       format: 'jsonv2',
@@ -50,7 +47,7 @@ export class NominatimProvider extends GeocodingProvider {
   async reverse(
     latitude: number,
     longitude: number,
-  ): Promise<PlaceSuggestion | null> {
+  ): Promise<PlaceSuggestionResponseDto | null> {
     const params = new URLSearchParams({
       lat: String(latitude),
       lon: String(longitude),
@@ -65,7 +62,7 @@ export class NominatimProvider extends GeocodingProvider {
     return item.error ? null : this.toSuggestion(item);
   }
 
-  private toSuggestion(item: NominatimItem): PlaceSuggestion {
+  private toSuggestion(item: NominatimItem): PlaceSuggestionResponseDto {
     const address = item.address ?? {};
     const city =
       address.city ??

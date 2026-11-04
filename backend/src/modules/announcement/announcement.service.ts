@@ -31,21 +31,19 @@ import {
   REPUBLISH_WINDOW_DAYS,
 } from './announcement.constants';
 import { Announcement } from './entities/announcement.entity';
-import {
-  AnnouncementAction,
-  AnnouncementDetails,
-  AnnouncementListItem,
-  AnnouncementPage,
-  OwnAnnouncementItem,
-  PhotoView,
-} from './announcement.views';
-import { CreateAnnouncementDto } from './dto/create-announcement.dto';
+import { AnnouncementDetailsResponseDto } from './dto/announcement-details.response.dto';
+import { AnnouncementListItemResponseDto } from './dto/announcement-list-item.response.dto';
+import { AnnouncementPageResponseDto } from './dto/announcement-page.response.dto';
+import { AnnouncementPhotoResponseDto } from './dto/announcement-photo.response.dto';
+import { OwnAnnouncementItemResponseDto } from './dto/own-announcement-item.response.dto';
+import { CreateAnnouncementRequestDto } from './dto/create-announcement.request.dto';
 import {
   ANNOUNCEMENT_TYPE_BY_FILTER,
   AnnouncementSort,
-  ListAnnouncementsQueryDto,
-} from './dto/list-announcements.dto';
-import { UpdateAnnouncementDto } from './dto/update-announcement.dto';
+  ListAnnouncementsRequestDto,
+} from './dto/list-announcements.request.dto';
+import { UpdateAnnouncementRequestDto } from './dto/update-announcement.request.dto';
+import { AnnouncementAction } from './enums/announcement-action.type';
 import { AnnouncementStatus } from './enums/announcement-status.enum';
 import { AnnouncementType } from './enums/announcement-type.enum';
 import { ModerationService } from './moderation.service';
@@ -84,8 +82,8 @@ export class AnnouncementService {
 
   async create(
     user: AuthUser,
-    dto: CreateAnnouncementDto,
-  ): Promise<AnnouncementDetails> {
+    dto: CreateAnnouncementRequestDto,
+  ): Promise<AnnouncementDetailsResponseDto> {
     this.assertCanPublish(user);
     await this.assertActiveLimit(user.id);
     await this.assertCategory(dto.categoryId);
@@ -147,9 +145,9 @@ export class AnnouncementService {
   // ---------------------------------------------------------------------------------------------
 
   async findAll(
-    query: ListAnnouncementsQueryDto,
+    query: ListAnnouncementsRequestDto,
     viewer?: AuthUser,
-  ): Promise<AnnouncementPage> {
+  ): Promise<AnnouncementPageResponseDto> {
     const page = query.page ?? 1;
     const hasPoint = query.lat !== undefined && query.lng !== undefined;
 
@@ -211,7 +209,7 @@ export class AnnouncementService {
   }
 
   /** "My announcements" (SRS 3.2.5.3 step 1): everything the user has published except deleted entries. */
-  async findMine(user: AuthUser): Promise<OwnAnnouncementItem[]> {
+  async findMine(user: AuthUser): Promise<OwnAnnouncementItemResponseDto[]> {
     const entities = await this.announcements
       .createQueryBuilder('a')
       .innerJoinAndSelect('a.category', 'category')
@@ -227,13 +225,17 @@ export class AnnouncementService {
     const thumbnails = await this.firstPhotos(
       entities.map((entity) => entity.id),
     );
-    return entities.map((entity) => ({
-      ...this.toListItem(entity, thumbnails.get(entity.id) ?? null, null),
-      viewsCount: entity.viewsCount,
-      responsesCount: entity.responsesCount,
-      allowedActions: this.allowedActions(entity),
-      republishUntil: this.republishUntil(entity),
-    }));
+    return entities.map((entity) =>
+      Object.assign(
+        this.toListItem(entity, thumbnails.get(entity.id) ?? null, null),
+        {
+          viewsCount: entity.viewsCount,
+          responsesCount: entity.responsesCount,
+          allowedActions: this.allowedActions(entity),
+          republishUntil: this.republishUntil(entity),
+        },
+      ),
+    );
   }
 
   // ---------------------------------------------------------------------------------------------
@@ -244,7 +246,7 @@ export class AnnouncementService {
     id: number,
     viewer?: AuthUser,
     options: { countView?: boolean } = {},
-  ): Promise<AnnouncementDetails> {
+  ): Promise<AnnouncementDetailsResponseDto> {
     const entity = await this.announcements.findOne({
       where: { id },
       relations: { category: true, user: { volunteer: true }, photos: true },
@@ -274,8 +276,8 @@ export class AnnouncementService {
   async update(
     user: AuthUser,
     id: number,
-    dto: UpdateAnnouncementDto,
-  ): Promise<AnnouncementDetails> {
+    dto: UpdateAnnouncementRequestDto,
+  ): Promise<AnnouncementDetailsResponseDto> {
     const entity = await this.loadForAuthor(user, id);
     if (entity.status === AnnouncementStatus.InProgress)
       throw new AppException('EDIT_IN_PROGRESS');
@@ -336,7 +338,10 @@ export class AnnouncementService {
     return this.getDetails(id, user, { countView: false });
   }
 
-  async close(user: AuthUser, id: number): Promise<AnnouncementDetails> {
+  async close(
+    user: AuthUser,
+    id: number,
+  ): Promise<AnnouncementDetailsResponseDto> {
     const entity = await this.loadForAuthor(user, id);
     if (entity.status !== AnnouncementStatus.Active)
       throw new AppException('CLOSE_NOT_ALLOWED');
@@ -373,7 +378,7 @@ export class AnnouncementService {
     user: AuthUser,
     id: number,
     days: number = MAX_EXTEND_DAYS,
-  ): Promise<AnnouncementDetails> {
+  ): Promise<AnnouncementDetailsResponseDto> {
     const entity = await this.loadForAuthor(user, id);
     if (entity.status !== AnnouncementStatus.Active)
       throw new AppException('EXTEND_NOT_ALLOWED');
@@ -391,7 +396,7 @@ export class AnnouncementService {
     user: AuthUser,
     id: number,
     expiryDays: number = DEFAULT_EXPIRY_DAYS,
-  ): Promise<AnnouncementDetails> {
+  ): Promise<AnnouncementDetailsResponseDto> {
     const entity = await this.loadForAuthor(user, id);
     if (entity.status !== AnnouncementStatus.Closed)
       throw new AppException('REPUBLISH_NOT_ALLOWED');
@@ -432,7 +437,7 @@ export class AnnouncementService {
     user: AuthUser,
     id: number,
     file: Pick<Express.Multer.File, 'buffer' | 'size'> | undefined,
-  ): Promise<PhotoView> {
+  ): Promise<AnnouncementPhotoResponseDto> {
     const entity = await this.loadForAuthor(user, id);
     if (entity.status !== AnnouncementStatus.Active)
       throw new AppException('NOT_EDITABLE');
@@ -615,7 +620,10 @@ export class AnnouncementService {
    * converted by the geocoding service (SRS 3.2.4.3 step 6).
    */
   private async resolveLocation(
-    dto: Pick<CreateAnnouncementDto, 'latitude' | 'longitude' | 'address'>,
+    dto: Pick<
+      CreateAnnouncementRequestDto,
+      'latitude' | 'longitude' | 'address'
+    >,
   ): Promise<{ point: GeoPoint; address: string | null }> {
     const hasLatitude = dto.latitude !== undefined;
     const hasLongitude = dto.longitude !== undefined;
@@ -733,7 +741,7 @@ export class AnnouncementService {
     entity: Announcement,
     thumbnail: AnnouncementPhoto | null,
     distanceKm: number | null,
-  ): AnnouncementListItem {
+  ): AnnouncementListItemResponseDto {
     const description = entity.description;
     return {
       id: entity.id,
@@ -766,7 +774,7 @@ export class AnnouncementService {
   private toDetails(
     entity: Announcement,
     isOwner: boolean,
-  ): AnnouncementDetails {
+  ): AnnouncementDetailsResponseDto {
     return {
       id: entity.id,
       type: entity.type,

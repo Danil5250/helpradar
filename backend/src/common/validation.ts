@@ -1,5 +1,6 @@
 import { ValidationError, ValidationPipe } from '@nestjs/common';
-import { AppException, FieldError } from './errors';
+import { FieldErrorResponseDto } from './dto/field-error.response.dto';
+import { AppException } from './errors';
 
 /** Builds class-validator options carrying both the user facing text and a stable error code. */
 export const v = (code: string, message: string) => ({
@@ -10,7 +11,7 @@ export const v = (code: string, message: string) => ({
 function collect(
   errors: ValidationError[],
   prefix: string,
-  into: Record<string, FieldError>,
+  into: Record<string, FieldErrorResponseDto>,
 ): void {
   for (const error of errors) {
     const path = prefix ? `${prefix}.${error.property}` : error.property;
@@ -35,7 +36,7 @@ export function buildValidationPipe(): ValidationPipe {
     forbidNonWhitelisted: true,
     transform: true,
     exceptionFactory: (errors) => {
-      const fields: Record<string, FieldError> = {};
+      const fields: Record<string, FieldErrorResponseDto> = {};
       collect(errors, '', fields);
       return new AppException('VALIDATION_FAILED', { fields });
     },

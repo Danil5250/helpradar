@@ -1,10 +1,4 @@
-export interface PlaceSuggestion {
-  label: string;
-  latitude: number;
-  longitude: number;
-  city: string | null;
-  region: string | null;
-}
+import { PlaceSuggestionResponseDto } from './dto/place-suggestion.response.dto';
 
 export interface SearchOptions {
   limit: number;
@@ -18,9 +12,9 @@ export abstract class GeocodingProvider {
   abstract search(
     query: string,
     options: SearchOptions,
-  ): Promise<PlaceSuggestion[]>;
+  ): Promise<PlaceSuggestionResponseDto[]>;
   abstract reverse(
     latitude: number,
     longitude: number,
-  ): Promise<PlaceSuggestion | null>;
+  ): Promise<PlaceSuggestionResponseDto | null>;
 }
