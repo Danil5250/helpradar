@@ -1,4 +1,6 @@
 import { HttpException } from '@nestjs/common';
+import { ErrorResponseDto } from './dto/error.response.dto';
+import { FieldErrorResponseDto } from './dto/field-error.response.dto';
 
 /**
  * Catalogue of API errors. The `message` texts of the registration, login and announcement
@@ -129,16 +131,13 @@ export const ERR = {
 
 export type ErrorCode = keyof typeof ERR;
 
-export interface FieldError {
-  code: string;
-  message: string;
-}
-
 /** Error with a stable machine readable `code` (used by the web client for translation). */
 export class AppException extends HttpException {
   constructor(
     public readonly code: ErrorCode,
-    extra: Record<string, unknown> = {},
+    extra: Partial<
+      Omit<ErrorResponseDto, 'statusCode' | 'code' | 'message'>
+    > = {},
     message?: string,
   ) {
     super(
@@ -154,7 +153,7 @@ export class AppException extends HttpException {
 }
 
 export function validationFailed(
-  fields: Record<string, FieldError>,
+  fields: Record<string, FieldErrorResponseDto>,
 ): AppException {
   return new AppException('VALIDATION_FAILED', { fields });
 }
