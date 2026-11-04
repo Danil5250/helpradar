@@ -1,5 +1,6 @@
 package ua.helpradar.app.presentation.request
 
+import android.Manifest
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -17,6 +18,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AddPhotoAlternate
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.WarningAmber
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -49,6 +51,19 @@ fun CreateRequestScreen(
     ) { uris: List<Uri> ->
         if (uris.isNotEmpty()) {
             viewModel.onAddPhotos(context, uris)
+        }
+    }
+
+    val locationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val fineGranted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true
+        val coarseGranted = permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+
+        if (fineGranted || coarseGranted) {
+            viewModel.fetchCurrentLocation(context)
+        } else {
+            viewModel.onLocationChange(state.location)
         }
     }
 
@@ -286,19 +301,46 @@ fun CreateRequestScreen(
                 }
             }
 
-            // Поле 4: Адреса / локація
+            // Поле 4: Адреса / локація з кнопкою автоматичного визначення
             OutlinedTextField(
                 value = state.location,
                 onValueChange = viewModel::onLocationChange,
                 label = { Text(if (isVolunteer) "Місто / район надання допомоги *" else "Населений пункт / адреса *") },
+                placeholder = { Text("Введіть або визначте автоматично") },
+                trailingIcon = {
+                    if (state.isLocating) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            strokeWidth = 2.dp,
+                            color = OliveGreen
+                        )
+                    } else {
+                        IconButton(
+                            onClick = {
+                                locationPermissionLauncher.launch(
+                                    arrayOf(
+                                        Manifest.permission.ACCESS_FINE_LOCATION,
+                                        Manifest.permission.ACCESS_COARSE_LOCATION
+                                    )
+                                )
+                            }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.MyLocation,
+                                contentDescription = "Визначити поточне місцезнаходження",
+                                tint = OliveGreen
+                            )
+                        }
+                    }
+                },
                 isError = state.locationError != null,
                 supportingText = {
                     if (state.locationError != null) {
                         Text(state.locationError!!, color = MaterialTheme.colorScheme.error)
                     } else {
                         Text(
-                            if (isVolunteer) "Вкажіть зону або місто вашої діяльності"
-                            else "Точна адреса буде видима лише підтвердженому волонтеру",
+                            if (isVolunteer) "Натисніть на значок прицілу для визначення вашого міста"
+                            else "Натисніть на значок прицілу для автоматичного визначення адреси",
                             fontSize = 11.sp
                         )
                     }

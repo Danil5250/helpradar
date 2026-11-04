@@ -1,20 +1,32 @@
 package ua.helpradar.app.presentation.request
 
+import android.annotation.SuppressLint
 import android.content.Context
+import android.location.Geocoder
+import android.location.Location
+import android.location.LocationListener
+import android.location.LocationManager
 import android.net.Uri
+import android.os.Build
+import android.os.Bundle
+import android.os.Looper
 import android.provider.OpenableColumns
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import ua.helpradar.app.data.local.SessionManager
 import ua.helpradar.app.data.network.Resource
 import ua.helpradar.app.data.network.dto.CategoryDto
 import ua.helpradar.app.data.network.dto.CreateAnnouncementRequest
 import ua.helpradar.app.data.repository.AnnouncementRepository
+import java.util.Locale
 
 class CreateRequestViewModel(
     private val repository: AnnouncementRepository = AnnouncementRepository()
@@ -59,6 +71,110 @@ class CreateRequestViewModel(
     fun onLocationChange(value: String) = _uiState.update { it.copy(location = value, locationError = null) }
     fun onExpiryDaysChange(days: Int) = _uiState.update { it.copy(expiryDays = days) }
     fun onUrgentToggle(urgent: Boolean) = _uiState.update { it.copy(isUrgent = urgent) }
+
+    @SuppressLint("MissingPermission")
+    fun fetchCurrentLocation(context: Context) {
+        val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager
+        if (locationManager == null) {
+            _uiState.update { it.copy(locationError = "Служба геолокації недоступна на пристрої") }
+            return
+        }
+
+        _uiState.update { it.copy(isLocating = true, locationError = null) }
+
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                val provider = if (locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
+                    LocationManager.GPS_PROVIDER
+                } else {
+                    LocationManager.NETWORK_PROVIDER
+                }
+
+                // Запитуємо саме СВІЖУ точку, яку щойно виставили в емуляторі
+                locationManager.getCurrentLocation(
+                    provider,
+                    null,
+                    context.mainExecutor
+                ) { location ->
+                    if (location != null) {
+                        applyLocation(context, location.latitude, location.longitude)
+                    } else {
+                        // Якщо свіжа точка не прийшла, шукаємо в кеші
+                        fallbackToLastKnownOrCurrent(context, locationManager)
+                    }
+                }
+            } else {
+                fallbackToLastKnownOrCurrent(context, locationManager)
+            }
+        } catch (_: Exception) {
+            fallbackToLastKnownOrCurrent(context, locationManager)
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun fallbackToLastKnownOrCurrent(context: Context, locationManager: LocationManager) {
+        val providers = locationManager.getProviders(true)
+        var bestLocation: Location? = null
+
+        for (p in providers) {
+            val loc = locationManager.getLastKnownLocation(p) ?: continue
+            if (bestLocation == null || loc.accuracy < bestLocation.accuracy) {
+                bestLocation = loc
+            }
+        }
+
+        if (bestLocation != null) {
+            applyLocation(context, bestLocation.latitude, bestLocation.longitude)
+        } else {
+            applyLocation(context, 50.4501, 30.5234)
+        }
+    }
+
+    private fun applyLocation(context: Context, lat: Double, lon: Double) {
+        _uiState.update {
+            it.copy(
+                latitude = lat,
+                longitude = lon
+            )
+        }
+        resolveAddressFromCoordinates(context, lat, lon)
+    }
+
+    private fun resolveAddressFromCoordinates(context: Context, lat: Double, lon: Double) {
+        viewModelScope.launch {
+            var resolvedAddress: String? = null
+
+            try {
+                resolvedAddress = withContext(Dispatchers.IO) {
+                    val geocoder = Geocoder(context, Locale("uk", "UA"))
+                    @Suppress("DEPRECATION")
+                    val list = geocoder.getFromLocation(lat, lon, 1)
+                    if (!list.isNullOrEmpty()) {
+                        val addr = list[0]
+                        val city = addr.locality ?: addr.adminArea ?: ""
+                        val street = addr.thoroughfare ?: ""
+                        val house = addr.subThoroughfare ?: ""
+                        listOf(city, street, house)
+                            .filter { it.isNotBlank() }
+                            .joinToString(", ")
+                            .ifEmpty { addr.getAddressLine(0) }
+                    } else null
+                }
+            } catch (_: Exception) {
+                resolvedAddress = null
+            }
+
+            val textToDisplay = resolvedAddress ?: "м. Київ (%.4f, %.4f)".format(lat, lon)
+
+            _uiState.update {
+                it.copy(
+                    location = textToDisplay,
+                    isLocating = false,
+                    locationError = null
+                )
+            }
+        }
+    }
 
     fun onAddPhotos(context: Context, uris: List<Uri>) {
         val contentResolver = context.contentResolver
@@ -144,8 +260,8 @@ class CreateRequestViewModel(
                 description = state.description.trim(),
                 categoryId = category.id,
                 address = state.location.trim(),
-                latitude = 50.4501,
-                longitude = 30.5234,
+                latitude = state.latitude,
+                longitude = state.longitude,
                 expiryDays = state.expiryDays,
                 isUrgent = if (state.isVolunteer) false else state.isUrgent
             )
