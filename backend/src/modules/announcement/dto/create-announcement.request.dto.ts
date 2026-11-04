@@ -35,7 +35,7 @@ const EXPIRY = v(
 const LOCATION = v('LOCATION_INVALID', 'The location is not valid.');
 
 /** SRS 3.2.4.2 Inputs - creating a help announcement. */
-export class CreateAnnouncementDto {
+export class CreateAnnouncementRequestDto {
   @ApiProperty({
     example: 'Need medicines for my mother',
     minLength: 5,

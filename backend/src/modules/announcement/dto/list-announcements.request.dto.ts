@@ -31,7 +31,7 @@ export const ANNOUNCEMENT_TYPE_BY_FILTER: Record<
 };
 
 /** SRS 3.2.6.2 Inputs: sort order (newest, nearest, urgent first) and the current location. */
-export class ListAnnouncementsQueryDto {
+export class ListAnnouncementsRequestDto {
   @ApiPropertyOptional({ default: 1, minimum: 1 })
   @IsOptional()
   @Type(() => Number)

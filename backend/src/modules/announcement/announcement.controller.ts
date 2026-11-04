@@ -30,13 +30,11 @@ import {
 } from '../auth/guards/session-auth.guard';
 import { MAX_PHOTO_BYTES } from '../storage/image-sanitizer.service';
 import { AnnouncementService } from './announcement.service';
-import {
-  ExtendAnnouncementDto,
-  RepublishAnnouncementDto,
-} from './dto/announcement-actions.dto';
-import { CreateAnnouncementDto } from './dto/create-announcement.dto';
-import { ListAnnouncementsQueryDto } from './dto/list-announcements.dto';
-import { UpdateAnnouncementDto } from './dto/update-announcement.dto';
+import { CreateAnnouncementRequestDto } from './dto/create-announcement.request.dto';
+import { ExtendAnnouncementRequestDto } from './dto/extend-announcement.request.dto';
+import { ListAnnouncementsRequestDto } from './dto/list-announcements.request.dto';
+import { RepublishAnnouncementRequestDto } from './dto/republish-announcement.request.dto';
+import { UpdateAnnouncementRequestDto } from './dto/update-announcement.request.dto';
 import { ParseAnnouncementIdPipe } from './parse-announcement-id.pipe';
 import { PhotoUploadFilter } from './photo-upload.filter';
 
@@ -54,7 +52,7 @@ export class AnnouncementController {
       'For a signed-in user the list does not include their own announcements (those are under "My announcements").',
   })
   findAll(
-    @Query() query: ListAnnouncementsQueryDto,
+    @Query() query: ListAnnouncementsRequestDto,
     @CurrentUser() user?: AuthUser,
   ) {
     return this.announcements.findAll(query, user);
@@ -90,7 +88,7 @@ export class AnnouncementController {
   })
   async create(
     @CurrentUser() user: AuthUser,
-    @Body() dto: CreateAnnouncementDto,
+    @Body() dto: CreateAnnouncementRequestDto,
   ) {
     return {
       code: 'ANNOUNCEMENT_PUBLISHED',
@@ -107,7 +105,7 @@ export class AnnouncementController {
   async update(
     @CurrentUser() user: AuthUser,
     @Param('id', ParseAnnouncementIdPipe) id: number,
-    @Body() dto: UpdateAnnouncementDto,
+    @Body() dto: UpdateAnnouncementRequestDto,
   ) {
     return {
       code: 'CHANGES_SAVED',
@@ -140,7 +138,7 @@ export class AnnouncementController {
   async extend(
     @CurrentUser() user: AuthUser,
     @Param('id', ParseAnnouncementIdPipe) id: number,
-    @Body() dto: ExtendAnnouncementDto,
+    @Body() dto: ExtendAnnouncementRequestDto,
   ) {
     return {
       code: 'ANNOUNCEMENT_EXTENDED',
@@ -159,7 +157,7 @@ export class AnnouncementController {
   async republish(
     @CurrentUser() user: AuthUser,
     @Param('id', ParseAnnouncementIdPipe) id: number,
-    @Body() dto: RepublishAnnouncementDto,
+    @Body() dto: RepublishAnnouncementRequestDto,
   ) {
     return {
       code: 'ANNOUNCEMENT_PUBLISHED',
