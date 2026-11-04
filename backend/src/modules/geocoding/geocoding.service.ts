@@ -1,7 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { AppException } from '../../common/errors';
 import { GeoPoint } from '../../common/utils/geo';
-import { GeocodingProvider, PlaceSuggestion } from './geocoding.provider';
+import { PlaceSuggestionResponseDto } from './dto/place-suggestion.response.dto';
+import { GeocodingProvider } from './geocoding.provider';
 
 const CACHE_TTL_MS = 10 * 60 * 1000;
 const CACHE_MAX_ENTRIES = 500;
@@ -18,7 +19,7 @@ export class GeocodingService {
   constructor(private readonly provider: GeocodingProvider) {}
 
   /** Address autocomplete; fails with GEOCODER_UNAVAILABLE when the external service cannot be reached. */
-  async searchAddress(query: string): Promise<PlaceSuggestion[]> {
+  async searchAddress(query: string): Promise<PlaceSuggestionResponseDto[]> {
     const normalized = query.trim();
     return this.cached(`address:${normalized.toLowerCase()}`, async () => {
       try {
@@ -42,7 +43,7 @@ export class GeocodingService {
   async reverse(
     latitude: number,
     longitude: number,
-  ): Promise<PlaceSuggestion | null> {
+  ): Promise<PlaceSuggestionResponseDto | null> {
     const key = `reverse:${latitude.toFixed(4)},${longitude.toFixed(4)}`;
     try {
       return await this.cached(key, () =>
