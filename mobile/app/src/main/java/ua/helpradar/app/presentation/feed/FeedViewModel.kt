@@ -8,10 +8,13 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import ua.helpradar.app.data.network.Resource
+import ua.helpradar.app.data.network.dto.CategoryDto
 import ua.helpradar.app.data.repository.AnnouncementRepository
 
 data class FeedUiState(
     val searchQuery: String = "",
+    val categories: List<CategoryDto> = emptyList(),
+    val isCategoriesLoading: Boolean = false,
     val selectedCategory: String? = null,
     val selectedType: AnnouncementType? = null,
     val announcements: List<AnnouncementItem> = emptyList(),
@@ -26,10 +29,12 @@ class FeedViewModel(
     private val _uiState = MutableStateFlow(FeedUiState())
     val uiState: StateFlow<FeedUiState> = _uiState.asStateFlow()
 
-    private var allLoadedAnnouncements = listOf<AnnouncementItem>()
+    // Зберігаємо сирі дані з бекенду для локальної фільтрації за категорією/пошуком
+    private var rawBackendAnnouncements: List<AnnouncementItem> = emptyList()
 
     init {
         loadFeed()
+        loadCategories()
     }
 
     fun loadFeed() {
@@ -37,32 +42,38 @@ class FeedViewModel(
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             when (val result = repository.getAnnouncements()) {
                 is Resource.Success -> {
-                    val serverItems = result.data.orEmpty().map { dto ->
-                        val authorDisplayName = dto.author?.name
-                            ?: listOfNotNull(dto.author?.firstName, dto.author?.lastName).joinToString(" ").ifEmpty { "Користувач" }
-
-                        AnnouncementItem(
-                            id = dto.id,
-                            title = dto.title,
-                            description = dto.excerpt ?: dto.description ?: "",
-                            categoryName = dto.category?.name ?: "Загальне",
-                            type = if (dto.type.equals("HelpOffer", ignoreCase = true) || dto.type.equals("offer", ignoreCase = true)) {
-                                AnnouncementType.OFFER
-                            } else {
-                                AnnouncementType.REQUEST
-                            },
-                            distanceKm = dto.distanceKm ?: 0.0,
-                            postedTimeAgo = "Нещодавно",
-                            authorName = authorDisplayName,
-                            authorRating = dto.author?.rating ?: 5.0,
-                            isUrgent = dto.isUrgent
-                        )
-                    }
-                    allLoadedAnnouncements = serverItems
-                    _uiState.update { it.copy(isLoading = false, announcements = serverItems) }
+                    rawBackendAnnouncements = result.data
+                    applyFilters()
+                    _uiState.update { it.copy(isLoading = false) }
                 }
                 is Resource.Error -> {
-                    _uiState.update { it.copy(isLoading = false, errorMessage = result.message) }
+                    rawBackendAnnouncements = emptyList()
+                    _uiState.update {
+                        it.copy(
+                            announcements = emptyList(),
+                            isLoading = false,
+                            errorMessage = result.message
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    fun loadCategories() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isCategoriesLoading = true) }
+            when (val result = repository.getCategories()) {
+                is Resource.Success -> {
+                    _uiState.update {
+                        it.copy(
+                            categories = result.data,
+                            isCategoriesLoading = false
+                        )
+                    }
+                }
+                is Resource.Error -> {
+                    _uiState.update { it.copy(isCategoriesLoading = false) }
                 }
             }
         }
@@ -92,11 +103,11 @@ class FeedViewModel(
         val category = _uiState.value.selectedCategory
         val type = _uiState.value.selectedType
 
-        val filtered = allLoadedAnnouncements.filter { item ->
+        val filtered = rawBackendAnnouncements.filter { item ->
             val matchesQuery = query.isEmpty() ||
                     item.title.lowercase().contains(query) ||
                     item.description.lowercase().contains(query)
-            val matchesCategory = category == null || item.categoryName == category
+            val matchesCategory = category == null || item.categoryName.equals(category, ignoreCase = true)
             val matchesType = type == null || item.type == type
 
             matchesQuery && matchesCategory && matchesType

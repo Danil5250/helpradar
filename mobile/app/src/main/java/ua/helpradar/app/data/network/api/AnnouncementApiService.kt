@@ -1,15 +1,14 @@
 package ua.helpradar.app.data.network.api
 
+import okhttp3.MultipartBody
 import retrofit2.Response
-import retrofit2.http.Body
-import retrofit2.http.GET
-import retrofit2.http.POST
-import retrofit2.http.Query
-import ua.helpradar.app.data.network.dto.AnnouncementListResponse
-import ua.helpradar.app.data.network.dto.AnnouncementResponseDto
-import ua.helpradar.app.data.network.dto.CreateAnnouncementRequest
+import retrofit2.http.*
+import ua.helpradar.app.data.network.dto.*
 
 interface AnnouncementApiService {
+
+    @GET("api/categories")
+    suspend fun getCategories(): Response<CategoriesResponseDto>
 
     @GET("api/announcements")
     suspend fun getAnnouncements(
@@ -22,5 +21,12 @@ interface AnnouncementApiService {
     @POST("api/announcements")
     suspend fun createAnnouncement(
         @Body request: CreateAnnouncementRequest
-    ): Response<AnnouncementResponseDto>
+    ): Response<CreateAnnouncementResponse>
+
+    @Multipart
+    @POST("api/announcements/{id}/photos")
+    suspend fun addPhoto(
+        @Path("id") id: Int,
+        @Part photo: MultipartBody.Part
+    ): Response<PhotoUploadResponse>
 }

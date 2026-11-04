@@ -9,9 +9,12 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import ua.helpradar.app.data.network.api.AnnouncementApiService
 import ua.helpradar.app.data.network.api.AuthApiService
+import ua.helpradar.app.data.network.api.GeocodingApiService
 
 object ApiClient {
-    private const val BASE_URL = "http://localhost:3000/"
+    // Якщо запускаєте на Android емуляторі, використовуйте 10.0.2.2 замість localhost,
+    // оскільки localhost всередині емулятора вказує на сам віртуальний телефон.
+    private const val BASE_URL = "http://10.0.2.2:3000/"
 
     private val cookieStore = mutableMapOf<String, List<Cookie>>()
 
@@ -35,10 +38,9 @@ object ApiClient {
 
     private val okHttpClient = OkHttpClient.Builder()
         .cookieJar(cookieJar)
-        // Додаємо інтерсептор для Origin та заголовків
         .addInterceptor { chain ->
             val request = chain.request().newBuilder()
-                .header("Origin", "http://localhost:3000") // Дозволений Origin для бекенду
+                .header("Origin", "http://localhost:3000")
                 .build()
             chain.proceed(request)
         }
@@ -51,6 +53,15 @@ object ApiClient {
         .client(okHttpClient)
         .build()
 
-    val authService: AuthApiService = retrofit.create(AuthApiService::class.java)
-    val announcementService: AnnouncementApiService = retrofit.create(AnnouncementApiService::class.java)
+    val authService: AuthApiService by lazy {
+        retrofit.create(AuthApiService::class.java)
+    }
+
+    val announcementApiService: AnnouncementApiService by lazy {
+        retrofit.create(AnnouncementApiService::class.java)
+    }
+
+    val geocodingService: GeocodingApiService by lazy {
+        retrofit.create(GeocodingApiService::class.java)
+    }
 }
