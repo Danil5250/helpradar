@@ -3,6 +3,7 @@ package ua.helpradar.app.presentation.feed
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -36,12 +37,14 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
 import ua.helpradar.app.R
+import ua.helpradar.app.data.local.SessionManager
 import ua.helpradar.app.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FeedScreen(
     onCreateRequestClick: () -> Unit,
+    onProfileClick: () -> Unit = {},
     onSignOutClick: () -> Unit = {},
     viewModel: FeedViewModel = viewModel()
 ) {
@@ -49,6 +52,8 @@ fun FeedScreen(
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val coroutineScope = rememberCoroutineScope()
     var selectedDrawerItem by remember { mutableStateOf("Announcements") }
+
+    val userInitial = remember { SessionManager.userInitial }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -80,20 +85,14 @@ fun FeedScreen(
                             .clip(RoundedCornerShape(10.dp))
                     )
 
-                    Box(
-                        modifier = Modifier
-                            .size(36.dp)
-                            .clip(CircleShape)
-                            .background(TacticalOlive.copy(alpha = 0.5f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "Д",
-                            fontWeight = FontWeight.Bold,
-                            color = CharcoalDark,
-                            fontSize = 15.sp
-                        )
-                    }
+                    // Аватарка в меню
+                    UserAvatarBadge(
+                        initial = userInitial,
+                        onClick = {
+                            coroutineScope.launch { drawerState.close() }
+                            onProfileClick()
+                        }
+                    )
                 }
 
                 HorizontalDivider(color = BorderSand.copy(alpha = 0.5f), thickness = 1.dp)
@@ -143,6 +142,7 @@ fun FeedScreen(
                         onClick = {
                             selectedDrawerItem = "Profile"
                             coroutineScope.launch { drawerState.close() }
+                            onProfileClick()
                         }
                     )
 
@@ -211,20 +211,11 @@ fun FeedScreen(
                                 )
                             }
 
-                            Box(
-                                modifier = Modifier
-                                    .size(36.dp)
-                                    .clip(CircleShape)
-                                    .background(TacticalOlive.copy(alpha = 0.5f)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = "Д",
-                                    fontWeight = FontWeight.Bold,
-                                    color = CharcoalDark,
-                                    fontSize = 15.sp
-                                )
-                            }
+                            // Аватарка у верхньому TopBar
+                            UserAvatarBadge(
+                                initial = userInitial,
+                                onClick = onProfileClick
+                            )
                         }
                         HorizontalDivider(color = BorderSand.copy(alpha = 0.6f), thickness = 1.dp)
                     }
@@ -382,6 +373,29 @@ fun FeedScreen(
 }
 
 @Composable
+fun UserAvatarBadge(
+    initial: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .size(36.dp)
+            .clip(CircleShape)
+            .background(TacticalOlive.copy(alpha = 0.5f))
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = initial,
+            fontWeight = FontWeight.Bold,
+            color = CharcoalDark,
+            fontSize = 15.sp
+        )
+    }
+}
+
+@Composable
 private fun DrawerItem(
     icon: ImageVector,
     title: String,
@@ -418,7 +432,6 @@ private fun DrawerItem(
 fun AnnouncementCard(item: AnnouncementItem) {
     val isOffer = item.type == AnnouncementType.OFFER
 
-    // Візуальне кольорове розрізнення за типами
     val cardBgColor = if (isOffer) SelectedRoleBg.copy(alpha = 0.9f) else Color.White.copy(alpha = 0.85f)
     val cardBorderColor = if (isOffer) OliveGreen.copy(alpha = 0.4f) else BorderSand
 
@@ -433,7 +446,6 @@ fun AnnouncementCard(item: AnnouncementItem) {
             modifier = Modifier.padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            // Верхній рядок: бейдж типу (Пропозиція/Потреба), категорія та терміновість
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,

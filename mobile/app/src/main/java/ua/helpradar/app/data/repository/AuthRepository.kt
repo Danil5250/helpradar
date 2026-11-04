@@ -12,11 +12,13 @@ class AuthRepository {
             val response = ApiClient.authService.login(LoginRequest(email, password))
             val body = response.body()
             if (response.isSuccessful && body != null) {
-                // Зберігаємо сесію та роль увійшовшого користувача
+                // Зберігаємо повні дані сесії користувача
                 body.user?.let { user ->
-                    SessionManager.currentUserRole = user.role
-                    SessionManager.currentUserName = "${user.firstName} ${user.lastName}".trim()
                     SessionManager.currentUserId = user.id
+                    SessionManager.currentUserName = user.firstName
+                    SessionManager.currentUserLastName = user.lastName
+                    SessionManager.currentUserEmail = user.email
+                    SessionManager.currentUserRole = user.role
                 }
 
                 val token = body.token.orEmpty()
