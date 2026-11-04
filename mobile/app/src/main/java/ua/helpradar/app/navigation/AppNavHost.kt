@@ -5,11 +5,13 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import ua.helpradar.app.data.local.SessionManager
+import ua.helpradar.app.data.repository.AuthRepository
 import ua.helpradar.app.presentation.auth.LoginScreen
 import ua.helpradar.app.presentation.auth.RegisterScreen
 import ua.helpradar.app.presentation.feed.FeedScreen
 import ua.helpradar.app.presentation.request.CreateRequestScreen
-import ua.helpradar.app.data.repository.AuthRepository
+import ua.helpradar.app.presentation.splash.SplashScreen
 
 @Composable
 fun AppNavHost(
@@ -18,9 +20,27 @@ fun AppNavHost(
 ) {
     NavHost(
         navController = navController,
-        startDestination = Screen.Login.route,
+        startDestination = Screen.Splash.route,
         modifier = modifier
     ) {
+        // Стартовий екран із лелекою
+        composable(Screen.Splash.route) {
+            SplashScreen(
+                onSplashFinished = {
+                    val nextScreen = if (SessionManager.isLoggedIn) {
+                        Screen.Feed.route
+                    } else {
+                        Screen.Login.route
+                    }
+
+                    navController.navigate(nextScreen) {
+                        // Видаляємо Splash з бекстеку, щоб кнопка "Назад" не повертала на нього
+                        popUpTo(Screen.Splash.route) { inclusive = true }
+                    }
+                }
+            )
+        }
+
         composable(Screen.Login.route) {
             LoginScreen(
                 onNavigateToRegister = {

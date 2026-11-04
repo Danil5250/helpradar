@@ -9,6 +9,9 @@ object SessionManager {
     val isVolunteer: Boolean
         get() = currentUserRole.equals("volunteer", ignoreCase = true)
 
+    val isLoggedIn: Boolean
+        get() = currentUserId != null
+
     fun clear() {
         currentUserRole = "person_in_need"
         currentUserName = ""
