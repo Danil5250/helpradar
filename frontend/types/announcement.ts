@@ -77,6 +77,8 @@ export interface AnnouncementPage {
 
 export type AnnouncementSort = 'newest' | 'nearest' | 'urgent';
 
+export type AnnouncementTypeFilter = 'helpOffer' | 'helpRequest';
+
 export interface AnnouncementPayload {
   title: string;
   description: string;

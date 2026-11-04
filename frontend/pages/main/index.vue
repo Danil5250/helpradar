@@ -13,13 +13,13 @@
           <AppButton has-outline class="px-2 w-full md:w-auto flex items-center justify-center space-x-3" :class="dropdownOpen ? '!rounded-b-none !rounded-t-3xl' : 'rounded-3xl'" aria-haspopup="listbox" :aria-expanded="dropdownOpen" data-test="sort-button" @click="dropdownOpen = !dropdownOpen">
             <span class="font-montserratMedium inline-grid items-center text-center">
               <span class="col-start-1 row-start-1">{{ t('sort_by') }}: {{ t(sortOptions.find((option) => option.value === sort)?.label ?? 'sort_newest') }}</span>
-              <span v-for="option in sortOptions" :key="option.value" class="col-start-1 row-start-1 invisible" aria-hidden="true">{{ t('sort_by') }}: {{ t(option.label) }}</span>
+              <span v-for="option in visibleSortOptions" :key="option.value" class="col-start-1 row-start-1 invisible" aria-hidden="true">{{ t('sort_by') }}: {{ t(option.label) }}</span>
             </span>
             <AppIcon name="chevron-down" class="h-4 w-4 transition-transform duration-300" :class="{ 'rotate-180': dropdownOpen }" />
           </AppButton>
           <ul v-if="dropdownOpen" role="listbox" class="w-full min-w-[14rem] bg-almost-white border-2 border-forest rounded-b-3xl absolute left-0 top-full z-10 -mt-1 overflow-hidden">
             <li
-              v-for="option in sortOptions"
+              v-for="option in visibleSortOptions"
               :key="option.value"
               role="option"
               tabindex="0"
@@ -72,7 +72,7 @@
 
 <script setup lang="ts">
 // Imports
-import type { AnnouncementListItem, AnnouncementSort } from '~/types/announcement';
+import type { AnnouncementListItem, AnnouncementSort, AnnouncementTypeFilter } from '~/types/announcement';
 
 // Composables
 const { user, isAuthenticated, role, canPublish } = useAuth();
@@ -103,6 +103,10 @@ const sortOptions: { value: AnnouncementSort; label: string }[] = [
   { value: 'urgent', label: 'sort_urgent' },
   { value: 'nearest', label: 'sort_nearest' },
 ];
+
+// Computed
+const listType = computed<AnnouncementTypeFilter | undefined>(() => (role.value === 'person_in_need' ? 'helpOffer' : undefined));
+const visibleSortOptions = computed(() => (listType.value === 'helpOffer' ? sortOptions.filter((option) => option.value !== 'urgent') : sortOptions));
 
 // Methods
 function useProfileCity(): boolean {
@@ -137,6 +141,7 @@ async function load(reset: boolean) {
     const result = await announcements.list({
       page: page.value,
       sort: sort.value,
+      type: listType.value,
       lat: position.value?.lat,
       lng: position.value?.lng,
     });
@@ -164,6 +169,9 @@ async function chooseSort(next: AnnouncementSort) {
   sort.value = next;
   await load(true);
 }
+
+// Watchers
+watch(listType, () => void load(true));
 
 // Lifecycle
 onMounted(async () => {
