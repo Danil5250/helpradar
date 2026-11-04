@@ -17,10 +17,10 @@ import type { AuthenticatedRequest, AuthUser } from './auth-user';
 import { SESSION_COOKIE } from './auth.constants';
 import { AuthResult, AuthService } from './auth.service';
 import { CurrentUser } from './current-user.decorator';
-import { LoginDto } from './dto/login.dto';
-import { RegisterDto } from './dto/register.dto';
-import { ResendVerificationDto } from './dto/resend-verification.dto';
-import { VerifyEmailDto } from './dto/verify-email.dto';
+import { LoginRequestDto } from './dto/login.request.dto';
+import { RegisterRequestDto } from './dto/register.request.dto';
+import { ResendVerificationRequestDto } from './dto/resend-verification.request.dto';
+import { VerifyEmailRequestDto } from './dto/verify-email.request.dto';
 import { IpRateLimitGuard } from './guards/ip-rate-limit.guard';
 import {
   OptionalSessionGuard,
@@ -45,7 +45,7 @@ export class AuthController {
   @Post('register')
   @UseGuards(IpRateLimitGuard)
   @ApiOperation({ summary: 'Register with role selection (SRS 3.2.1)' })
-  register(@Body() dto: RegisterDto) {
+  register(@Body() dto: RegisterRequestDto) {
     return this.auth.register(dto);
   }
 
@@ -56,7 +56,7 @@ export class AuthController {
     summary: 'Activate the account with the token from the e-mail and sign in',
   })
   async verifyEmail(
-    @Body() dto: VerifyEmailDto,
+    @Body() dto: VerifyEmailRequestDto,
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
@@ -71,16 +71,16 @@ export class AuthController {
   @ApiOperation({
     summary: 'Send the activation e-mail again ("Resend email")',
   })
-  resendVerification(@Body() dto: ResendVerificationDto) {
+  resendVerification(@Body() dto: ResendVerificationRequestDto) {
     return this.auth.resendVerification(dto.email, dto.locale);
   }
-  
+
   @Post('login')
   @HttpCode(200)
   @UseGuards(IpRateLimitGuard)
   @ApiOperation({ summary: 'Log in with e-mail and password (SRS 3.2.2)' })
   async login(
-    @Body() dto: LoginDto,
+    @Body() dto: LoginRequestDto,
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {

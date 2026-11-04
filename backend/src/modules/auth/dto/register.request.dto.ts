@@ -45,7 +45,7 @@ function MatchesField(
 }
 
 /** SRS 3.2.1.2 Inputs - registration with role selection. */
-export class RegisterDto {
+export class RegisterRequestDto {
   @ApiProperty({ example: 'Olena', minLength: 2, maxLength: 50 })
   @Transform(trim)
   @IsString(
