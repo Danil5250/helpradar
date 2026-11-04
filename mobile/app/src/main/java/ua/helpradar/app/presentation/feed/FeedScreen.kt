@@ -89,6 +89,7 @@ fun FeedScreen(
                     ) {
                         Text(
                             text = "Д",
+                            fontFamily = Montserrat,
                             fontWeight = FontWeight.Bold,
                             color = CharcoalDark,
                             fontSize = 15.sp
@@ -159,6 +160,7 @@ fun FeedScreen(
                         label = {
                             Text(
                                 text = "Вийти з акаунта",
+                                fontFamily = Montserrat,
                                 color = MaterialTheme.colorScheme.error,
                                 fontWeight = FontWeight.SemiBold
                             )
@@ -220,6 +222,7 @@ fun FeedScreen(
                             ) {
                                 Text(
                                     text = "Д",
+                                    fontFamily = Montserrat,
                                     fontWeight = FontWeight.Bold,
                                     color = CharcoalDark,
                                     fontSize = 15.sp
@@ -251,7 +254,12 @@ fun FeedScreen(
                     value = state.searchQuery,
                     onValueChange = viewModel::onSearchQueryChange,
                     placeholder = {
-                        Text("Пошук потреб або допомоги...", color = PlaceholderSage, fontSize = 14.sp)
+                        Text(
+                            text = "Пошук потреб або допомоги...",
+                            fontFamily = Montserrat,
+                            color = PlaceholderSage,
+                            fontSize = 14.sp
+                        )
                     },
                     leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = DeepSage) },
                     singleLine = true,
@@ -277,7 +285,7 @@ fun FeedScreen(
                     FilterChip(
                         selected = state.selectedType == null,
                         onClick = { viewModel.onTypeSelect(null) },
-                        label = { Text("Усі") },
+                        label = { Text("Усі", fontFamily = Montserrat) },
                         colors = FilterChipDefaults.filterChipColors(
                             selectedContainerColor = OliveGreen,
                             selectedLabelColor = Color.White,
@@ -293,7 +301,7 @@ fun FeedScreen(
                     FilterChip(
                         selected = state.selectedType == AnnouncementType.REQUEST,
                         onClick = { viewModel.onTypeSelect(AnnouncementType.REQUEST) },
-                        label = { Text("Потреби") },
+                        label = { Text("Потреби", fontFamily = Montserrat) },
                         colors = FilterChipDefaults.filterChipColors(
                             selectedContainerColor = OliveGreen,
                             selectedLabelColor = Color.White,
@@ -309,7 +317,7 @@ fun FeedScreen(
                     FilterChip(
                         selected = state.selectedType == AnnouncementType.OFFER,
                         onClick = { viewModel.onTypeSelect(AnnouncementType.OFFER) },
-                        label = { Text("Пропозиції") },
+                        label = { Text("Пропозиції", fontFamily = Montserrat) },
                         colors = FilterChipDefaults.filterChipColors(
                             selectedContainerColor = OliveGreen,
                             selectedLabelColor = Color.White,
@@ -337,7 +345,7 @@ fun FeedScreen(
                         FilterChip(
                             selected = isSelected,
                             onClick = { viewModel.onCategorySelect(category.name) },
-                            label = { Text(category.name, fontSize = 13.sp) },
+                            label = { Text(category.name, fontFamily = Montserrat, fontSize = 13.sp) },
                             colors = FilterChipDefaults.filterChipColors(
                                 selectedContainerColor = OliveGreen,
                                 selectedLabelColor = Color.White,
@@ -353,26 +361,42 @@ fun FeedScreen(
                     }
                 }
 
-                // Список карток оголошень
-                if (state.announcements.isEmpty()) {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "Оголошень не знайдено",
-                            color = DeepSage,
-                            fontSize = 15.sp
+                // Відображення контенту: Завантаження / Помилка / Лелека порожнього списку / Список карток
+                when {
+                    state.isLoading -> {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(24.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator(color = OliveGreen)
+                        }
+                    }
+
+                    state.errorMessage != null -> {
+                        FeedErrorView(
+                            errorMessage = state.errorMessage ?: "Не вдалося завантажити оголошення",
+                            onRetry = { viewModel.loadFeed() }
                         )
                     }
-                } else {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(14.dp)
-                    ) {
-                        items(state.announcements, key = { it.id }) { item ->
-                            AnnouncementCard(item = item)
+
+                    state.announcements.isEmpty() -> {
+                        FeedEmptyView(
+                            message = "Оголошень не знайдено",
+                            subMessage = "За вибраними критеріями немає оголошень. Спробуйте змінити фільтри або створіть власне"
+                        )
+                    }
+
+                    else -> {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(14.dp)
+                        ) {
+                            items(state.announcements, key = { it.id }) { item ->
+                                AnnouncementCard(item = item)
+                            }
                         }
                     }
                 }
@@ -399,6 +423,7 @@ private fun DrawerItem(
         label = {
             Text(
                 text = title,
+                fontFamily = Montserrat,
                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                 color = if (isSelected) Color.White else CharcoalDark
             )
@@ -418,7 +443,6 @@ private fun DrawerItem(
 fun AnnouncementCard(item: AnnouncementItem) {
     val isOffer = item.type == AnnouncementType.OFFER
 
-    // Візуальне кольорове розрізнення за типами
     val cardBgColor = if (isOffer) SelectedRoleBg.copy(alpha = 0.9f) else Color.White.copy(alpha = 0.85f)
     val cardBorderColor = if (isOffer) OliveGreen.copy(alpha = 0.4f) else BorderSand
 
@@ -433,7 +457,6 @@ fun AnnouncementCard(item: AnnouncementItem) {
             modifier = Modifier.padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            // Верхній рядок: бейдж типу (Пропозиція/Потреба), категорія та терміновість
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -449,6 +472,7 @@ fun AnnouncementCard(item: AnnouncementItem) {
                     ) {
                         Text(
                             text = if (isOffer) "Пропозиція" else "Потреба",
+                            fontFamily = Montserrat,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = if (isOffer) Color.White else CharcoalDark,
@@ -462,6 +486,7 @@ fun AnnouncementCard(item: AnnouncementItem) {
                     ) {
                         Text(
                             text = item.categoryName,
+                            fontFamily = Montserrat,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Medium,
                             color = DeepSage,
@@ -488,6 +513,7 @@ fun AnnouncementCard(item: AnnouncementItem) {
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
                                 text = "Терміново",
+                                fontFamily = Montserrat,
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = RadarOrange
@@ -499,8 +525,9 @@ fun AnnouncementCard(item: AnnouncementItem) {
 
             Text(
                 text = item.title,
+                fontFamily = KharkivTone,
                 fontSize = 17.sp,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.Normal,
                 color = CharcoalDark,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
@@ -508,6 +535,7 @@ fun AnnouncementCard(item: AnnouncementItem) {
 
             Text(
                 text = item.description,
+                fontFamily = Montserrat,
                 fontSize = 14.sp,
                 color = CharcoalDark.copy(alpha = 0.8f),
                 maxLines = 3,
@@ -531,6 +559,7 @@ fun AnnouncementCard(item: AnnouncementItem) {
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
                         text = "${item.distanceKm} км • ${item.postedTimeAgo}",
+                        fontFamily = Montserrat,
                         fontSize = 12.sp,
                         color = CharcoalDark
                     )
@@ -538,6 +567,7 @@ fun AnnouncementCard(item: AnnouncementItem) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = item.authorName,
+                        fontFamily = Montserrat,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium,
                         color = CharcoalDark
@@ -551,6 +581,7 @@ fun AnnouncementCard(item: AnnouncementItem) {
                     )
                     Text(
                         text = item.authorRating.toString(),
+                        fontFamily = Montserrat,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
                         color = CharcoalDark
@@ -570,6 +601,7 @@ fun AnnouncementCard(item: AnnouncementItem) {
             ) {
                 Text(
                     text = if (isOffer) "Зв'язатися з волонтером" else "Допомогти",
+                    fontFamily = Montserrat,
                     fontWeight = FontWeight.Bold,
                     fontSize = 14.sp,
                     color = Color.White

@@ -14,13 +14,13 @@ import { S3FileStorage } from './S3FileStorage';
       provide: FileStorage,
       inject: [appConfig.KEY],
       useFactory: (config: ConfigType<typeof appConfig>) => {
-        //new LocalFileStorage(config.storage.dir),
-        return new S3FileStorage(
-        config.aws.region,
-        config.aws.accessKeyId,
-        config.aws.secretAccessKey,
-        config.aws.bucket,
-      );
+        return new LocalFileStorage(config.storage.dir);
+      //   return new S3FileStorage(
+      //   config.aws.region,
+      //   config.aws.accessKeyId,
+      //   config.aws.secretAccessKey,
+      //   config.aws.bucket,
+      // );
       }
     },
     SignedUrlService,
