@@ -205,7 +205,15 @@
     "SORT_INVALID": "Недійсний порядок сортування.",
     "TYPE_INVALID": "Недійсний тип оголошення.",
     "URGENT_INVALID": "Недійсне значення.",
-    "UNKNOWN_FIELD": "Запит містить невідоме поле."
+    "UNKNOWN_FIELD": "Запит містить невідоме поле.",
+    "STREET_INVALID": "Оберіть вулицю зі списку.",
+    "ABOUT_TOO_LONG": "Поле «Про себе» може містити до 500 символів.",
+    "SUPPORTS_INVALID": "Оберіть види допомоги зі списку.",
+    "NEW_EMAIL_TAKEN": "Ця пошта вже зайнята.",
+    "USER_NOT_FOUND": "Користувача не знайдено.",
+    "PROFILE_BLOCKED": "Цей акаунт заблоковано.",
+    "PROFILE_SAVE_FAILED": "Не вдалося зберегти зміни. Спробуйте пізніше.",
+    "PROFILE_UNAVAILABLE": "Не вдалося завантажити профіль. Спробуйте пізніше."
   },
   "category": {
     "1": "Їжа та вода",
@@ -227,5 +235,32 @@
     "Hidden": "Приховано",
     "Closed": "Закрите",
     "Deleted": "Видалене"
+  },
+  "my_profile": "Мій профіль",
+  "helmet_profile": "Мій профіль - HelpRadar",
+  "helmet_public_profile": "Профіль користувача - HelpRadar",
+  "helmet_confirm_email": "Підтвердження пошти - HelpRadar",
+  "personal_data": "Особисті дані",
+  "editUPPER": "РЕДАГУВАТИ",
+  "saveUPPER": "ЗБЕРЕГТИ",
+  "cancel": "Скасувати",
+  "street": "Вулиця",
+  "about_me": "Про себе",
+  "help_types": "Яку допомогу я надаю",
+  "email_change_hint": "Нова адреса почне діяти після підтвердження за посиланням із листа.",
+  "pending_email": "Нова адреса {email} очікує підтвердження. Доти діє поточна.",
+  "profile_updated": "Профіль оновлено.",
+  "profile_updated_email_sent": "Профіль оновлено. Ми надіслали посилання для підтвердження на нову пошту.",
+  "profile_updated_email_queued": "Профіль оновлено. Лист для підтвердження нової пошти надійде протягом кількох хвилин.",
+  "email_changed": "Пошту змінено.",
+  "role_volunteer": "Волонтер",
+  "role_person_in_need": "Потребує допомоги",
+  "member_since": "На платформі з {date}",
+  "view_public_profile": "Як мій профіль бачать інші",
+  "support": {
+    "psychological": "Психологічна допомога",
+    "humanitarian": "Гуманітарна допомога",
+    "informational": "Інформаційна допомога",
+    "material": "Матеріальна допомога"
   }
 }

@@ -81,7 +81,7 @@
             <div class="pl-[1vw]">
               <p class="font-montserratMedium font-semibold uppercase">{{ t('ad_author') }}:</p>
               <h4 class="font-montserratMedium" data-test="author">
-                {{ details.author.name }}<span v-if="details.author.rating !== null" class="ml-2">★ {{ details.author.rating.toFixed(1) }}</span>
+                <NuxtLink :to="`/users/${details.author.id}`" class="underline hover:text-forest">{{ details.author.name }}</NuxtLink><span v-if="details.author.rating !== null" class="ml-2">★ {{ details.author.rating.toFixed(1) }}</span>
               </h4>
             </div>
           </div>
