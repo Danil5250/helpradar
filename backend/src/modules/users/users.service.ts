@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AppException } from '../../common/errors';
+import { SignedUrlService } from '../storage/signed-url.service';
 import { Role } from './enums/role.enum';
 import { PersonInNeed } from './entities/person-in-need.entity';
 import { User } from './entities/user.entity';
@@ -19,6 +20,7 @@ export class UsersService {
     private readonly personsInNeed: Repository<PersonInNeed>,
     @InjectRepository(Volunteer)
     private readonly volunteers: Repository<Volunteer>,
+    private readonly signer: SignedUrlService,
   ) {}
 
   findById(id: number): Promise<User | null> {
@@ -61,7 +63,7 @@ export class UsersService {
       role: user.role,
       phoneNumber: user.phoneNumber,
       city: await this.getCity(user),
-      avatarUrl: user.avatarUrl,
+      avatarUrl: this.signer.resolve(user.avatarUrl),
     };
   }
 }

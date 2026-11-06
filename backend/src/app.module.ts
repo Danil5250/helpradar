@@ -10,6 +10,7 @@ import { AnnouncementModule } from './modules/announcement/announcement.module';
 import { GeocodingModule } from './modules/geocoding/geocoding.module';
 import { StorageModule } from './modules/storage/storage.module';
 import { CategoriesModule } from './modules/categories/categories.module';
+import { ProfileModule } from './modules/profile/profile.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { HealthController } from './modules/health/health.controller';
 
@@ -40,6 +41,7 @@ import { HealthController } from './modules/health/health.controller';
     StorageModule,
     GeocodingModule,
     AnnouncementModule,
+    ProfileModule,
   ],
   controllers: [HealthController],
 })

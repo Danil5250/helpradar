@@ -127,6 +127,8 @@ export const ERR = {
     status: 403,
     message: 'This link is invalid or has expired.',
   },
+  USER_NOT_FOUND: { status: 404, message: 'User not found.' },
+  PROFILE_BLOCKED: { status: 403, message: 'This account is blocked.' },
 } as const;
 
 export type ErrorCode = keyof typeof ERR;
