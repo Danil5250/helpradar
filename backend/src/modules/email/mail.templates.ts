@@ -90,3 +90,39 @@ export function expiryReminderEmail(
     html: html('Оголошення скоро спливе', lines, { label: 'Продовжити', url }),
   };
 }
+
+/** SRS 3.2.12.3 step 5: confirmation link for a new e-mail address (valid for 24 hours). */
+export function emailChangeEmail(
+  locale: MailLocale,
+  firstName: string,
+  url: string,
+): Pick<OutgoingMail, 'subject' | 'text' | 'html'> {
+  if (locale === 'en') {
+    const lines = [
+      `Hello, ${firstName}!`,
+      'You asked to use this address for your HelpRadar account. To confirm it, open the link below. It is valid for 24 hours.',
+      'Until you confirm it, your previous address stays active. If you did not ask for this change, simply ignore this e-mail.',
+    ];
+    return {
+      subject: 'Confirm your new HelpRadar e-mail',
+      text: `${lines[0]}\n\n${lines[1]}\n${url}\n\n${lines[2]}`,
+      html: html('Confirm your new e-mail', lines, {
+        label: 'Confirm e-mail',
+        url,
+      }),
+    };
+  }
+  const lines = [
+    `Вітаємо, ${firstName}!`,
+    'Ви вказали цю адресу для свого акаунта HelpRadar. Щоб підтвердити її, відкрийте посилання нижче. Воно дійсне 24 години.',
+    'Доки ви не підтвердите адресу, діє попередня. Якщо ви не змінювали e-mail, просто проігноруйте цей лист.',
+  ];
+  return {
+    subject: 'Підтвердження нової адреси HelpRadar',
+    text: `${lines[0]}\n\n${lines[1]}\n${url}\n\n${lines[2]}`,
+    html: html('Підтвердження нової адреси', lines, {
+      label: 'Підтвердити e-mail',
+      url,
+    }),
+  };
+}

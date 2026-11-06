@@ -17,9 +17,12 @@ import {
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
+import { MessageResponseDto } from '../../common/dto/message.response.dto';
 import type { AuthUser } from '../auth/auth-user';
 import { CurrentUser } from '../auth/current-user.decorator';
+import { IpRateLimitGuard } from '../auth/guards/ip-rate-limit.guard';
 import { SessionAuthGuard } from '../auth/guards/session-auth.guard';
+import { ConfirmEmailChangeRequestDto } from './dto/confirm-email-change.request.dto';
 import { ProfileUpdatedResponseDto } from './dto/profile-updated.response.dto';
 import { ProfileResponseDto } from './dto/profile.response.dto';
 import { UpdateProfileRequestDto } from './dto/update-profile.request.dto';
@@ -53,4 +56,15 @@ export class ProfileController {
     return this.profile.update(user, dto);
   }
 
+  @Post('confirm-email')
+  @HttpCode(200)
+  @UseGuards(IpRateLimitGuard)
+  @ApiOperation({
+    summary: 'Confirm a new e-mail address with the token from the e-mail',
+  })
+  confirmEmail(
+    @Body() dto: ConfirmEmailChangeRequestDto,
+  ): Promise<MessageResponseDto> {
+    return this.profile.confirmEmailChange(dto.token);
+  }
 }

@@ -1,4 +1,5 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
+import type { ConfigType } from '@nestjs/config';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import {
   DataSource,
@@ -8,16 +9,23 @@ import {
   Not,
   Repository,
 } from 'typeorm';
+import { MessageResponseDto } from '../../common/dto/message.response.dto';
 import { AppException } from '../../common/errors';
+import { generateToken, hashToken } from '../../common/utils/tokens';
+import appConfig from '../../config/app.config';
 import type { AuthUser } from '../auth/auth-user';
+import { VERIFICATION_TTL_MS } from '../auth/auth.constants';
+import { EmailSentResponseDto } from '../auth/dto/email-sent.response.dto';
 import { EmailVerificationToken } from '../auth/entities/email-verification-token.entity';
 import { Comment } from '../comments/entities/comment.entity';
+import { MailService } from '../email/mail.service';
+import { emailChangeEmail, MailLocale } from '../email/mail.templates';
 import { SignedUrlService } from '../storage/signed-url.service';
 import { PersonInNeed } from '../users/entities/person-in-need.entity';
 import { User } from '../users/entities/user.entity';
 import { Volunteer } from '../users/entities/volunteer.entity';
 import { Role } from '../users/enums/role.enum';
-import { isBlocked } from '../users/users.service';
+import { isBlocked, normalizeEmail } from '../users/users.service';
 import { ProfileUpdatedResponseDto } from './dto/profile-updated.response.dto';
 import { ProfileResponseDto } from './dto/profile.response.dto';
 import { PublicProfileResponseDto } from './dto/public-profile.response.dto';
@@ -25,6 +33,9 @@ import { UpdateProfileRequestDto } from './dto/update-profile.request.dto';
 
 /** Roles that have a profile (guests and administrators have none). */
 const PROFILE_ROLES: ReadonlyArray<Role> = [Role.Volunteer, Role.PersonInNeed];
+
+const isUniqueViolation = (error: unknown): boolean =>
+  (error as { code?: string })?.code === '23505';
 
 @Injectable()
 export class ProfileService {
@@ -34,7 +45,10 @@ export class ProfileService {
     @InjectRepository(EmailVerificationToken)
     private readonly tokens: Repository<EmailVerificationToken>,
     @InjectRepository(Comment) private readonly comments: Repository<Comment>,
+    private readonly mail: MailService,
     private readonly signer: SignedUrlService,
+    @Inject(appConfig.KEY)
+    private readonly config: ConfigType<typeof appConfig>,
   ) {}
 
   // ---------------------------------------------------------------------------------------------
@@ -75,12 +89,18 @@ export class ProfileService {
     };
   }
 
-  /** Save the personal fields without changing the login address. */
+  /** SRS 3.2.12.3: saves the changed fields; a new e-mail only becomes active after confirmation. */
   async update(
     authUser: AuthUser,
     dto: UpdateProfileRequestDto,
   ): Promise<ProfileUpdatedResponseDto> {
-    await this.dataSource.transaction(async (manager) => {
+    const newEmail =
+      dto.email !== undefined ? normalizeEmail(dto.email) : undefined;
+    const locale: MailLocale = dto.locale ?? 'uk';
+
+    let outboxId: string | null = null;
+    try {
+      outboxId = await this.dataSource.transaction(async (manager) => {
         const user = await manager.findOne(User, {
           where: { id: authUser.id },
           relations: { volunteer: true, personInNeed: true },
@@ -96,8 +116,67 @@ export class ProfileService {
           await this.updateVolunteer(manager, user.volunteer, dto);
         if (user.personInNeed)
           await this.updatePersonInNeed(manager, user.personInNeed, dto);
-    });
-    return { code: 'PROFILE_UPDATED', message: 'Profile updated.', profile: await this.getOwn(authUser.id), emailChange: null };
+
+        if (newEmail === undefined || newEmail === user.email) return null;
+        if (await manager.exists(User, { where: { email: newEmail } }))
+          throw new AppException('NEW_EMAIL_TAKEN');
+        const token = await this.issueEmailChangeToken(
+          manager,
+          user.id,
+          newEmail,
+        );
+        const message = emailChangeEmail(
+          locale,
+          user.firstName,
+          `${this.config.appUrl}/confirm-email?token=${encodeURIComponent(token)}`,
+        );
+        const row = await this.mail.enqueue(
+          manager,
+          { to: newEmail, ...message },
+          'email-change',
+        );
+        return row.id;
+      });
+    } catch (error) {
+      if (isUniqueViolation(error)) throw new AppException('NEW_EMAIL_TAKEN');
+      throw error;
+    }
+
+    const emailChange = outboxId
+      ? this.emailResult(await this.mail.deliver(outboxId))
+      : null;
+    return {
+      code: 'PROFILE_UPDATED',
+      message: 'Profile updated.',
+      profile: await this.getOwn(authUser.id),
+      emailChange,
+    };
+  }
+
+  /** SRS 3.2.12.3 step 5: the new address becomes active once the link from the e-mail is opened. */
+  async confirmEmailChange(token: string): Promise<MessageResponseDto> {
+    try {
+      await this.dataSource.transaction(async (manager) => {
+        const row = await manager.findOne(EmailVerificationToken, {
+          where: { tokenHash: hashToken(token), newEmail: Not(IsNull()) },
+          lock: { mode: 'pessimistic_write' },
+        });
+        if (!row || row.usedAt || row.expiresAt.getTime() <= Date.now())
+          throw new AppException('LINK_INVALID');
+        const email = row.newEmail as string;
+        const owner = await manager.findOneBy(User, { email });
+        if (owner && owner.id !== row.userId)
+          throw new AppException('NEW_EMAIL_TAKEN');
+
+        row.usedAt = new Date();
+        await manager.save(row);
+        await manager.update(User, { id: row.userId }, { email });
+      });
+    } catch (error) {
+      if (isUniqueViolation(error)) throw new AppException('NEW_EMAIL_TAKEN');
+      throw error;
+    }
+    return { code: 'EMAIL_CHANGED', message: 'Your email has been changed.' };
   }
 
   // ---------------------------------------------------------------------------------------------
@@ -166,5 +245,47 @@ export class ProfileService {
     if (dto.street !== undefined) profile.street = dto.street || null;
     if (dto.aboutMe !== undefined) profile.aboutMe = dto.aboutMe;
     await manager.save(PersonInNeed, profile);
+  }
+
+  /** A new request replaces the previous unconfirmed one; activation tokens are not touched. */
+  private async issueEmailChangeToken(
+    manager: EntityManager,
+    userId: number,
+    newEmail: string,
+  ): Promise<string> {
+    await manager
+      .createQueryBuilder()
+      .update(EmailVerificationToken)
+      .set({ usedAt: new Date() })
+      .where(
+        '"user_id" = :userId AND "used_at" IS NULL AND "new_email" IS NOT NULL',
+        { userId },
+      )
+      .execute();
+    const token = generateToken();
+    await manager.save(
+      manager.create(EmailVerificationToken, {
+        userId,
+        newEmail,
+        tokenHash: hashToken(token),
+        expiresAt: new Date(Date.now() + VERIFICATION_TTL_MS),
+      }),
+    );
+    return token;
+  }
+
+  private emailResult(delivered: boolean): EmailSentResponseDto {
+    return delivered
+      ? {
+          code: 'CHECK_EMAIL',
+          message:
+            'Check your new email – we have sent you a confirmation link.',
+          emailQueued: false,
+        }
+      : {
+          code: 'EMAIL_QUEUED',
+          message: 'The email will arrive within a few minutes.',
+          emailQueued: true,
+        };
   }
 }

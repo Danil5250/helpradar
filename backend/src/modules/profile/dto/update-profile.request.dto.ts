@@ -3,7 +3,9 @@ import { Transform } from 'class-transformer';
 import {
   ArrayUnique,
   IsArray,
+  IsEmail,
   IsEnum,
+  IsIn,
   IsOptional,
   IsString,
   Length,
@@ -35,6 +37,7 @@ const SUPPORTS = v(
   'SUPPORTS_INVALID',
   'Choose the types of help from the list.',
 );
+const EMAIL = v('EMAIL_INVALID', 'Enter a valid email address.');
 
 /** SRS 3.2.12.2 Inputs - editing the personal profile. Fields that are not sent stay unchanged. */
 export class UpdateProfileRequestDto {
@@ -110,4 +113,23 @@ export class UpdateProfileRequestDto {
   @IsEnum(SupportType, { each: true, ...SUPPORTS })
   supports?: SupportType[];
 
+  @ApiPropertyOptional({
+    example: 'new@example.com',
+    description:
+      'A new e-mail address; it becomes active only after it is confirmed by the link sent to it',
+  })
+  @IsOptional()
+  @Transform(trim)
+  @IsString(EMAIL)
+  @MaxLength(254, EMAIL)
+  @IsEmail({}, EMAIL)
+  email?: string;
+
+  @ApiPropertyOptional({
+    enum: ['uk', 'en'],
+    description: 'Language of the confirmation e-mail',
+  })
+  @IsOptional()
+  @IsIn(['uk', 'en'])
+  locale?: 'uk' | 'en';
 }
