@@ -106,6 +106,10 @@ export class Announcement {
   @Column({ type: 'timestamptz', nullable: true })
   closedAt: Date | null;
 
+  /** When the request became "Completed" (start of the 14-day review period, SRS 3.2.14.3). */
+  @Column({ type: 'timestamptz', nullable: true })
+  completedAt: Date | null;
+
   @Column({ type: 'timestamptz', nullable: true })
   expiryReminderSentAt: Date | null;
 
