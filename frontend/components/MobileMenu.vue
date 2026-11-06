@@ -10,7 +10,7 @@
       <div class="flex flex-col space-y-5 md:mr-14 sm:mr-0 mt-auto pb-24">
         <LanguageSelector />
         <template v-if="isAuthenticated && user">
-          <NuxtLink to="/profile" class="font-montserratMedium flex items-center gap-2"><AppIcon name="user" class="text-forest" />{{ user.firstName }} {{ user.lastName }}</NuxtLink>
+          <NuxtLink to="/profile" class="font-montserratMedium flex items-center gap-2"><img :src="user.avatarUrl" alt="" class="w-8 h-8 rounded-full object-cover" />{{ user.firstName }} {{ user.lastName }}</NuxtLink>
           <AppButton has-outline class="w-full md:text-pxl" @click="emit('logout')">{{ t('log_outUPPER') }}</AppButton>
         </template>
         <template v-else>

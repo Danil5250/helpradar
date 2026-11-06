@@ -11,6 +11,7 @@
 
     <div v-else-if="profile" class="flex flex-col xl:flex-row gap-8 mt-6">
       <aside class="xl:w-1/3 bg-almost-white rounded-3xl p-6 self-start w-full flex flex-col items-center text-center gap-2">
+        <ProfileAvatarUploader :url="profile.avatarUrl" @uploaded="avatarUploaded" />
         <p class="font-montserratMedium text-xl mt-2" data-test="profile-name">{{ profile.firstName }} {{ profile.lastName }}</p>
         <p class="text-sm"><span class="bg-sand rounded-full px-3 py-1">{{ t(profile.role === 'volunteer' ? 'role_volunteer' : 'role_person_in_need') }}</span></p>
         <p v-if="profile.city" class="flex items-center gap-1 text-sm"><AppIcon name="pin" class="h-4 w-4 text-forest" />{{ profile.city }}</p>
@@ -98,6 +99,13 @@ async function saved(result: ProfileUpdated) {
   editing.value = false;
   if (!result.emailChange) show(t('profile_updated'));
   else show(t(result.emailChange.emailQueued ? 'profile_updated_email_queued' : 'profile_updated_email_sent'));
+  // the header shows the name and the avatar from the session.
+  await fetchMe();
+}
+
+async function avatarUploaded(url: string) {
+  if (profile.value) profile.value.avatarUrl = url;
+  show(t('profile_updated'));
   await fetchMe();
 }
 
