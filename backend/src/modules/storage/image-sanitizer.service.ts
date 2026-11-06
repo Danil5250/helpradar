@@ -1,8 +1,12 @@
 import { Injectable } from '@nestjs/common';
-import sharp from 'sharp';
-import { AppException } from '../../common/errors';
+import sharp, { ResizeOptions } from 'sharp';
+import { AppException, ErrorCode } from '../../common/errors';
 
 export const MAX_PHOTO_BYTES = 10 * 1024 * 1024;
+/** SRS 3.2.12.2: avatars up to 5 MB. */
+export const MAX_AVATAR_BYTES = 5 * 1024 * 1024;
+/** SRS 3.2.12.3 step 4: the avatar is resized to 256×256 px. */
+export const AVATAR_SIZE = 256;
 const MAX_DIMENSION = 2560;
 const MAX_INPUT_PIXELS = 50_000_000;
 
@@ -18,9 +22,32 @@ export interface SanitizedImage {
  */
 @Injectable()
 export class ImageSanitizerService {
-  async sanitize(input: Buffer): Promise<SanitizedImage> {
-    if (!input || input.length === 0 || input.length > MAX_PHOTO_BYTES)
-      throw new AppException('PHOTO_INVALID');
+  sanitize(input: Buffer): Promise<SanitizedImage> {
+    return this.process(input, MAX_PHOTO_BYTES, 'PHOTO_INVALID', {
+      width: MAX_DIMENSION,
+      height: MAX_DIMENSION,
+      fit: 'inside',
+      withoutEnlargement: true,
+    });
+  }
+
+  /** Avatar: up to 5 MB, cropped to a 256×256 square, metadata removed (SRS 3.2.12.3 step 4). */
+  sanitizeAvatar(input: Buffer): Promise<SanitizedImage> {
+    return this.process(input, MAX_AVATAR_BYTES, 'AVATAR_INVALID', {
+      width: AVATAR_SIZE,
+      height: AVATAR_SIZE,
+      fit: 'cover',
+    });
+  }
+
+  private async process(
+    input: Buffer,
+    maxBytes: number,
+    errorCode: ErrorCode,
+    resize: ResizeOptions,
+  ): Promise<SanitizedImage> {
+    if (!input || input.length === 0 || input.length > maxBytes)
+      throw new AppException(errorCode);
 
     try {
       const base = sharp(input, {
@@ -29,12 +56,7 @@ export class ImageSanitizerService {
       });
       const { format } = await base.metadata();
       // .rotate() applies the EXIF orientation first, so removing the metadata does not turn the picture sideways
-      const pipeline = base.rotate().resize({
-        width: MAX_DIMENSION,
-        height: MAX_DIMENSION,
-        fit: 'inside',
-        withoutEnlargement: true,
-      });
+      const pipeline = base.rotate().resize(resize);
 
       switch (format) {
         case 'jpeg':
@@ -56,11 +78,11 @@ export class ImageSanitizerService {
             extension: 'webp',
           };
         default:
-          throw new AppException('PHOTO_INVALID');
+          throw new AppException(errorCode);
       }
     } catch (error) {
       if (error instanceof AppException) throw error;
-      throw new AppException('PHOTO_INVALID');
+      throw new AppException(errorCode);
     }
   }
 }

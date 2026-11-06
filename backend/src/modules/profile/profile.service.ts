@@ -1,6 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { ConfigType } from '@nestjs/config';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
+import { randomUUID } from 'crypto';
 import {
   DataSource,
   EntityManager,
@@ -20,6 +21,8 @@ import { EmailVerificationToken } from '../auth/entities/email-verification-toke
 import { Comment } from '../comments/entities/comment.entity';
 import { MailService } from '../email/mail.service';
 import { emailChangeEmail, MailLocale } from '../email/mail.templates';
+import { FileStorage, STORAGE_KEY_REGEX } from '../storage/file-storage';
+import { ImageSanitizerService } from '../storage/image-sanitizer.service';
 import { SignedUrlService } from '../storage/signed-url.service';
 import { PersonInNeed } from '../users/entities/person-in-need.entity';
 import { User } from '../users/entities/user.entity';
@@ -30,6 +33,7 @@ import { ProfileUpdatedResponseDto } from './dto/profile-updated.response.dto';
 import { ProfileResponseDto } from './dto/profile.response.dto';
 import { PublicProfileResponseDto } from './dto/public-profile.response.dto';
 import { UpdateProfileRequestDto } from './dto/update-profile.request.dto';
+import { UploadAvatarResponseDto } from './dto/upload-avatar.response.dto';
 
 /** Roles that have a profile (guests and administrators have none). */
 const PROFILE_ROLES: ReadonlyArray<Role> = [Role.Volunteer, Role.PersonInNeed];
@@ -46,6 +50,8 @@ export class ProfileService {
     private readonly tokens: Repository<EmailVerificationToken>,
     @InjectRepository(Comment) private readonly comments: Repository<Comment>,
     private readonly mail: MailService,
+    private readonly storage: FileStorage,
+    private readonly sanitizer: ImageSanitizerService,
     private readonly signer: SignedUrlService,
     @Inject(appConfig.KEY)
     private readonly config: ConfigType<typeof appConfig>,
@@ -177,6 +183,35 @@ export class ProfileService {
       throw error;
     }
     return { code: 'EMAIL_CHANGED', message: 'Your email has been changed.' };
+  }
+
+  /** SRS 3.2.12.3 step 4: the avatar is resized to 256×256 px and its EXIF metadata is removed. */
+  async uploadAvatar(
+    authUser: AuthUser,
+    file: Pick<Express.Multer.File, 'buffer'> | undefined,
+  ): Promise<UploadAvatarResponseDto> {
+    if (!file?.buffer) throw new AppException('AVATAR_INVALID');
+    const image = await this.sanitizer.sanitizeAvatar(file.buffer);
+    const key = `${randomUUID()}.${image.extension}`;
+    await this.storage.put(key, image.data);
+
+    let previous: string;
+    try {
+      const user = await this.users.findOneByOrFail({ id: authUser.id });
+      previous = user.avatarUrl;
+      await this.users.update({ id: user.id }, { avatarUrl: key });
+    } catch (error) {
+      await this.storage.delete(key).catch(() => undefined);
+      throw error;
+    }
+    if (STORAGE_KEY_REGEX.test(previous))
+      await this.storage.delete(previous).catch(() => undefined);
+
+    return {
+      code: 'PROFILE_UPDATED',
+      message: 'Profile updated.',
+      avatarUrl: this.signer.sign(key),
+    };
   }
 
   // ---------------------------------------------------------------------------------------------

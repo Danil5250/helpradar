@@ -130,6 +130,10 @@ export const ERR = {
   USER_NOT_FOUND: { status: 404, message: 'User not found.' },
   PROFILE_BLOCKED: { status: 403, message: 'This account is blocked.' },
   NEW_EMAIL_TAKEN: { status: 409, message: 'This email is already taken.' },
+  AVATAR_INVALID: {
+    status: 400,
+    message: 'Use a JPEG, PNG or WebP image up to 5 MB.',
+  },
 } as const;
 
 export type ErrorCode = keyof typeof ERR;
