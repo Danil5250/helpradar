@@ -2,6 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import type { ConfigType } from '@nestjs/config';
 import { createHmac, timingSafeEqual } from 'crypto';
 import appConfig from '../../config/app.config';
+import { STORAGE_KEY_REGEX } from './file-storage';
 
 export const SIGNED_URL_TTL_SECONDS = 60 * 60;
 
@@ -20,6 +21,11 @@ export class SignedUrlService {
   ): string {
     const expires = Math.floor(now / 1000) + ttlSeconds;
     return `/api/files/${key}?expires=${expires}&signature=${this.signature(key, expires)}`;
+  }
+
+  /** Stored file keys become signed URLs; anything else (e.g. the default placeholder path) is returned as is. */
+  resolve(value: string): string {
+    return STORAGE_KEY_REGEX.test(value) ? this.sign(value) : value;
   }
 
   verify(

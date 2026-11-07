@@ -2,7 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import type { ConfigType } from '@nestjs/config';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcryptjs';
-import { DataSource, EntityManager, Repository } from 'typeorm';
+import { DataSource, EntityManager, IsNull, Repository } from 'typeorm';
 import { AppException } from '../../common/errors';
 import { generateToken, hashToken } from '../../common/utils/tokens';
 import appConfig from '../../config/app.config';
@@ -143,7 +143,8 @@ export class AuthService {
   async verifyEmail(token: string, meta: SessionMeta): Promise<AuthResult> {
     const user = await this.dataSource.transaction(async (manager) => {
       const row = await manager.findOne(EmailVerificationToken, {
-        where: { tokenHash: hashToken(token) },
+        // e-mail change tokens are confirmed by the profile flow, not here
+        where: { tokenHash: hashToken(token), newEmail: IsNull() },
         lock: { mode: 'pessimistic_write' },
       });
       if (!row || row.usedAt || row.expiresAt.getTime() <= Date.now())
