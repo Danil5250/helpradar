@@ -15,6 +15,10 @@
         <p class="font-montserratMedium text-xl mt-2" data-test="profile-name">{{ profile.firstName }} {{ profile.lastName }}</p>
         <p class="text-sm"><span class="bg-sand rounded-full px-3 py-1">{{ t(profile.role === 'volunteer' ? 'role_volunteer' : 'role_person_in_need') }}</span></p>
         <p v-if="profile.city" class="flex items-center gap-1 text-sm"><AppIcon name="pin" class="h-4 w-4 text-forest" />{{ profile.city }}</p>
+        <div v-if="profile.rating !== null" class="flex items-center gap-2" data-test="profile-rating">
+          <ProfileRatingStars :value="profile.rating" />
+          <span class="text-sm text-sage">({{ t('reviews_count', { count: profile.reviewsCount }) }})</span>
+        </div>
         <p class="text-xs text-sage">{{ t('member_since', { date: formatDate(profile.createdAt, locale) }) }}</p>
         <NuxtLink :to="`/users/${profile.id}`" class="mt-2 underline font-montserratMedium hover:text-forest" data-test="public-link">{{ t('view_public_profile') }}</NuxtLink>
       </aside>
@@ -48,6 +52,10 @@
             </div>
             <div class="md:col-span-2"><dt class="text-sm text-sage">{{ t('about_me') }}</dt><dd class="whitespace-pre-line break-words">{{ profile.aboutMe || '—' }}</dd></div>
           </dl>
+        </div>
+
+        <div v-if="profile.role === 'volunteer'" class="bg-almost-white rounded-3xl p-6">
+          <ProfileReviewsList :user-id="profile.id" />
         </div>
       </section>
     </div>
