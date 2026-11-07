@@ -60,5 +60,18 @@ export const useAuth = () => {
     user.value = null;
   }
 
-  return { user, loaded, isAuthenticated, role, canPublish, fetchMe, login, verifyEmail, logout, sessionEnded };
+  function forgotPassword(email: string, locale: string): Promise<{ code: string; message: string }> {
+    return apiFetch('/auth/forgot-password', { method: 'POST', body: { email, locale } });
+  }
+
+  function checkResetToken(token: string): Promise<{ code: string }> {
+    return apiFetch('/auth/check-reset-token', { method: 'POST', body: { token } });
+  }
+
+  async function resetPassword(token: string, password: string, passwordConfirm: string): Promise<void> {
+    await apiFetch('/auth/reset-password', { method: 'POST', body: { token, password, passwordConfirm } });
+    user.value = null;
+  }
+
+  return { user, loaded, isAuthenticated, role, canPublish, fetchMe, login, verifyEmail, logout, sessionEnded, forgotPassword, checkResetToken, resetPassword };
 };

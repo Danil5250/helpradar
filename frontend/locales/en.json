@@ -223,7 +223,8 @@
     "REVIEW_PERIOD_ENDED": "The review period for this request has ended.",
     "REVIEW_TEXT_FORBIDDEN": "Please change the text of your review.",
     "REVIEW_EDIT_EXPIRED": "A review can only be edited within 24 hours.",
-    "REVIEW_NOT_FOUND": "The review was not found."
+    "REVIEW_NOT_FOUND": "The review was not found.",
+    "RESET_LINK_INVALID": "This link is invalid or has expired. Request a new one."
   },
   "category": {
     "1": "Food & Water",
@@ -285,5 +286,17 @@
     "humanitarian": "Humanitarian help",
     "informational": "Informational help",
     "material": "Material help"
-  }
+  },
+  "forgot_password": "Forgot password?",
+  "password_recovery": "Password recovery",
+  "password_recovery_hint": "Enter the e-mail of your account and we will send you a link to set a new password.",
+  "send_reset_linkUPPER": "SEND LINK",
+  "reset_link_sent": "If this email is registered, we have sent a reset link.",
+  "back_to_login": "Back to log in",
+  "helmet_password_recovery": "Password recovery - HelpRadar",
+  "new_password": "New password",
+  "password_rules": "8–64 characters, at least one letter and one digit.",
+  "save_passwordUPPER": "SAVE PASSWORD",
+  "request_new_linkUPPER": "REQUEST A NEW LINK",
+  "password_changed": "Your password has been changed."
 }

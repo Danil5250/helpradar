@@ -223,7 +223,8 @@
     "REVIEW_PERIOD_ENDED": "Термін для відгуку на цей запит минув.",
     "REVIEW_TEXT_FORBIDDEN": "Будь ласка, змініть текст відгуку.",
     "REVIEW_EDIT_EXPIRED": "Відгук можна редагувати лише протягом 24 годин.",
-    "REVIEW_NOT_FOUND": "Відгук не знайдено."
+    "REVIEW_NOT_FOUND": "Відгук не знайдено.",
+    "RESET_LINK_INVALID": "Посилання недійсне або застаріло. Запросіть нове."
   },
   "category": {
     "1": "Їжа та вода",
@@ -285,5 +286,17 @@
     "humanitarian": "Гуманітарна допомога",
     "informational": "Інформаційна допомога",
     "material": "Матеріальна допомога"
-  }
+  },
+  "forgot_password": "Забули пароль?",
+  "password_recovery": "Відновлення пароля",
+  "password_recovery_hint": "Вкажіть пошту акаунта — ми надішлемо посилання для нового пароля.",
+  "send_reset_linkUPPER": "НАДІСЛАТИ ПОСИЛАННЯ",
+  "reset_link_sent": "Якщо ця пошта зареєстрована, ми надіслали посилання для відновлення.",
+  "back_to_login": "Повернутися до входу",
+  "helmet_password_recovery": "Відновлення пароля - HelpRadar",
+  "new_password": "Новий пароль",
+  "password_rules": "8–64 символи, щонайменше одна літера і одна цифра.",
+  "save_passwordUPPER": "ЗБЕРЕГТИ ПАРОЛЬ",
+  "request_new_linkUPPER": "ЗАПРОСИТИ НОВЕ ПОСИЛАННЯ",
+  "password_changed": "Ваш пароль змінено."
 }

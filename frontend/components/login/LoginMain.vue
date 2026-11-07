@@ -43,6 +43,9 @@
       </button>
       <p v-if="errors.password" class="text-charcoal text-sm mt-1 border-l-4 border-radar pl-2">{{ fieldText(errors.password) }}</p>
     </div>
+    <div class="w-full flex justify-end -mt-3 mb-6">
+      <NuxtLink to="/forgot-password" class="font-montserratMedium text-sm underline hover:text-forest" data-test="forgot-password">{{ t('forgot_password') }}</NuxtLink>
+    </div>
     <div id="login-error" role="alert" aria-live="assertive">
       <p v-if="generalError" class="text-charcoal text-center mb-5 border-l-4 border-radar bg-almost-white rounded-r-lg px-3 py-2" data-test="login-error">
         {{ generalError }}
