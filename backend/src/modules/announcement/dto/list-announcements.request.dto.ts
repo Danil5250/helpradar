@@ -2,6 +2,7 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
   IsEnum,
+  IsIn,
   IsInt,
   IsLatitude,
   IsLongitude,
@@ -16,6 +17,14 @@ export enum AnnouncementSort {
   Nearest = 'nearest',
   Urgent = 'urgent',
 }
+
+/** SRS 3.2.19.2: radius of the search, km. */
+export const SEARCH_RADII_KM = [1, 3, 5, 10, 25, 50] as const;
+export type SearchRadiusKm = (typeof SEARCH_RADII_KM)[number];
+export const RADIUS_INVALID = v(
+  'RADIUS_INVALID',
+  'Choose a radius of 1, 3, 5, 10, 25 or 50 km.',
+);
 
 export enum AnnouncementTypeFilter {
   HelpOffer = 'helpOffer',
@@ -58,6 +67,16 @@ export class ListAnnouncementsRequestDto {
     v('TYPE_INVALID', 'Invalid announcement type.'),
   )
   type?: AnnouncementTypeFilter;
+
+  @ApiPropertyOptional({
+    enum: SEARCH_RADII_KM,
+    description:
+      'Radius search (SRS 3.2.19): only announcements within this distance from lat/lng; ignored without a location',
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsIn(SEARCH_RADII_KM, RADIUS_INVALID)
+  radius?: SearchRadiusKm;
 
   @ApiPropertyOptional({
     description:

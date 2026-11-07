@@ -38,6 +38,8 @@ import { ExtendAnnouncementRequestDto } from './dto/extend-announcement.request.
 import { GetAnnouncementResponseDto } from './dto/get-announcement.response.dto';
 import { GetOwnAnnouncementsResponseDto } from './dto/get-own-announcements.response.dto';
 import { ListAnnouncementsRequestDto } from './dto/list-announcements.request.dto';
+import { MapAnnouncementsRequestDto } from './dto/map-announcements.request.dto';
+import { MapAnnouncementsResponseDto } from './dto/map-announcements.response.dto';
 import { RepublishAnnouncementRequestDto } from './dto/republish-announcement.request.dto';
 import { UpdateAnnouncementRequestDto } from './dto/update-announcement.request.dto';
 import { UploadAnnouncementPhotoResponseDto } from './dto/upload-announcement-photo.response.dto';
@@ -62,6 +64,20 @@ export class AnnouncementController {
     @CurrentUser() user?: AuthUser,
   ): Promise<AnnouncementPageResponseDto> {
     return this.announcements.findAll(query, user);
+  }
+
+  // 3.2.18 / 3.2.19 Map and radius search - also available to guests (declared before ":id")
+  @Get('map')
+  @UseGuards(OptionalSessionGuard)
+  @ApiOperation({
+    summary:
+      'Announcements within a radius of a point, nearest first, for the map (SRS 3.2.18, 3.2.19)',
+  })
+  findForMap(
+    @Query() query: MapAnnouncementsRequestDto,
+    @CurrentUser() user?: AuthUser,
+  ): Promise<MapAnnouncementsResponseDto> {
+    return this.announcements.findForMap(query, user);
   }
 
   // 3.2.5.3 step 1: "My announcements" (declared before ":id" so that it is not treated as an id)
