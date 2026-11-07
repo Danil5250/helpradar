@@ -18,12 +18,15 @@ import type { AuthenticatedRequest, AuthUser } from './auth-user';
 import { SESSION_COOKIE } from './auth.constants';
 import { AuthResult, AuthService } from './auth.service';
 import { CurrentUser } from './current-user.decorator';
+import { CheckResetTokenRequestDto } from './dto/check-reset-token.request.dto';
 import { CurrentUserResponseDto } from './dto/current-user.response.dto';
 import { EmailSentResponseDto } from './dto/email-sent.response.dto';
+import { ForgotPasswordRequestDto } from './dto/forgot-password.request.dto';
 import { LoginRequestDto } from './dto/login.request.dto';
 import { LoginResponseDto } from './dto/login.response.dto';
 import { RegisterRequestDto } from './dto/register.request.dto';
 import { ResendVerificationRequestDto } from './dto/resend-verification.request.dto';
+import { ResetPasswordRequestDto } from './dto/reset-password.request.dto';
 import { SessionResponseDto } from './dto/session.response.dto';
 import { VerifyEmailRequestDto } from './dto/verify-email.request.dto';
 import { IpRateLimitGuard } from './guards/ip-rate-limit.guard';
@@ -108,6 +111,47 @@ export class AuthController {
     await this.auth.logout(user.sessionId);
     res.clearCookie(SESSION_COOKIE, this.cookieOptions());
     return { code: 'LOGGED_OUT', message: 'You have logged out.' };
+  }
+
+  // 3.2.3 Password recovery
+  @Post('forgot-password')
+  @HttpCode(202)
+  @UseGuards(IpRateLimitGuard)
+  @ApiOperation({
+    summary:
+      'Send a password reset link; the answer is the same for unknown e-mails (SRS 3.2.3)',
+  })
+  forgotPassword(
+    @Body() dto: ForgotPasswordRequestDto,
+  ): Promise<MessageResponseDto> {
+    return this.auth.forgotPassword(dto.email, dto.locale);
+  }
+
+  @Post('check-reset-token')
+  @HttpCode(200)
+  @UseGuards(IpRateLimitGuard)
+  @ApiOperation({ summary: 'Check that a password reset link is still valid' })
+  checkResetToken(
+    @Body() dto: CheckResetTokenRequestDto,
+  ): Promise<MessageResponseDto> {
+    return this.auth.checkResetToken(dto.token);
+  }
+
+  @Post('reset-password')
+  @HttpCode(200)
+  @UseGuards(IpRateLimitGuard)
+  @ApiOperation({
+    summary:
+      'Set a new password with the token from the e-mail; ends all sessions',
+  })
+  async resetPassword(
+    @Body() dto: ResetPasswordRequestDto,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<MessageResponseDto> {
+    const result = await this.auth.resetPassword(dto.token, dto.password);
+    // every session of the user has just been ended, so the cookie of this browser is useless too
+    res.clearCookie(SESSION_COOKIE, this.cookieOptions());
+    return result;
   }
 
   @Get('me')
