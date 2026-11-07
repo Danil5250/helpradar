@@ -25,6 +25,10 @@ export class EmailVerificationToken {
   @Column({ type: 'timestamptz' })
   expiresAt: Date;
 
+  /** Set for an e-mail change (SRS 3.2.12.3 step 5): the address that becomes active after confirmation. */
+  @Column({ type: 'varchar', length: 254, nullable: true })
+  newEmail: string | null;
+
   @Column({ type: 'timestamptz', nullable: true })
   usedAt: Date | null;
 

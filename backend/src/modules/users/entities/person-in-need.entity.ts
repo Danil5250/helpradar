@@ -22,6 +22,10 @@ export class PersonInNeed {
   @Column({ type: 'varchar', length: 255, nullable: true })
   street: string | null;
 
+  /** SRS 3.2.12.2: "About me", up to 500 characters. */
+  @Column({ type: 'varchar', length: 500, default: '' })
+  aboutMe: string;
+
   @Column({ type: 'int', unique: true })
   userId: number;
 

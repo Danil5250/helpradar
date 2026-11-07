@@ -4,6 +4,7 @@ import { EmailVerificationToken } from '../modules/auth/entities/email-verificat
 import { LoginAttempt } from '../modules/auth/entities/login-attempt.entity';
 import { UserSession } from '../modules/auth/entities/user-session.entity';
 import { Category } from '../modules/categories/category.entity';
+import { Comment } from '../modules/comments/entities/comment.entity';
 import { EmailOutbox } from '../modules/email/entities/email-outbox.entity';
 import { PersonInNeed } from '../modules/users/entities/person-in-need.entity';
 import { User } from '../modules/users/entities/user.entity';
@@ -16,6 +17,7 @@ export const ALL_ENTITIES = [
   Category,
   Announcement,
   AnnouncementPhoto,
+  Comment,
   UserSession,
   EmailVerificationToken,
   LoginAttempt,
