@@ -7,6 +7,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import ua.helpradar.app.data.local.SessionManager
 import ua.helpradar.app.data.repository.AuthRepository
+import ua.helpradar.app.presentation.auth.ForgotPasswordScreen
 import ua.helpradar.app.presentation.auth.LoginScreen
 import ua.helpradar.app.presentation.auth.RegisterScreen
 import ua.helpradar.app.presentation.feed.FeedScreen
@@ -50,6 +51,9 @@ fun AppNavHost(
                     navController.navigate(Screen.Feed.route) {
                         popUpTo(Screen.Login.route) { inclusive = true }
                     }
+                },
+                onNavigateToForgotPassword = {
+                    navController.navigate(Screen.ForgotPassword.route)
                 }
             )
         }
@@ -63,6 +67,14 @@ fun AppNavHost(
                     navController.navigate(Screen.Login.route) {
                         popUpTo(Screen.Register.route) { inclusive = true }
                     }
+                }
+            )
+        }
+
+        composable(Screen.ForgotPassword.route) {
+            ForgotPasswordScreen(
+                onNavigateBackToLogin = {
+                    navController.popBackStack()
                 }
             )
         }

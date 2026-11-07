@@ -8,6 +8,8 @@ import ua.helpradar.app.data.network.dto.LoginRequest
 import ua.helpradar.app.data.network.dto.AuthResponse
 import ua.helpradar.app.data.network.dto.RegisterRequest
 import ua.helpradar.app.data.network.dto.RegisterResponse
+import ua.helpradar.app.data.network.dto.ForgotPasswordRequest
+import ua.helpradar.app.data.network.dto.ForgotPasswordResponse
 
 interface AuthApiService {
     @POST("api/auth/login")
@@ -15,4 +17,7 @@ interface AuthApiService {
 
     @POST("api/auth/register")
     suspend fun register(@Body request: RegisterRequest): Response<RegisterResponse>
+
+    @POST("api/auth/forgot-password")
+    suspend fun forgotPassword(@Body request: ForgotPasswordRequest): Response<ForgotPasswordResponse>
 }
