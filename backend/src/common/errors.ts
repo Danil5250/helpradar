@@ -134,6 +134,27 @@ export const ERR = {
     status: 400,
     message: 'Use a JPEG, PNG or WebP image up to 5 MB.',
   },
+  REVIEW_NOT_ALLOWED: {
+    status: 403,
+    message: 'You cannot leave a review for this request.',
+  },
+  REVIEW_EXISTS: {
+    status: 409,
+    message: 'You have already left a review for this request.',
+  },
+  REVIEW_PERIOD_ENDED: {
+    status: 422,
+    message: 'The review period for this request has ended.',
+  },
+  REVIEW_TEXT_FORBIDDEN: {
+    status: 422,
+    message: 'Please change the text of your review.',
+  },
+  REVIEW_EDIT_EXPIRED: {
+    status: 422,
+    message: 'A review can only be edited within 24 hours.',
+  },
+  REVIEW_NOT_FOUND: { status: 404, message: 'The review was not found.' },
 } as const;
 
 export type ErrorCode = keyof typeof ERR;

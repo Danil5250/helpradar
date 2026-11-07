@@ -9,6 +9,7 @@ import { distanceMeters, GeoPoint, randomShift } from '../../common/utils/geo';
 import appConfig from '../../config/app.config';
 import { AuthUser } from '../auth/auth-user';
 import { CategoriesService } from '../categories/categories.service';
+import { CommentsService } from '../comments/comments.service';
 import { MailService } from '../email/mail.service';
 import { expiryReminderEmail } from '../email/mail.templates';
 import { GeocodingService } from '../geocoding/geocoding.service';
@@ -72,6 +73,7 @@ export class AnnouncementService {
     private readonly storage: FileStorage,
     private readonly sanitizer: ImageSanitizerService,
     private readonly mail: MailService,
+    private readonly comments: CommentsService,
     @Inject(appConfig.KEY)
     private readonly config: ConfigType<typeof appConfig>,
   ) {}
@@ -266,7 +268,11 @@ export class AnnouncementService {
       await this.announcements.increment({ id }, 'viewsCount', 1);
       entity.viewsCount += 1;
     }
-    return this.toDetails(entity, isOwner);
+    return this.toDetails(
+      entity,
+      isOwner,
+      await this.comments.canReview(entity, viewer),
+    );
   }
 
   // ---------------------------------------------------------------------------------------------
@@ -775,6 +781,7 @@ export class AnnouncementService {
   private toDetails(
     entity: Announcement,
     isOwner: boolean,
+    canReview: boolean,
   ): AnnouncementDetailsResponseDto {
     return {
       id: entity.id,
@@ -813,6 +820,7 @@ export class AnnouncementService {
         : null,
       allowedActions: isOwner ? this.allowedActions(entity) : [],
       republishUntil: isOwner ? this.republishUntil(entity) : null,
+      canReview,
     };
   }
 }
