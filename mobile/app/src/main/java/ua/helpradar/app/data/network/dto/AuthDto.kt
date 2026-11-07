@@ -43,3 +43,12 @@ data class RegisterResponse(
     @SerializedName("message") val message: String?,
     @SerializedName("emailQueued") val emailQueued: Boolean?
 )
+
+data class ForgotPasswordRequest(
+    @SerializedName("email") val email: String,
+    @SerializedName("locale") val locale: String = "uk"
+)
+
+data class ForgotPasswordResponse(
+    @SerializedName("message") val message: String?
+)

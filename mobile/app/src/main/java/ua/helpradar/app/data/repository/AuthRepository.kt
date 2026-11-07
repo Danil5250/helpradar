@@ -5,6 +5,7 @@ import ua.helpradar.app.data.network.ApiClient
 import ua.helpradar.app.data.network.Resource
 import ua.helpradar.app.data.network.dto.LoginRequest
 import ua.helpradar.app.data.network.dto.RegisterRequest
+import ua.helpradar.app.data.network.dto.ForgotPasswordRequest
 
 class AuthRepository {
     suspend fun login(email: String, password: String): Resource<String> {
@@ -57,6 +58,28 @@ class AuthRepository {
         }
     }
 
+    suspend fun forgotPassword(email: String): Resource<String> {
+        return try {
+            val response = ApiClient.authService.forgotPassword(ForgotPasswordRequest(email = email))
+            val body = response.body()
+
+            if (response.isSuccessful) {
+                val message = body?.message
+                    ?: "Якщо ця пошта зареєстрована, ми надіслали інструкції для відновлення пароля."
+                Resource.Success(message)
+            } else {
+                val errorMsg = when (response.code()) {
+                    400 -> "Введіть дійсну адресу електронної пошти."
+                    429 -> "Забагато спроб відновлення. Спробуйте пізніше."
+                    503 -> "Поштовий сервіс тимчасово недоступний. Спробуйте через кілька хвилин."
+                    else -> "Помилка надсилання запиту (${response.code()})"
+                }
+                Resource.Error(errorMsg, response.code())
+            }
+        } catch (_: Exception) {
+            Resource.Error("Немає зв'язку з сервером")
+        }
+    }
     fun logout() {
         SessionManager.clear()
         ApiClient.clearCookies()

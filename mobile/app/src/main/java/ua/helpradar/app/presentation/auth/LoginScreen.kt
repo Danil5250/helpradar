@@ -34,6 +34,7 @@ import ua.helpradar.app.ui.theme.*
 fun LoginScreen(
     onNavigateToRegister: () -> Unit,
     onLoginSuccess: () -> Unit,
+    onNavigateToForgotPassword: () -> Unit,
     viewModel: LoginViewModel = viewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -146,7 +147,7 @@ fun LoginScreen(
                     color = OliveGreen,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Medium,
-                    modifier = Modifier.clickable { }
+                    modifier = Modifier.clickable { onNavigateToForgotPassword() }
                 )
             }
 
