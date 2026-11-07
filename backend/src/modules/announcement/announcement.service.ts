@@ -760,6 +760,7 @@ export class AnnouncementService {
       author: {
         id: entity.user.id,
         name: displayName(entity.user),
+        avatarUrl: this.signer.resolve(entity.user.avatarUrl),
         rating: entity.user.volunteer ? entity.user.volunteer.rating : null,
       },
       approxLocation: {
@@ -791,6 +792,7 @@ export class AnnouncementService {
       author: {
         id: entity.user.id,
         name: displayName(entity.user),
+        avatarUrl: this.signer.resolve(entity.user.avatarUrl),
         rating: entity.user.volunteer ? entity.user.volunteer.rating : null,
       },
       photos: (entity.photos ?? []).map((photo) => ({
