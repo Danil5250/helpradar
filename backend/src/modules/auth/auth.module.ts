@@ -7,6 +7,7 @@ import { AuthService } from './auth.service';
 import { AuthTasks } from './auth.tasks';
 import { EmailVerificationToken } from './entities/email-verification-token.entity';
 import { LoginAttempt } from './entities/login-attempt.entity';
+import { PasswordResetToken } from './entities/password-reset-token.entity';
 import { UserSession } from './entities/user-session.entity';
 import { IpRateLimitGuard } from './guards/ip-rate-limit.guard';
 import { RolesGuard } from './guards/roles.guard';
@@ -22,6 +23,7 @@ import { SessionService } from './session.service';
       UserSession,
       EmailVerificationToken,
       LoginAttempt,
+      PasswordResetToken,
     ]),
     UsersModule,
     MailModule,

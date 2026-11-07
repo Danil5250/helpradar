@@ -1,4 +1,5 @@
 import { ValidationError, ValidationPipe } from '@nestjs/common';
+import { registerDecorator, ValidationArguments } from 'class-validator';
 import { FieldErrorResponseDto } from './dto/field-error.response.dto';
 import { AppException } from './errors';
 
@@ -49,3 +50,24 @@ export const NAME_REGEX = /^(?=.*\p{L})[\p{L} '’ʼ-]{2,50}$/u;
 export const PASSWORD_REGEX = /^(?=.*\p{L})(?=.*\d).{8,64}$/u;
 /** International format, e.g. +380XXXXXXXXX (E.164). */
 export const PHONE_REGEX = /^\+[1-9]\d{7,14}$/;
+
+/** Validates that the property equals another property of the same object (e.g. "Repeat password"). */
+export function MatchesField(
+  field: string,
+  options: { message: string; context: { code: string } },
+) {
+  return (object: object, propertyName: string) => {
+    registerDecorator({
+      name: 'matchesField',
+      target: object.constructor,
+      propertyName,
+      constraints: [field],
+      options,
+      validator: {
+        validate: (value: unknown, args: ValidationArguments) =>
+          value ===
+          (args.object as Record<string, unknown>)[args.constraints[0]],
+      },
+    });
+  };
+}
