@@ -27,6 +27,7 @@ import {
   MAX_ACTIVE_ANNOUNCEMENTS,
   MAX_EXTEND_DAYS,
   MAX_PHOTOS,
+  MAP_MARKERS_LIMIT,
   PAGE_SIZE,
   REMINDER_BEFORE_EXPIRY_HOURS,
   REPUBLISH_WINDOW_DAYS,
@@ -41,8 +42,11 @@ import { CreateAnnouncementRequestDto } from './dto/create-announcement.request.
 import {
   ANNOUNCEMENT_TYPE_BY_FILTER,
   AnnouncementSort,
+  AnnouncementTypeFilter,
   ListAnnouncementsRequestDto,
 } from './dto/list-announcements.request.dto';
+import { MapAnnouncementsRequestDto } from './dto/map-announcements.request.dto';
+import { MapAnnouncementsResponseDto } from './dto/map-announcements.response.dto';
 import { UpdateAnnouncementRequestDto } from './dto/update-announcement.request.dto';
 import { AnnouncementAction } from './enums/announcement-action.type';
 import { AnnouncementStatus } from './enums/announcement-status.enum';
@@ -153,26 +157,17 @@ export class AnnouncementService {
     const page = query.page ?? 1;
     const hasPoint = query.lat !== undefined && query.lng !== undefined;
 
-    const qb = this.announcements
-      .createQueryBuilder('a')
-      .innerJoinAndSelect('a.category', 'category')
-      .innerJoinAndSelect('a.user', 'user')
-      .leftJoinAndSelect('user.volunteer', 'volunteer')
-      .where('a.status = :status', { status: AnnouncementStatus.Active })
-      .andWhere('a.expiresAt > now()');
+    const qb = this.activeQuery(viewer, query.type);
 
-    if (viewer) qb.andWhere('a.userId != :viewerId', { viewerId: viewer.id });
-
-    if (query.type)
-      qb.andWhere('a.type = :type', {
-        type: ANNOUNCEMENT_TYPE_BY_FILTER[query.type],
-      });
-
-    if (hasPoint)
+    if (hasPoint) {
       qb.addSelect(DISTANCE_SQL, 'distance_km').setParameters({
         lat: query.lat,
         lng: query.lng,
       });
+      // 3.2.19 radius search: the list shows only what is inside the circle
+      if (query.radius)
+        qb.andWhere(`${DISTANCE_SQL} <= :radius`, { radius: query.radius });
+    }
 
     if (query.sort === AnnouncementSort.Urgent) {
       qb.orderBy('a.isUrgent', 'DESC').addOrderBy('a.datePosted', 'DESC');
@@ -208,6 +203,71 @@ export class AnnouncementService {
       pageSize: PAGE_SIZE,
       hasMore: entities.length > PAGE_SIZE,
     };
+  }
+
+  // ---------------------------------------------------------------------------------------------
+  // 3.2.18 Map / 3.2.19 Radius search
+  // ---------------------------------------------------------------------------------------------
+
+  /** Everything inside the circle, nearest first; the same role filter as the list applies. */
+  async findForMap(
+    query: MapAnnouncementsRequestDto,
+    viewer?: AuthUser,
+  ): Promise<MapAnnouncementsResponseDto> {
+    const qb = this.activeQuery(viewer, query.type)
+      .addSelect(DISTANCE_SQL, 'distance_km')
+      .andWhere(`${DISTANCE_SQL} <= :radius`)
+      .setParameters({ lat: query.lat, lng: query.lng, radius: query.radius });
+    const total = await qb.clone().getCount();
+    const { entities, raw } = await qb
+      .orderBy('distance_km', 'ASC')
+      .addOrderBy('a.id', 'DESC')
+      .limit(MAP_MARKERS_LIMIT)
+      .getRawAndEntities();
+
+    const distances = new Map<number, number>(
+      raw.map((row) => [row.a_id, Number(row.distance_km)]),
+    );
+    return {
+      items: entities.map((entity) => ({
+        id: entity.id,
+        type: entity.type,
+        title: entity.title ?? '',
+        category: { id: entity.category.id, name: entity.category.name },
+        isUrgent: entity.isUrgent,
+        datePosted: entity.datePosted.toISOString(),
+        distanceKm: Math.round((distances.get(entity.id) ?? 0) * 10) / 10,
+        approxLocation: {
+          latitude: entity.approxLatitude,
+          longitude: entity.approxLongitude,
+        },
+      })),
+      total,
+      radiusKm: query.radius,
+    };
+  }
+
+  /**
+   * Active, not expired announcements. A signed-in user never sees their own ones (they are under
+   * "My announcements"), and the role decides which type is shown (offers for persons in need, requests for volunteers).
+   */
+  private activeQuery(
+    viewer: AuthUser | undefined,
+    type: AnnouncementTypeFilter | undefined,
+  ) {
+    const qb = this.announcements
+      .createQueryBuilder('a')
+      .innerJoinAndSelect('a.category', 'category')
+      .innerJoinAndSelect('a.user', 'user')
+      .leftJoinAndSelect('user.volunteer', 'volunteer')
+      .where('a.status = :status', { status: AnnouncementStatus.Active })
+      .andWhere('a.expiresAt > now()');
+    if (viewer) qb.andWhere('a.userId != :viewerId', { viewerId: viewer.id });
+    if (type)
+      qb.andWhere('a.type = :type', {
+        type: ANNOUNCEMENT_TYPE_BY_FILTER[type],
+      });
+    return qb;
   }
 
   /** "My announcements" (SRS 3.2.5.3 step 1): everything the user has published except deleted entries. */

@@ -21,3 +21,5 @@ export const APPROX_MAX_METERS = 300;
 export const LOCATION_UNCHANGED_METERS = 10;
 
 export const DAY_MS = 24 * 60 * 60 * 1000;
+/** Upper bound of markers returned for one map request (the client clusters them). */
+export const MAP_MARKERS_LIMIT = 500;
