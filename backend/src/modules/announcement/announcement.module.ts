@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from '../auth/auth.module';
 import { CategoriesModule } from '../categories/categories.module';
+import { CommentsModule } from '../comments/comments.module';
 import { MailModule } from '../email/mail.module';
 import { GeocodingModule } from '../geocoding/geocoding.module';
 import { StorageModule } from '../storage/storage.module';
@@ -17,6 +18,7 @@ import { ModerationService } from './moderation.service';
     TypeOrmModule.forFeature([Announcement, AnnouncementPhoto]),
     AuthModule,
     CategoriesModule,
+    CommentsModule,
     GeocodingModule,
     StorageModule,
     MailModule,

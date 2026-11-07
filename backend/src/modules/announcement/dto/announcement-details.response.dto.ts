@@ -29,4 +29,6 @@ export class AnnouncementDetailsResponseDto {
   } | null;
   allowedActions: AnnouncementAction[];
   republishUntil: string | null;
+  /** The author of a completed request can leave a review for the volunteer (SRS 3.2.14.3 step 1). */
+  canReview: boolean;
 }
