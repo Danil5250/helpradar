@@ -105,3 +105,23 @@ export interface LocationValue {
   latitude: number | null;
   longitude: number | null;
 }
+
+export const SEARCH_RADII_KM = [1, 3, 5, 10, 25, 50] as const;
+export type SearchRadiusKm = (typeof SEARCH_RADII_KM)[number];
+
+export interface MapMarker {
+  id: number;
+  type: AnnouncementType;
+  title: string;
+  category: Category;
+  isUrgent: boolean;
+  datePosted: string;
+  distanceKm: number;
+  approxLocation: GeoPoint;
+}
+
+export interface MapAnnouncements {
+  items: MapMarker[];
+  total: number;
+  radiusKm: number;
+}
