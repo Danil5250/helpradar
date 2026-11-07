@@ -127,6 +127,12 @@ export const ERR = {
     status: 403,
     message: 'This link is invalid or has expired.',
   },
+  // SRS 3.2.3 password recovery
+  RESET_LINK_INVALID: {
+    status: 400,
+    message: 'This link is invalid or has expired. Request a new one.',
+  },
+  // SRS 3.2.12 / 3.2.15 profiles
   USER_NOT_FOUND: { status: 404, message: 'User not found.' },
   PROFILE_BLOCKED: { status: 403, message: 'This account is blocked.' },
   NEW_EMAIL_TAKEN: { status: 409, message: 'This email is already taken.' },
@@ -134,6 +140,7 @@ export const ERR = {
     status: 400,
     message: 'Use a JPEG, PNG or WebP image up to 5 MB.',
   },
+  // SRS 3.2.14 reviews
   REVIEW_NOT_ALLOWED: {
     status: 403,
     message: 'You cannot leave a review for this request.',

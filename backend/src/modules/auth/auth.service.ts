@@ -3,11 +3,16 @@ import type { ConfigType } from '@nestjs/config';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcryptjs';
 import { DataSource, EntityManager, IsNull, Repository } from 'typeorm';
+import { MessageResponseDto } from '../../common/dto/message.response.dto';
 import { AppException } from '../../common/errors';
 import { generateToken, hashToken } from '../../common/utils/tokens';
 import appConfig from '../../config/app.config';
 import { MailService } from '../email/mail.service';
-import { activationEmail, MailLocale } from '../email/mail.templates';
+import {
+  activationEmail,
+  MailLocale,
+  passwordResetEmail,
+} from '../email/mail.templates';
 import { PersonInNeed } from '../users/entities/person-in-need.entity';
 import { User } from '../users/entities/user.entity';
 import { Volunteer } from '../users/entities/volunteer.entity';
@@ -23,6 +28,8 @@ import {
   LOGIN_LOCK_MS,
   LOGIN_WINDOW_MS,
   MAX_FAILED_LOGINS,
+  PASSWORD_RESET_COOLDOWN_MS,
+  PASSWORD_RESET_TTL_MS,
   RESEND_COOLDOWN_MS,
   UNVERIFIED_ACCOUNT_TTL_MS,
   VERIFICATION_TTL_MS,
@@ -32,6 +39,7 @@ import { LoginRequestDto } from './dto/login.request.dto';
 import { RegisterRequestDto } from './dto/register.request.dto';
 import { EmailVerificationToken } from './entities/email-verification-token.entity';
 import { LoginAttempt } from './entities/login-attempt.entity';
+import { PasswordResetToken } from './entities/password-reset-token.entity';
 import { SessionMeta, SessionService } from './session.service';
 
 export interface AuthResult {
@@ -58,6 +66,8 @@ export class AuthService {
     private readonly loginAttempts: Repository<LoginAttempt>,
     @InjectRepository(EmailVerificationToken)
     private readonly verificationTokens: Repository<EmailVerificationToken>,
+    @InjectRepository(PasswordResetToken)
+    private readonly resetTokens: Repository<PasswordResetToken>,
     @InjectRepository(User) private readonly users: Repository<User>,
     private readonly usersService: UsersService,
     private readonly sessions: SessionService,
@@ -245,6 +255,117 @@ export class AuthService {
   async me(userId: number): Promise<UserResponseDto> {
     const user = await this.users.findOneByOrFail({ id: userId });
     return this.usersService.toView(user);
+  }
+
+  // ---------------------------------------------------------------------------------------------
+  // 3.2.3 Password recovery
+  // ---------------------------------------------------------------------------------------------
+
+  /**
+   * SRS 3.2.3.3 steps 2-3. The answer is the same whether or not the address is registered and whether or not
+   * the e-mail could be delivered right away (SRS 3.2.3.4 / 3.2.3.5), so it does not reveal accounts.
+   */
+  async forgotPassword(
+    rawEmail: string,
+    locale: MailLocale = 'uk',
+  ): Promise<MessageResponseDto> {
+    const neutral = {
+      code: 'RESET_LINK_SENT',
+      message: 'If this email is registered, we have sent a reset link.',
+    };
+    const user = await this.users.findOneBy({
+      email: normalizeEmail(rawEmail),
+    });
+    if (!user) return neutral;
+
+    const outboxId = await this.dataSource.transaction(async (manager) => {
+      const recent = await manager
+        .createQueryBuilder(PasswordResetToken, 'token')
+        .where('token.userId = :userId AND token.createdAt > :since', {
+          userId: user.id,
+          since: new Date(Date.now() - PASSWORD_RESET_COOLDOWN_MS),
+        })
+        .getExists();
+      if (recent) return null;
+
+      // only the newest link works
+      await manager
+        .createQueryBuilder()
+        .update(PasswordResetToken)
+        .set({ usedAt: new Date() })
+        .where('"user_id" = :userId AND "used_at" IS NULL', { userId: user.id })
+        .execute();
+      const token = generateToken();
+      await manager.save(
+        manager.create(PasswordResetToken, {
+          userId: user.id,
+          tokenHash: hashToken(token),
+          expiresAt: new Date(Date.now() + PASSWORD_RESET_TTL_MS),
+        }),
+      );
+      const message = passwordResetEmail(
+        locale,
+        user.firstName,
+        `${this.config.appUrl}/reset-password?token=${encodeURIComponent(token)}`,
+      );
+      return (
+        await this.mail.enqueue(
+          manager,
+          { to: user.email, ...message },
+          'password-reset',
+        )
+      ).id;
+    });
+    // a failed delivery stays in the outbox and is retried by the scheduler
+    if (outboxId) await this.mail.deliver(outboxId);
+    return neutral;
+  }
+
+  /** SRS 3.2.3.3 step 4: lets the page tell an invalid link before the user types a new password. */
+  async checkResetToken(token: string): Promise<MessageResponseDto> {
+    const row = await this.resetTokens.findOneBy({
+      tokenHash: hashToken(token),
+    });
+    if (!this.isUsableResetToken(row))
+      throw new AppException('RESET_LINK_INVALID');
+    return { code: 'RESET_LINK_VALID', message: 'The link is valid.' };
+  }
+
+  /** SRS 3.2.3.3 step 6: saves the new hash, marks the token as used and ends all sessions of the user. */
+  async resetPassword(
+    token: string,
+    password: string,
+  ): Promise<MessageResponseDto> {
+    const passwordHash = await bcrypt.hash(password, this.config.bcryptRounds);
+    const userId = await this.dataSource.transaction(async (manager) => {
+      const row = await manager.findOne(PasswordResetToken, {
+        where: { tokenHash: hashToken(token) },
+        lock: { mode: 'pessimistic_write' },
+      });
+      if (!this.isUsableResetToken(row))
+        throw new AppException('RESET_LINK_INVALID');
+      row.usedAt = new Date();
+      await manager.save(row);
+      await manager.update(
+        User,
+        { id: row.userId },
+        { password: passwordHash },
+      );
+      return row.userId;
+    });
+    await this.sessions.revokeAllForUser(userId);
+    // the owner has just proven access to the mailbox: a login lock from failed attempts no longer applies
+    await this.resetFailedAttempts(userId);
+    return {
+      code: 'PASSWORD_CHANGED',
+      message: 'Your password has been changed.',
+    };
+  }
+
+  private isUsableResetToken(
+    row: PasswordResetToken | null,
+  ): row is PasswordResetToken {
+    return !!row && !row.usedAt && row.expiresAt.getTime() > Date.now();
   }
 
   // ---------------------------------------------------------------------------------------------

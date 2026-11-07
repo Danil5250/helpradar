@@ -9,10 +9,9 @@ import {
   Length,
   Matches,
   MaxLength,
-  registerDecorator,
-  ValidationArguments,
 } from 'class-validator';
 import {
+  MatchesField,
   NAME_REGEX,
   PASSWORD_REGEX,
   PHONE_REGEX,
@@ -22,27 +21,6 @@ import { Role } from '../../users/enums/role.enum';
 
 const trim = ({ value }: { value: unknown }) =>
   typeof value === 'string' ? value.trim() : value;
-
-/** Validates that the property equals another property of the same object (e.g. "Repeat password"). */
-function MatchesField(
-  field: string,
-  options: { message: string; context: { code: string } },
-) {
-  return (object: object, propertyName: string) => {
-    registerDecorator({
-      name: 'matchesField',
-      target: object.constructor,
-      propertyName,
-      constraints: [field],
-      options,
-      validator: {
-        validate: (value: unknown, args: ValidationArguments) =>
-          value ===
-          (args.object as Record<string, unknown>)[args.constraints[0]],
-      },
-    });
-  };
-}
 
 /** SRS 3.2.1.2 Inputs - registration with role selection. */
 export class RegisterRequestDto {

@@ -126,3 +126,39 @@ export function emailChangeEmail(
     }),
   };
 }
+
+/** SRS 3.2.3.3 step 3: link for setting a new password (valid for 1 hour). */
+export function passwordResetEmail(
+  locale: MailLocale,
+  firstName: string,
+  url: string,
+): Pick<OutgoingMail, 'subject' | 'text' | 'html'> {
+  if (locale === 'en') {
+    const lines = [
+      `Hello, ${firstName}!`,
+      'We received a request to reset the password of your HelpRadar account. To set a new password, open the link below. It is valid for 1 hour and can be used once.',
+      'If you did not ask for this, simply ignore this e-mail - your password stays the same.',
+    ];
+    return {
+      subject: 'Reset your HelpRadar password',
+      text: `${lines[0]}\n\n${lines[1]}\n${url}\n\n${lines[2]}`,
+      html: html('Reset your password', lines, {
+        label: 'Set a new password',
+        url,
+      }),
+    };
+  }
+  const lines = [
+    `Вітаємо, ${firstName}!`,
+    'Ми отримали запит на відновлення пароля до вашого акаунта HelpRadar. Щоб задати новий пароль, відкрийте посилання нижче. Воно дійсне 1 годину і спрацьовує один раз.',
+    'Якщо ви не робили цього запиту, просто проігноруйте лист - ваш пароль не зміниться.',
+  ];
+  return {
+    subject: 'Відновлення пароля HelpRadar',
+    text: `${lines[0]}\n\n${lines[1]}\n${url}\n\n${lines[2]}`,
+    html: html('Відновлення пароля', lines, {
+      label: 'Задати новий пароль',
+      url,
+    }),
+  };
+}
