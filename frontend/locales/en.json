@@ -205,7 +205,15 @@
     "SORT_INVALID": "Invalid sort order.",
     "TYPE_INVALID": "Invalid announcement type.",
     "URGENT_INVALID": "Invalid value.",
-    "UNKNOWN_FIELD": "The request contains an unknown field."
+    "UNKNOWN_FIELD": "The request contains an unknown field.",
+    "STREET_INVALID": "Select the street from the list.",
+    "ABOUT_TOO_LONG": "\"About me\" can be up to 500 characters.",
+    "SUPPORTS_INVALID": "Choose the types of help from the list.",
+    "NEW_EMAIL_TAKEN": "This email is already taken.",
+    "USER_NOT_FOUND": "User not found.",
+    "PROFILE_BLOCKED": "This account is blocked.",
+    "PROFILE_SAVE_FAILED": "Unable to save changes. Try again later.",
+    "PROFILE_UNAVAILABLE": "Unable to load the profile. Try again later."
   },
   "category": {
     "1": "Food & Water",
@@ -227,5 +235,32 @@
     "Hidden": "Hidden",
     "Closed": "Closed",
     "Deleted": "Deleted"
+  },
+  "my_profile": "My profile",
+  "helmet_profile": "My profile - HelpRadar",
+  "helmet_public_profile": "User profile - HelpRadar",
+  "helmet_confirm_email": "E-mail confirmation - HelpRadar",
+  "personal_data": "Personal data",
+  "editUPPER": "EDIT",
+  "saveUPPER": "SAVE",
+  "cancel": "Cancel",
+  "street": "Street",
+  "about_me": "About me",
+  "help_types": "Help I provide",
+  "email_change_hint": "A new address becomes active after you confirm it with the link from the e-mail.",
+  "pending_email": "The new address {email} is waiting for confirmation. Until then the current one stays active.",
+  "profile_updated": "Profile updated.",
+  "profile_updated_email_sent": "Profile updated. We have sent a confirmation link to the new e-mail.",
+  "profile_updated_email_queued": "Profile updated. The confirmation e-mail will arrive within a few minutes.",
+  "email_changed": "Your e-mail has been changed.",
+  "role_volunteer": "Volunteer",
+  "role_person_in_need": "Person in need",
+  "member_since": "Member since {date}",
+  "view_public_profile": "See my public profile",
+  "support": {
+    "psychological": "Psychological help",
+    "humanitarian": "Humanitarian help",
+    "informational": "Informational help",
+    "material": "Material help"
   }
 }

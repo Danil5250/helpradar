@@ -13,9 +13,9 @@
       <div class="hidden xl:flex items-center space-x-5">
         <LanguageSelector />
         <template v-if="isAuthenticated && user">
-          <span class="font-montserratMedium flex items-center gap-2" data-test="user-name">
+          <NuxtLink to="/profile" class="font-montserratMedium flex items-center gap-2 hover:text-forest" :aria-label="t('my_profile')" data-test="user-name">
             <AppIcon name="user" class="text-forest" />{{ user.firstName }} {{ user.lastName }}
-          </span>
+          </NuxtLink>
           <AppButton has-outline data-test="logout" @click="logout">{{ t('log_outUPPER') }}</AppButton>
         </template>
         <template v-else>

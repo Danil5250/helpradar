@@ -15,6 +15,8 @@ export const LIMITS = {
   expiryDefault: 14,
   maxPhotos: 5,
   maxPhotoBytes: 10 * 1024 * 1024,
+  aboutMax: 500,
+  streetMax: 255,
 } as const;
 
 export const NAME_REGEX = /^(?=.*\p{L})[\p{L} '’ʼ-]{2,50}$/u;
@@ -117,4 +119,31 @@ export function validateAnnouncement(
 export function validatePhoto(file: { type: string; size: number }): string | null {
   if (!PHOTO_TYPES.includes(file.type) || file.size <= 0 || file.size > LIMITS.maxPhotoBytes) return 'PHOTO_INVALID';
   return null;
+}
+
+export interface ProfileForm {
+  firstName: string;
+  lastName: string;
+  city: string;
+  region: string;
+  street: string;
+  phoneNumber: string;
+  aboutMe: string;
+  email: string;
+}
+
+export type ProfileField = keyof ProfileForm | 'supports';
+
+export function validateProfile(form: ProfileForm): Errors<ProfileField> {
+  const errors: Errors<ProfileField> = {};
+  if (!NAME_REGEX.test(form.firstName.trim())) errors.firstName = 'FIRST_NAME_INVALID';
+  if (!NAME_REGEX.test(form.lastName.trim())) errors.lastName = 'LAST_NAME_INVALID';
+  const city = form.city.trim();
+  if (city.length < 2 || city.length > 100) errors.city = 'CITY_REQUIRED';
+  if (form.street.trim().length > LIMITS.streetMax) errors.street = 'STREET_INVALID';
+  if (form.phoneNumber.trim() !== '' && !PHONE_REGEX.test(form.phoneNumber.trim())) errors.phoneNumber = 'PHONE_INVALID';
+  if (form.aboutMe.length > LIMITS.aboutMax) errors.aboutMe = 'ABOUT_TOO_LONG';
+  const email = form.email.trim();
+  if (!EMAIL_REGEX.test(email) || email.length > LIMITS.emailMax) errors.email = 'EMAIL_INVALID';
+  return errors;
 }
