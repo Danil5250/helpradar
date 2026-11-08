@@ -29,6 +29,7 @@ export default defineNuxtConfig({
   },
 
   runtimeConfig: {
+    apiBase: apiTarget,
     public: {
       mapTileUrl: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
       mapAttribution: '&copy; OpenStreetMap contributors',

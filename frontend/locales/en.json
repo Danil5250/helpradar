@@ -403,5 +403,20 @@
     "empty_title": "Your help starts here",
     "empty_hint": "There are no requests in this section yet. Find an announcement and take the first step."
   },
-  "select_options": "Show options"
+  "select_options": "Show options",
+  "sharing": {
+    "button": "Share",
+    "title": "Share announcement",
+    "hint": "Send this announcement to someone who can help or needs this offer.",
+    "channels": "Sharing channels",
+    "email": "Email",
+    "more": "More sharing options",
+    "link": "Announcement link",
+    "copy": "Copy link",
+    "copied": "Link copied",
+    "public_link": "This link opens a public page without requiring login.",
+    "manual_copy": "Select the link above and copy it manually — clipboard access is unavailable.",
+    "native_failed": "The share menu could not be opened. Choose a service or copy the link.",
+    "viber_hint": "If Viber did not open, copy the link and paste it into your message."
+  }
 }

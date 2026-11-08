@@ -85,6 +85,9 @@
               </h4>
             </div>
           </div>
+          <div v-if="details.status !== 'Hidden' && details.status !== 'Deleted'" class="pl-[2vw] mt-4">
+            <AnnouncementShare :announcement="details" />
+          </div>
           <div v-if="details.isOwner && details.allowedActions.length > 0" class="pl-[2vw] mt-4">
             <AnnouncementOwnerActions :id="details.id" :actions="details.allowedActions" @updated="updated" @deleted="deleted" />
           </div>

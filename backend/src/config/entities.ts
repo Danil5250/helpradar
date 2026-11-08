@@ -11,6 +11,7 @@ import { PersonInNeed } from '../modules/users/entities/person-in-need.entity';
 import { User } from '../modules/users/entities/user.entity';
 import { Volunteer } from '../modules/users/entities/volunteer.entity';
 import { HelpResponse } from '../modules/help/entities/help-response.entity';
+import { AnnouncementShare } from '../modules/sharing/entities/announcement-share.entity';
 
 export const ALL_ENTITIES = [
   User,
@@ -26,4 +27,5 @@ export const ALL_ENTITIES = [
   LoginAttempt,
   EmailOutbox,
   HelpResponse,
+  AnnouncementShare,
 ];
