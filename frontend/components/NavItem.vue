@@ -1,6 +1,6 @@
 <template>
   <NuxtLink :to="to" class="relative flex flex-col items-start">
-    <span class="xl:text-pl md:text-pxl sm:text-ps cursor-pointer hover:text-forest" :class="route.path === to ? 'font-bold text-forest' : 'text-charcoal'">
+    <span class="xl:text-pl md:text-pxl sm:text-ps uppercase cursor-pointer hover:text-forest" :class="route.path === to ? 'font-bold text-forest' : 'text-charcoal'">
       <div class="my-2">{{ text }}</div>
     </span>
     <div

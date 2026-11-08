@@ -4,8 +4,9 @@ export type HelpAction = 'accept' | 'decline' | 'withdraw' | 'complete' | 'cance
 export interface HelpPerson { id: number; name: string; avatarUrl: string }
 export interface HelpConnection {
   id: number;
-  status: 'Pending' | 'Accepted' | 'Declined' | 'Withdrawn';
+  status: 'Pending' | 'Accepted' | 'Rejected';
   initiatedBy: 'volunteer' | 'requester';
+  isDirect: boolean;
   dateCreated: string;
   request: { id: number; title: string; status: AnnouncementStatus };
   requester: HelpPerson;
@@ -17,6 +18,7 @@ export interface HelpConnection {
 }
 export interface HelpOverview {
   canRespond: boolean;
+  canReceiveOffer: boolean;
   requests: { id: number; title: string }[];
   connections: HelpConnection[];
 }

@@ -89,9 +89,6 @@
             <AnnouncementOwnerActions :id="details.id" :actions="details.allowedActions" @updated="updated" @deleted="deleted" />
           </div>
           <p v-if="details.isOwner && details.status === 'Closed' && details.republishUntil" class="pl-[2vw] mt-3 text-sm text-sage">{{ t('republish_until', { date: formatDate(details.republishUntil, locale) }) }}</p>
-          <div v-if="details.status === 'Active' && !details.isOwner && ((details.type === 'HelpOffer' && role === 'person_in_need') || (details.type === 'HelpRequest' && role === 'volunteer'))" class="pl-[2vw] mt-5">
-            <a href="#help"><AppButton is-filled>{{ t(details.type === 'HelpOffer' ? 'help.request_button' : 'help.offer_help_button') }}</AppButton></a>
-          </div>
           <p v-if="details.isOwner && details.status === 'InProgress'" class="pl-[2vw] mt-3 text-sm border-l-4 border-sage ml-[2vw] pl-2">{{ t('errors.EDIT_IN_PROGRESS') }}</p>
         </aside>
       </div>
@@ -106,7 +103,6 @@ import type { AnnouncementDetails } from '~/types/announcement';
 
 // Composables
 const announcements = useAnnouncements();
-const { role } = useAuth();
 
 // Data
 const details = ref<AnnouncementDetails | null>(null);

@@ -30,6 +30,7 @@ export class HelpConnectionDto {
   id: number;
   status: HelpResponseStatus;
   initiatedBy: HelpInitiator;
+  isDirect: boolean;
   dateCreated: string;
   request: { id: number; title: string; status: AnnouncementStatus };
   requester: HelpPersonDto;
@@ -42,6 +43,7 @@ export class HelpConnectionDto {
 
 export class HelpOverviewDto {
   canRespond: boolean;
+  canReceiveOffer: boolean;
   requests: { id: number; title: string }[];
   connections: HelpConnectionDto[];
 }

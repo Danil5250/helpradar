@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
-import { DataSource, EntityManager, Repository } from 'typeorm';
+import { DataSource, EntityManager, IsNull, Repository } from 'typeorm';
 import { AppException } from '../../common/errors';
 import { ModerationService } from '../announcement/moderation.service';
 import { Announcement } from '../announcement/entities/announcement.entity';
@@ -11,6 +11,7 @@ import { SignedUrlService } from '../storage/signed-url.service';
 import { User } from '../users/entities/user.entity';
 import { Volunteer } from '../users/entities/volunteer.entity';
 import { Role } from '../users/enums/role.enum';
+import { HelpResponse } from '../help/entities/help-response.entity';
 import { CommentSavedResponseDto } from './dto/comment-saved.response.dto';
 import { CommentResponseDto } from './dto/comment.response.dto';
 import { CommentsPageResponseDto } from './dto/comments-page.response.dto';
@@ -57,22 +58,22 @@ export class CommentsService {
     this.assertCleanText(description);
 
     const id = await this.dataSource.transaction(async (manager) => {
-      // lock the request, so that two parallel submissions cannot both pass the duplicate check
+      // lock the announcement to prevent duplicate reviews.
       const announcement = await manager.findOne(Announcement, {
         where: { id: announcementId },
         lock: { mode: 'pessimistic_write' },
       });
       if (!announcement || announcement.status === AnnouncementStatus.Deleted)
         throw new AppException('ANNOUNCEMENT_UNAVAILABLE');
-      if (!this.isReviewable(announcement, user.id))
-        throw new AppException('REVIEW_NOT_ALLOWED');
+      const context = await this.reviewContext(announcement, user.id, manager);
+      if (!context) throw new AppException('REVIEW_NOT_ALLOWED');
       if (
         await manager.exists(Comment, {
           where: { announcementId, authorId: user.id },
         })
       )
         throw new AppException('REVIEW_EXISTS');
-      if (!this.withinReviewPeriod(announcement))
+      if (!this.withinReviewPeriod(context.completedAt))
         throw new AppException('REVIEW_PERIOD_ENDED');
 
       const saved = await manager.save(
@@ -80,7 +81,7 @@ export class CommentsService {
           rating: dto.rating,
           description,
           authorId: user.id,
-          volunteerId: announcement.volunteerWhoCompleteId as number,
+          volunteerId: context.volunteerId,
           announcementId,
         }),
       );
@@ -132,8 +133,9 @@ export class CommentsService {
     viewer: AuthUser | undefined,
   ): Promise<boolean> {
     if (!viewer || viewer.role !== Role.PersonInNeed) return false;
-    if (!this.isReviewable(announcement, viewer.id)) return false;
-    if (!this.withinReviewPeriod(announcement)) return false;
+    if (announcement.status === AnnouncementStatus.Deleted) return false;
+    const context = await this.reviewContext(announcement, viewer.id);
+    if (!context || !this.withinReviewPeriod(context.completedAt)) return false;
     return !(await this.comments.exists({
       where: { announcementId: announcement.id, authorId: viewer.id },
     }));
@@ -181,21 +183,37 @@ export class CommentsService {
   // Helpers
   // ---------------------------------------------------------------------------------------------
 
-  /** Only the author of a completed help request with a confirmed volunteer may review (SRS 3.2.14.3 step 3). */
-  private isReviewable(announcement: Announcement, userId: number): boolean {
-    return (
-      announcement.userId === userId &&
-      announcement.type === AnnouncementType.HelpRequest &&
-      announcement.status === AnnouncementStatus.Completed &&
-      announcement.volunteerWhoCompleteId !== null
-    );
+  // only a recipient of confirmed, completed help may review it.
+  private async reviewContext(
+    announcement: Announcement,
+    userId: number,
+    manager: EntityManager = this.dataSource.manager,
+  ): Promise<{ volunteerId: number; completedAt: Date } | null> {
+    if (announcement.type === AnnouncementType.HelpRequest) {
+      return announcement.userId === userId &&
+        announcement.status === AnnouncementStatus.Completed &&
+        announcement.volunteerWhoCompleteId !== null &&
+        announcement.completedAt
+        ? {
+            volunteerId: announcement.volunteerWhoCompleteId,
+            completedAt: announcement.completedAt,
+          }
+        : null;
+    }
+    const response = await manager.findOneBy(HelpResponse, {
+      announcementId: IsNull(),
+      offerId: announcement.id,
+      requesterId: userId,
+      status: 'Accepted',
+      helpStatus: AnnouncementStatus.Completed,
+    });
+    return response?.completedAt
+      ? { volunteerId: response.volunteerId, completedAt: response.completedAt }
+      : null;
   }
 
-  private withinReviewPeriod(announcement: Announcement): boolean {
-    return (
-      announcement.completedAt !== null &&
-      Date.now() - announcement.completedAt.getTime() <= REVIEW_PERIOD_MS
-    );
+  private withinReviewPeriod(completedAt: Date): boolean {
+    return Date.now() - completedAt.getTime() <= REVIEW_PERIOD_MS;
   }
 
   /** SRS 3.2.14.3 step 4: the text is checked against the stop-word list. */

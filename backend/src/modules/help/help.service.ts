@@ -1,6 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
-import { DataSource, EntityManager, MoreThan, Repository } from 'typeorm';
+import {
+  DataSource,
+  EntityManager,
+  IsNull,
+  MoreThan,
+  Repository,
+} from 'typeorm';
 import { AppException } from '../../common/errors';
 import { Announcement } from '../announcement/entities/announcement.entity';
 import { AnnouncementStatus } from '../announcement/enums/announcement-status.enum';
@@ -33,10 +39,10 @@ export class HelpService {
 
   async mine(user: AuthUser): Promise<{ items: HelpConnectionDto[] }> {
     const rows = await this.query()
-      .where('request.userId = :userId OR volunteer.userId = :userId', {
+      .where('response.requesterId = :userId OR volunteer.userId = :userId', {
         userId: user.id,
       })
-      .andWhere('request.status != :deleted', {
+      .andWhere('COALESCE(request.status, offer.status) != :deleted', {
         deleted: AnnouncementStatus.Deleted,
       })
       .take(100)
@@ -64,7 +70,7 @@ export class HelpService {
     } else {
       qb.where('response.offerId = :id', { id });
       if (announcement.userId !== user.id)
-        qb.andWhere('request.userId = :userId', { userId: user.id });
+        qb.andWhere('response.requesterId = :userId', { userId: user.id });
     }
     const rows = await qb.take(100).getMany();
     const requests =
@@ -89,6 +95,17 @@ export class HelpService {
         this.isActive(announcement) &&
         !rows.some(
           (row) => row.status === 'Pending' || row.status === 'Accepted',
+        ),
+      canReceiveOffer:
+        user.role === Role.PersonInNeed &&
+        announcement.type === AnnouncementType.HelpOffer &&
+        announcement.userId !== user.id &&
+        this.isActive(announcement) &&
+        !rows.some(
+          (row) =>
+            row.announcementId === null &&
+            row.requesterId === user.id &&
+            (row.status === 'Pending' || row.status === 'Accepted'),
         ),
       requests: requests.map((request) => ({
         id: request.id,
@@ -158,6 +175,53 @@ export class HelpService {
     return this.getOne(id, user);
   }
 
+  async receiveOffer(
+    user: AuthUser,
+    offerId: number,
+  ): Promise<HelpConnectionDto> {
+    this.assertRole(user, Role.PersonInNeed);
+    const id = await this.dataSource.transaction(async (manager) => {
+      const offer = await this.lockOffer(manager, offerId);
+      this.assertActive(offer);
+      const volunteer = await manager.findOne(Volunteer, {
+        where: { userId: offer.userId },
+        relations: { user: true },
+      });
+      if (!volunteer || isBlocked(volunteer.user) || offer.userId === user.id)
+        throw new AppException('HELP_NOT_ALLOWED');
+      const existing = await manager.findOneBy(HelpResponse, {
+        announcementId: IsNull(),
+        offerId,
+        requesterId: user.id,
+      });
+      if (existing && existing.status !== 'Rejected')
+        throw new AppException('HELP_ALREADY_RESPONDED');
+      const response = await manager.save(
+        HelpResponse,
+        manager.create(HelpResponse, {
+          ...(existing ? { id: existing.id } : {}),
+          announcementId: null,
+          offerId,
+          requesterId: user.id,
+          volunteerId: volunteer.id,
+          initiatedBy: 'requester',
+          status: 'Pending',
+          helpStatus: null,
+          completedAt: null,
+          dateCreated: new Date(),
+        }),
+      );
+      await manager.increment(
+        Announcement,
+        { id: offerId },
+        'responsesCount',
+        1,
+      );
+      return response.id;
+    });
+    return this.getOne(id, user);
+  }
+
   async act(
     user: AuthUser,
     id: number,
@@ -166,8 +230,11 @@ export class HelpService {
     const existing = await this.responses.findOneBy({ id });
     if (!existing) throw new AppException('HELP_RESPONSE_NOT_FOUND');
     await this.dataSource.transaction(async (manager) => {
-      // lock the request first to prevent double selection.
-      const request = await this.lockRequest(manager, existing.announcementId);
+      // lock the announcement before its response to keep actions serialized.
+      const isDirect = existing.announcementId === null;
+      const announcement = isDirect
+        ? await this.lockOffer(manager, existing.offerId!)
+        : await this.lockRequest(manager, existing.announcementId!);
       const response = await manager.findOne(HelpResponse, {
         where: { id },
         lock: { mode: 'pessimistic_write' },
@@ -179,10 +246,11 @@ export class HelpService {
       });
       if (
         !volunteer ||
-        (request.userId !== user.id && volunteer.userId !== user.id)
+        (response.requesterId !== user.id && volunteer.userId !== user.id)
       )
         throw new AppException('HELP_RESPONSE_NOT_FOUND');
-      response.announcement = request;
+      response.announcement = isDirect ? null : announcement;
+      response.offer = isDirect ? announcement : null;
       response.volunteer = volunteer;
       if (!this.actions(response, user).includes(action))
         throw new AppException('HELP_ACTION_UNAVAILABLE');
@@ -191,45 +259,67 @@ export class HelpService {
         if (isBlocked(volunteer.user))
           throw new AppException('HELP_NOT_ALLOWED');
         response.status = 'Accepted';
-        request.status = AnnouncementStatus.InProgress;
-        request.volunteerWhoCompleteId = volunteer.id;
-        request.completedAt = null;
-        await manager
-          .createQueryBuilder()
-          .update(HelpResponse)
-          .set({ status: 'Declined' })
-          .where(
-            'announcement_id = :requestId AND id != :id AND status = :status',
-            { requestId: request.id, id, status: 'Pending' },
-          )
-          .execute();
+        if (isDirect) {
+          response.helpStatus = AnnouncementStatus.InProgress;
+          response.completedAt = null;
+        } else {
+          announcement.status = AnnouncementStatus.InProgress;
+          announcement.volunteerWhoCompleteId = volunteer.id;
+          announcement.completedAt = null;
+          await manager
+            .createQueryBuilder()
+            .update(HelpResponse)
+            .set({ status: 'Rejected' })
+            .where(
+              'announcement_id = :requestId AND id != :id AND status = :status',
+              { requestId: announcement.id, id, status: 'Pending' },
+            )
+            .execute();
+        }
       } else if (action === 'complete') {
-        request.status = AnnouncementStatus.Completed;
-        request.completedAt = new Date();
+        if (isDirect) {
+          response.helpStatus = AnnouncementStatus.Completed;
+          response.completedAt = new Date();
+        } else {
+          announcement.status = AnnouncementStatus.Completed;
+          announcement.completedAt = new Date();
+        }
       } else if (action === 'cancel') {
-        response.status = 'Withdrawn';
-        request.status =
-          request.expiresAt.getTime() > Date.now()
-            ? AnnouncementStatus.Active
-            : AnnouncementStatus.Closed;
-        request.closedAt =
-          request.status === AnnouncementStatus.Closed
-            ? request.expiresAt
-            : null;
-        request.volunteerWhoCompleteId = null;
-        request.completedAt = null;
+        response.status = 'Rejected';
+        if (isDirect) {
+          response.helpStatus = null;
+          response.completedAt = null;
+        } else {
+          announcement.status =
+            announcement.expiresAt.getTime() > Date.now()
+              ? AnnouncementStatus.Active
+              : AnnouncementStatus.Closed;
+          announcement.closedAt =
+            announcement.status === AnnouncementStatus.Closed
+              ? announcement.expiresAt
+              : null;
+          announcement.volunteerWhoCompleteId = null;
+          announcement.completedAt = null;
+        }
       } else {
-        response.status = action === 'decline' ? 'Declined' : 'Withdrawn';
+        response.status = 'Rejected';
       }
-      // avoid saving stale relations over the locked request.
-      await manager.update(HelpResponse, id, { status: response.status });
-      request.responsesCount = await manager.count(HelpResponse, {
+      // update scalar fields without saving stale relations.
+      await manager.update(HelpResponse, id, {
+        status: response.status,
+        helpStatus: response.helpStatus,
+        completedAt: response.completedAt,
+      });
+      const source = isDirect
+        ? { offerId: announcement.id }
+        : { announcementId: announcement.id };
+      announcement.responsesCount = await manager.count(HelpResponse, {
         where: [
-          { announcementId: request.id, status: 'Pending' },
-          { announcementId: request.id, status: 'Accepted' },
+          { ...source, status: 'Pending' },
+          { ...source, status: 'Accepted' },
         ],
       });
-      await manager.save(Announcement, request);
+      await manager.save(Announcement, announcement);
     });
     return this.getOne(id, user);
   }
@@ -237,8 +327,9 @@ export class HelpService {
   private query() {
     return this.responses
       .createQueryBuilder('response')
-      .innerJoinAndSelect('response.announcement', 'request')
-      .innerJoinAndSelect('request.user', 'requester')
+      .leftJoinAndSelect('response.announcement', 'request')
+      .leftJoinAndSelect('response.offer', 'offer')
+      .innerJoinAndSelect('response.requester', 'requester')
       .innerJoinAndSelect('response.volunteer', 'volunteer')
       .innerJoinAndSelect('volunteer.user', 'helper')
       .orderBy('response.dateCreated', 'DESC')
@@ -260,6 +351,7 @@ export class HelpService {
   ): Promise<number> {
     let response = await manager.findOneBy(HelpResponse, {
       announcementId: request.id,
+      requesterId: request.userId,
       volunteerId,
     });
     if (
@@ -270,6 +362,7 @@ export class HelpService {
     response = manager.create(HelpResponse, {
       ...(response ? { id: response.id } : {}),
       announcementId: request.id,
+      requesterId: request.userId,
       volunteerId,
       initiatedBy,
       offerId,
@@ -303,6 +396,23 @@ export class HelpService {
     return request;
   }
 
+  private async lockOffer(
+    manager: EntityManager,
+    id: number,
+  ): Promise<Announcement> {
+    const offer = await manager.findOne(Announcement, {
+      where: { id },
+      lock: { mode: 'pessimistic_write' },
+    });
+    if (
+      !offer ||
+      offer.type !== AnnouncementType.HelpOffer ||
+      offer.status === AnnouncementStatus.Deleted
+    )
+      throw new AppException('HELP_REQUEST_UNAVAILABLE');
+    return offer;
+  }
+
   private isActive(request: Announcement): boolean {
     return (
       request.status === AnnouncementStatus.Active &&
@@ -323,17 +433,21 @@ export class HelpService {
 
   private actions(response: HelpResponse, user: AuthUser): HelpAction[] {
     const request = response.announcement;
-    const isRequester = request.userId === user.id;
+    const isRequester = response.requesterId === user.id;
     const isVolunteer = response.volunteer.userId === user.id;
     if (!isRequester && !isVolunteer) return [];
     if (
       response.status === 'Accepted' &&
-      request.status === AnnouncementStatus.InProgress &&
-      request.volunteerWhoCompleteId === response.volunteerId
+      (request
+        ? request.status === AnnouncementStatus.InProgress &&
+          request.volunteerWhoCompleteId === response.volunteerId
+        : response.helpStatus === 'InProgress')
     ) {
       return isRequester ? ['complete', 'cancel'] : ['cancel'];
     }
-    if (response.status !== 'Pending' || !this.isActive(request)) return [];
+    const source = request ?? response.offer;
+    if (response.status !== 'Pending' || !source || !this.isActive(source))
+      return [];
     const isRecipient =
       response.initiatedBy === 'volunteer' ? isRequester : isVolunteer;
     return isRecipient ? ['accept', 'decline'] : ['withdraw'];
@@ -343,15 +457,18 @@ export class HelpService {
     response: HelpResponse,
     user: AuthUser,
   ): Promise<HelpConnectionDto> {
-    const request = response.announcement;
-    const requester = request.user;
+    const request = response.announcement ?? response.offer!;
+    const requester = response.requester;
+    const progress = response.announcement
+      ? request.status
+      : (response.helpStatus ?? request.status);
     const volunteer = response.volunteer.user;
     const isParticipant = requester.id === user.id || volunteer.id === user.id;
     const canContact =
       isParticipant &&
       response.status === 'Accepted' &&
-      (request.status === AnnouncementStatus.InProgress ||
-        request.status === AnnouncementStatus.Completed);
+      (progress === AnnouncementStatus.InProgress ||
+        progress === AnnouncementStatus.Completed);
     const person = (account: User) => ({
       id: account.id,
       name: `${account.firstName} ${account.lastName.charAt(0)}.`,
@@ -361,11 +478,12 @@ export class HelpService {
       id: response.id,
       status: response.status,
       initiatedBy: response.initiatedBy,
+      isDirect: response.announcementId === null,
       dateCreated: response.dateCreated.toISOString(),
       request: {
         id: request.id,
         title: request.title ?? '',
-        status: request.status,
+        status: progress,
       },
       requester: person(requester),
       volunteer: person(volunteer),

@@ -22,14 +22,21 @@
         <div><h3 class="font-montserratMedium text-lg mb-1">{{ t('help.offer_help_title') }}</h3><p class="text-sm text-sage max-w-xl">{{ t('help.offer_help_hint') }}</p></div>
         <AppButton is-filled :loading="busy" data-test="help-respond" @click="respond">{{ t('help.offer_help_button') }}</AppButton>
       </div>
-      <div v-if="canRequest" class="rounded-2xl bg-sand/40 p-5 mb-5">
-        <h3 class="font-montserratMedium text-lg mb-2">{{ t('help.request_title') }}</h3><p class="text-sm text-sage mb-4">{{ t('help.request_hint') }}</p>
-        <div v-if="requestOptions.length" class="flex flex-col md:flex-row gap-3 md:items-end">
-          <div class="flex-1 min-w-0"><label for="help-request" class="text-sm block mb-2">{{ t('help.your_request') }}</label><AppSelect id="help-request" v-model="selectedRequest" :options="selectRequestOptions" :label="t('help.your_request')" full-width :disabled="busy" data-test="help-request-select" /></div>
-          <AppButton is-filled :loading="busy" :disabled="!selectedRequest" data-test="help-request-send" @click="requestHelp">{{ t('help.request_button') }}</AppButton>
-        </div>
-        <div v-else><p class="text-sm text-sage mb-3">{{ t(overview.requests.length ? 'help.requests_already_sent' : 'help.create_request_hint') }}</p><NuxtLink :to="{ path: '/add-announcement', query: { offer: announcement.id } }"><AppButton has-outline>{{ t('create_request') }}</AppButton></NuxtLink></div>
+      <div v-if="overview.canReceiveOffer" class="flex flex-col md:flex-row md:items-center md:justify-between gap-5 rounded-2xl bg-sand/40 p-5 mb-5">
+        <div><h3 class="font-montserratMedium text-lg mb-1">{{ t('help.receive_offer_title') }}</h3><p class="text-sm text-sage max-w-xl">{{ t('help.receive_offer_hint') }}</p></div>
+        <AppButton is-filled :loading="busy" data-test="help-receive-offer" @click="receiveOffer">{{ t('help.receive_offer_button') }}</AppButton>
       </div>
+      <details v-if="canRequest" :open="route.query.request !== undefined" class="rounded-2xl border-2 border-sand p-5 mb-5" data-test="help-custom-request">
+        <summary class="font-montserratMedium text-forest cursor-pointer">{{ t('help.custom_request_title') }}</summary>
+        <div class="mt-4">
+          <p class="text-sm text-sage mb-4">{{ t('help.request_hint') }}</p>
+          <div v-if="requestOptions.length" class="flex flex-col md:flex-row gap-3 md:items-end">
+            <div class="flex-1 min-w-0"><label for="help-request" class="text-sm block mb-2">{{ t('help.your_request') }}</label><AppSelect id="help-request" v-model="selectedRequest" :options="selectRequestOptions" :label="t('help.your_request')" full-width :disabled="busy" data-test="help-request-select" /></div>
+            <AppButton is-filled :loading="busy" :disabled="!selectedRequest" data-test="help-request-send" @click="requestHelp">{{ t('help.request_button') }}</AppButton>
+          </div>
+          <div v-else><p class="text-sm text-sage mb-3">{{ t(overview.requests.length ? 'help.requests_already_sent' : 'help.create_request_hint') }}</p><NuxtLink :to="{ path: '/add-announcement', query: { offer: announcement.id } }"><AppButton has-outline>{{ t('create_request') }}</AppButton></NuxtLink></div>
+        </div>
+      </details>
       <p v-if="overview.connections.length === 0 && !overview.canRespond && !canRequest" class="text-sage text-sm rounded-2xl bg-sand/30 p-5">{{ t(announcement.isOwner ? 'help.no_responses' : 'help.inactive_hint') }}</p>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4"><HelpConnectionCard v-for="connection in overview.connections" :key="connection.id" :connection="connection" :show-review-link="false" @updated="emit('updated')" /></div>
       <div v-if="announcement.canReview" id="review" class="scroll-mt-32 mt-6 max-w-2xl">
@@ -72,13 +79,19 @@ let timer: ReturnType<typeof setInterval> | undefined;
 const steps = ['connect', 'help', 'review'] as const;
 
 // Computed
-const currentStep = computed(() => (props.announcement.status === 'Completed' ? 2 : props.announcement.status === 'InProgress' ? 1 : 0));
+const directConnection = computed(() => overview.value?.connections.find((connection) => connection.isDirect && connection.requester.id === user.value?.id));
+const currentStep = computed(() => {
+  const status = directConnection.value?.request.status ?? props.announcement.status;
+  if (status === 'Completed') {
+    const hasReview =
+      directConnection.value?.hasReview ??
+      overview.value?.connections.some((connection) => connection.request.id === props.announcement.id && connection.hasReview);
+    return hasReview ? steps.length : 2;
+  }
+  return status === 'InProgress' ? 1 : 0;
+});
 const canRequest = computed(
-  () =>
-    role.value === 'person_in_need' &&
-    props.announcement.type === 'HelpOffer' &&
-    props.announcement.status === 'Active' &&
-    !props.announcement.isOwner,
+  () => role.value === 'person_in_need' && props.announcement.type === 'HelpOffer' && props.announcement.status === 'Active' && !props.announcement.isOwner,
 );
 const requestOptions = computed(
   () =>
@@ -130,6 +143,9 @@ async function send(action: () => Promise<unknown>, message: string) {
 }
 function respond() {
   return send(() => help.respond(props.announcement.id), 'help.response_sent');
+}
+function receiveOffer() {
+  return send(() => help.receiveOffer(props.announcement.id), 'help.direct_request_sent');
 }
 function requestHelp() {
   if (selectedRequest.value) return send(() => help.requestHelp(props.announcement.id, selectedRequest.value!), 'help.request_sent');
