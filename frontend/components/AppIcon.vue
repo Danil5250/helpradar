@@ -58,6 +58,13 @@
     <template v-else-if="name === 'check'">
       <polyline points="20 6 9 17 4 12" />
     </template>
+    <template v-else-if="name === 'share'">
+      <circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" />
+      <path d="m8.6 10.5 6.8-4m-6.8 7 6.8 4" />
+    </template>
+    <template v-else-if="name === 'copy'">
+      <rect x="8" y="8" width="12" height="12" rx="2" /><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3" />
+    </template>
     <template v-else-if="name === 'alert'">
       <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
       <line x1="12" y1="9" x2="12" y2="13" />
@@ -79,5 +86,5 @@
 
 <script setup lang="ts">
 // Props
-defineProps<{ name: 'eye' | 'eye-off' | 'menu' | 'close' | 'pin' | 'calendar' | 'user' | 'chevron-down' | 'trash' | 'plus' | 'camera' | 'check' | 'alert' | 'clock' | 'crosshair' }>();
+defineProps<{ name: 'eye' | 'eye-off' | 'menu' | 'close' | 'pin' | 'calendar' | 'user' | 'chevron-down' | 'trash' | 'plus' | 'camera' | 'check' | 'share' | 'copy' | 'alert' | 'clock' | 'crosshair' }>();
 </script>
