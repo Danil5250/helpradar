@@ -10,6 +10,7 @@ import retrofit2.converter.gson.GsonConverterFactory
 import ua.helpradar.app.data.network.api.AnnouncementApiService
 import ua.helpradar.app.data.network.api.AuthApiService
 import ua.helpradar.app.data.network.api.GeocodingApiService
+import ua.helpradar.app.data.network.api.ProfileApiService
 
 object ApiClient {
     // Якщо запускаєте на Android емуляторі, використовуйте 10.0.2.2 замість localhost,
@@ -63,5 +64,9 @@ object ApiClient {
 
     val geocodingService: GeocodingApiService by lazy {
         retrofit.create(GeocodingApiService::class.java)
+    }
+
+    val profileService: ProfileApiService by lazy {
+        retrofit.create(ProfileApiService::class.java)
     }
 }

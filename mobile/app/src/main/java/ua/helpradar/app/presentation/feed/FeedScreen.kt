@@ -3,6 +3,7 @@ package ua.helpradar.app.presentation.feed
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -38,12 +39,14 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
 import ua.helpradar.app.R
+import ua.helpradar.app.data.local.SessionManager
 import ua.helpradar.app.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FeedScreen(
     onCreateRequestClick: () -> Unit,
+    onProfileClick: () -> Unit,
     onSignOutClick: () -> Unit = {},
     viewModel: FeedViewModel = viewModel()
 ) {
@@ -51,6 +54,16 @@ fun FeedScreen(
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val coroutineScope = rememberCoroutineScope()
     var selectedDrawerItem by remember { mutableStateOf("Announcements") }
+
+    // Динамічна літера для аватара замість статичної "Д"
+    val avatarLetter = remember(SessionManager.currentUserName) {
+        val name = SessionManager.currentUserName.trim()
+        if (name.isNotEmpty()) {
+            name.first().uppercaseChar().toString()
+        } else {
+            "U"
+        }
+    }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -73,6 +86,7 @@ fun FeedScreen(
                             tint = CharcoalDark
                         )
                     }
+
                     Image(
                         painter = painterResource(id = R.drawable.helpradar_logo),
                         contentDescription = "HelpRadar Logo",
@@ -80,15 +94,21 @@ fun FeedScreen(
                             .size(38.dp)
                             .clip(RoundedCornerShape(10.dp))
                     )
+
+                    // Аватар у бічній шторці (при кліку також переходить до профілю)
                     Box(
                         modifier = Modifier
                             .size(36.dp)
                             .clip(CircleShape)
-                            .background(TacticalOlive.copy(alpha = 0.5f)),
+                            .background(TacticalOlive.copy(alpha = 0.5f))
+                            .clickable {
+                                coroutineScope.launch { drawerState.close() }
+                                onProfileClick()
+                            },
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "Д",
+                            text = avatarLetter,
                             fontFamily = Montserrat,
                             fontWeight = FontWeight.Bold,
                             color = CharcoalDark,
@@ -96,8 +116,11 @@ fun FeedScreen(
                         )
                     }
                 }
+
                 HorizontalDivider(color = BorderSand.copy(alpha = 0.5f), thickness = 1.dp)
+
                 Spacer(modifier = Modifier.height(16.dp))
+
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -113,6 +136,7 @@ fun FeedScreen(
                             coroutineScope.launch { drawerState.close() }
                         }
                     )
+
                     DrawerItem(
                         icon = Icons.Default.Search,
                         title = "Оголошення",
@@ -122,6 +146,7 @@ fun FeedScreen(
                             coroutineScope.launch { drawerState.close() }
                         }
                     )
+
                     DrawerItem(
                         icon = Icons.AutoMirrored.Filled.Chat,
                         title = "Чат",
@@ -131,6 +156,7 @@ fun FeedScreen(
                             coroutineScope.launch { drawerState.close() }
                         }
                     )
+
                     DrawerItem(
                         icon = Icons.Default.Person,
                         title = "Профіль",
@@ -138,9 +164,12 @@ fun FeedScreen(
                         onClick = {
                             selectedDrawerItem = "Profile"
                             coroutineScope.launch { drawerState.close() }
+                            onProfileClick()
                         }
                     )
+
                     Spacer(modifier = Modifier.height(16.dp))
+
                     NavigationDrawerItem(
                         icon = {
                             Icon(
@@ -195,6 +224,7 @@ fun FeedScreen(
                                         tint = CharcoalDark
                                     )
                                 }
+
                                 Image(
                                     painter = painterResource(id = R.drawable.helpradar_logo),
                                     contentDescription = "HelpRadar Logo",
@@ -203,15 +233,18 @@ fun FeedScreen(
                                         .clip(RoundedCornerShape(10.dp))
                                 )
                             }
+
+                            // Аватар у правому верхньому кутку
                             Box(
                                 modifier = Modifier
                                     .size(36.dp)
                                     .clip(CircleShape)
-                                    .background(TacticalOlive.copy(alpha = 0.5f)),
+                                    .background(TacticalOlive.copy(alpha = 0.5f))
+                                    .clickable { onProfileClick() },
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
-                                    text = "Д",
+                                    text = avatarLetter,
                                     fontFamily = Montserrat,
                                     fontWeight = FontWeight.Bold,
                                     color = CharcoalDark,
@@ -219,6 +252,7 @@ fun FeedScreen(
                                 )
                             }
                         }
+
                         HorizontalDivider(color = BorderSand.copy(alpha = 0.6f), thickness = 1.dp)
                     }
                 }
@@ -359,7 +393,7 @@ fun FeedScreen(
                     )
                 }
 
-                // Динамічні категорії з бекенду
+                // Категорії з бекенду
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -388,7 +422,7 @@ fun FeedScreen(
                     }
                 }
 
-                // Відображення контенту
+                // Контент списку
                 when {
                     state.isLoading -> {
                         Box(
@@ -506,6 +540,7 @@ fun AnnouncementCard(item: AnnouncementItem) {
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                         )
                     }
+
                     Surface(
                         shape = RoundedCornerShape(6.dp),
                         color = DeepSage.copy(alpha = 0.12f)
@@ -570,7 +605,7 @@ fun AnnouncementCard(item: AnnouncementItem) {
                 overflow = TextOverflow.Ellipsis
             )
 
-            // Блок дат створення та завершення дії
+            // Блок дат створення та закінчення строку
             if (item.createdDateFormatted != null || item.expiryDateFormatted != null) {
                 Surface(
                     shape = RoundedCornerShape(8.dp),
@@ -626,7 +661,7 @@ fun AnnouncementCard(item: AnnouncementItem) {
 
             HorizontalDivider(color = BorderSand.copy(alpha = 0.6f), thickness = 1.dp)
 
-            // Нижня частина: Відстань, Автор, Рейтинг
+            // Нижня частина
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -673,7 +708,6 @@ fun AnnouncementCard(item: AnnouncementItem) {
                 }
             }
 
-            // Кнопка взаємодії
             Button(
                 onClick = { },
                 colors = ButtonDefaults.buttonColors(
