@@ -26,7 +26,7 @@
       </div>
 
       <div v-if="user.role === 'volunteer'" class="bg-almost-white rounded-3xl p-6 mt-8">
-        <ProfileReviewsList :user-id="user.id" />
+        <ProfileReviewsList :user-id="user.id" @updated="load" />
       </div>
     </template>
   </div>

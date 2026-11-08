@@ -224,7 +224,12 @@
     "REVIEW_TEXT_FORBIDDEN": "Please change the text of your review.",
     "REVIEW_EDIT_EXPIRED": "A review can only be edited within 24 hours.",
     "REVIEW_NOT_FOUND": "The review was not found.",
-    "RESET_LINK_INVALID": "This link is invalid or has expired. Request a new one."
+    "RESET_LINK_INVALID": "This link is invalid or has expired. Request a new one.",
+    "HELP_NOT_ALLOWED": "You cannot perform this help action.",
+    "HELP_REQUEST_UNAVAILABLE": "This request is no longer active. Refresh the page.",
+    "HELP_ALREADY_RESPONDED": "You already have a response for this request and volunteer. Check My help.",
+    "HELP_RESPONSE_NOT_FOUND": "This response is not available.",
+    "HELP_ACTION_UNAVAILABLE": "This action is no longer available. Refresh the page."
   },
   "category": {
     "1": "Food & Water",
@@ -281,6 +286,9 @@
   "comment": "Comment",
   "send": "Send",
   "review_thanks": "Thank you for your review!",
+  "edit_review": "Edit my review",
+  "review_edit_hint": "You can change the rating and comment within 24 hours of posting your review.",
+  "review_updated": "Review updated.",
   "support": {
     "psychological": "Psychological help",
     "humanitarian": "Humanitarian help",
@@ -314,5 +322,81 @@
   "password_rules": "8–64 characters, at least one letter and one digit.",
   "save_passwordUPPER": "SAVE PASSWORD",
   "request_new_linkUPPER": "REQUEST A NEW LINK",
-  "password_changed": "Your password has been changed."
+  "password_changed": "Your password has been changed.",
+  "help": {
+    "my_help": "My help",
+    "together": "Helping each other",
+    "panel_title": "From a request to real help",
+    "steps_label": "How help works",
+    "step": {
+      "connect": "Agree on help",
+      "help": "Receive help",
+      "review": "Leave a review"
+    },
+    "login_hint": "Log in to offer help or send your request to a volunteer.",
+    "offer_help_title": "Can you help with this request?",
+    "offer_help_hint": "Send a response. The person who needs help will confirm you as their volunteer.",
+    "offer_help_button": "I can help",
+    "request_title": "Need this volunteer’s help?",
+    "request_hint": "Choose your request and send it to the volunteer. Help starts after they accept.",
+    "your_request": "Your help request",
+    "request_button": "Ask for help",
+    "create_request_hint": "Create a request describing what you need. Then you can send it to this volunteer.",
+    "requests_already_sent": "Your active requests have already been sent to this volunteer.",
+    "no_responses": "Responses will appear here. Once you agree with a volunteer, you can confirm that the help was received and leave a review.",
+    "recipient": "Person receiving help",
+    "waiting_for_you": "Your confirmation is needed. Accept when you are ready to arrange the help together.",
+    "waiting_for_partner": "Request sent. Waiting for the other person to confirm. You can find updates under My help.",
+    "in_progress_recipient": "You have agreed on help. Arrange the details with your volunteer. Confirm receipt only after the help has been provided.",
+    "in_progress_volunteer": "You have been confirmed as the volunteer. Arrange the details with the recipient; they will confirm when the help is received.",
+    "review_invitation": "Help received! Share your experience: choose a rating and, if you like, leave a comment.",
+    "review_published": "Your review has been published. You can edit it in the volunteer’s profile within 24 hours.",
+    "completed_hint": "Help has been completed. Thank you for being part of HelpRadar.",
+    "inactive_hint": "This response is no longer active. Browse announcements to find another opportunity to help.",
+    "view_review": "View reviews",
+    "action": {
+      "accept": "Confirm help",
+      "decline": "Decline",
+      "withdraw": "Withdraw response",
+      "complete": "I received help",
+      "cancel": "Cancel arrangement"
+    },
+    "confirm_complete_title": "Did you receive the help?",
+    "confirm_complete_text": "Confirm only when the volunteer has provided the help. The request will be completed and you can leave a review.",
+    "confirm_cancel_title": "Cancel this arrangement?",
+    "confirm_cancel_text": "The volunteer will no longer be assigned. If the request has not expired, it will be available for other volunteers again.",
+    "success": {
+      "accept": "Help confirmed. You can now arrange the details.",
+      "decline": "Response declined.",
+      "withdraw": "Response withdrawn.",
+      "complete": "Help completed. You can now leave a review.",
+      "cancel": "Arrangement cancelled."
+    },
+    "response_sent": "Your response has been sent.",
+    "request_sent": "Your request has been sent to the volunteer.",
+    "state": {
+      "Pending": "Awaiting confirmation",
+      "Accepted": "Confirmed",
+      "Declined": "Declined",
+      "Withdrawn": "Cancelled",
+      "InProgress": "Help in progress",
+      "Completed": "Completed",
+      "Closed": "Request closed",
+      "Deleted": "Request removed",
+      "Hidden": "Request unavailable"
+    },
+    "filter": {
+      "all": "All",
+      "pending": "Awaiting reply",
+      "active": "In progress",
+      "completed": "Completed"
+    },
+    "filter_label": "Filter help",
+    "refresh": "Refresh",
+    "volunteer_intro": "Requests from people who need you, your responses, and the help you are already providing — all in one place.",
+    "requester_intro": "Follow your requests, confirm a volunteer, and share your experience after receiving help.",
+    "empty_title": "Your help starts here",
+    "empty_hint": "There are no requests in this section yet. Find an announcement and take the first step."
+  },
+  "select_options": "Show options"
 }

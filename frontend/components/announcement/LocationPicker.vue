@@ -4,41 +4,20 @@
 
     <div class="flex flex-col xl:flex-row gap-2 mb-2">
       <div class="relative flex-1">
-        <input
+        <AppSelect
           id="location-address"
           v-model="model.address"
-          type="text"
-          role="combobox"
-          autocomplete="off"
-          maxlength="255"
+          :options="addressOptions"
+          searchable
+          full-width
+          :maxlength="255"
           :placeholder="t('address_placeholder')"
-          :aria-expanded="listOpen"
-          aria-controls="location-suggestions"
-          aria-autocomplete="list"
-          :aria-activedescendant="activeIndex >= 0 ? `location-option-${activeIndex}` : undefined"
-          :aria-invalid="!!error"
-          aria-describedby="location-error"
-          class="w-full p-3 border-2 rounded-lg outline-none bg-almost-white border-sage focus:border-forest"
-          :class="{ 'border-radar': error }"
+          :invalid="!!error"
+          described-by="location-error"
           data-test="address"
-          @input="onAddressInput"
-          @keydown="onAddressKeydown"
-          @blur="listOpen = false"
+          @search="onAddressInput"
+          @change="selectAddress"
         />
-        <ul v-if="listOpen" id="location-suggestions" role="listbox" class="absolute w-full border-2 border-sage bg-almost-white rounded-lg z-[1000] max-h-56 overflow-y-auto shadow-lg">
-          <li
-            v-for="(place, index) in suggestions"
-            :id="`location-option-${index}`"
-            :key="`${place.latitude}-${place.longitude}-${index}`"
-            role="option"
-            :aria-selected="index === activeIndex"
-            class="p-2 cursor-pointer hover:bg-sand text-sm"
-            :class="{ 'bg-sand': index === activeIndex }"
-            @mousedown.prevent="selectSuggestion(place)"
-          >
-            {{ place.label }}
-          </li>
-        </ul>
       </div>
       <AppButton has-outline :loading="locating" data-test="use-location" @click="useMyLocation()">
         <AppIcon name="crosshair" class="inline mr-1" />{{ t('use_my_location') }}
@@ -79,8 +58,6 @@ const fieldText = useFieldErrorText();
 // Data
 const mapElement = ref<HTMLElement | null>(null);
 const suggestions = ref<PlaceSuggestion[]>([]);
-const listOpen = ref(false);
-const activeIndex = ref(-1);
 const searchError = ref('');
 const locating = ref(false);
 const locationHint = ref('');
@@ -93,6 +70,9 @@ let searchTimer: ReturnType<typeof setTimeout> | undefined;
 let searchToken = 0;
 const UKRAINE_CENTER: [number, number] = [48.38, 31.17];
 const pin = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 40" width="32" height="40"><path d="M16 1C8 1 2 7 2 15c0 10 14 24 14 24s14-14 14-24C30 7 24 1 16 1z" fill="#FF8C00" stroke="#1A2421" stroke-width="2"/><circle cx="16" cy="15" r="5.5" fill="#1A2421"/></svg>`;
+
+// Computed
+const addressOptions = computed(() => suggestions.value.map((place) => ({ value: place.label, label: place.label })));
 
 // Methods
 function placeMarker(latitude: number, longitude: number, fly: boolean) {
@@ -158,7 +138,6 @@ function onAddressInput() {
     }
   }
   searchError.value = '';
-  activeIndex.value = -1;
   if (searchTimer) clearTimeout(searchTimer);
   const query = model.value.address.trim();
   if (query.length < 3) {
@@ -171,7 +150,6 @@ function onAddressInput() {
       const items = await announcements.searchAddress(query);
       if (token !== searchToken) return;
       suggestions.value = items;
-      listOpen.value = items.length > 0;
     } catch (error) {
       if (token !== searchToken) return;
       suggestions.value = [];
@@ -181,26 +159,14 @@ function onAddressInput() {
 }
 
 function selectSuggestion(place: PlaceSuggestion) {
-  listOpen.value = false;
   suggestions.value = [];
   model.value = { ...model.value, address: place.label.slice(0, 255) };
   void setPoint(place.latitude, place.longitude, { fly: true });
 }
 
-function onAddressKeydown(event: KeyboardEvent) {
-  if (event.key === 'ArrowDown') {
-    event.preventDefault();
-    listOpen.value = suggestions.value.length > 0;
-    activeIndex.value = Math.min(activeIndex.value + 1, suggestions.value.length - 1);
-  } else if (event.key === 'ArrowUp') {
-    event.preventDefault();
-    activeIndex.value = Math.max(activeIndex.value - 1, 0);
-  } else if (event.key === 'Enter' && listOpen.value && activeIndex.value >= 0) {
-    event.preventDefault();
-    selectSuggestion(suggestions.value[activeIndex.value]);
-  } else if (event.key === 'Escape') {
-    listOpen.value = false;
-  }
+function selectAddress(address: string) {
+  const place = suggestions.value.find((suggestion) => suggestion.label === address);
+  if (place) selectSuggestion(place);
 }
 
 // Watchers

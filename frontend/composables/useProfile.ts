@@ -27,4 +27,7 @@ export const useProfile = () => ({
 
   leaveReview: (announcementId: number, payload: ReviewPayload): Promise<ReviewSaved> =>
     apiFetch<ReviewSaved>(`/announcements/${announcementId}/comments`, { method: 'POST', body: payload }),
+
+  updateReview: (id: number, payload: ReviewPayload): Promise<ReviewSaved> =>
+    apiFetch<ReviewSaved>(`/comments/${id}`, { method: 'PATCH', body: payload }),
 });

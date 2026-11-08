@@ -162,6 +162,11 @@ export const ERR = {
     message: 'A review can only be edited within 24 hours.',
   },
   REVIEW_NOT_FOUND: { status: 404, message: 'The review was not found.' },
+  HELP_NOT_ALLOWED: { status: 403, message: 'You cannot perform this help action.' },
+  HELP_REQUEST_UNAVAILABLE: { status: 409, message: 'This help request is no longer active. Refresh the page.' },
+  HELP_ALREADY_RESPONDED: { status: 409, message: 'A response for this request and volunteer already exists.' },
+  HELP_RESPONSE_NOT_FOUND: { status: 404, message: 'This response is not available.' },
+  HELP_ACTION_UNAVAILABLE: { status: 409, message: 'This action is no longer available. Refresh the page.' },
 } as const;
 
 export type ErrorCode = keyof typeof ERR;

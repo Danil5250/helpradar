@@ -213,7 +213,8 @@ async function submit() {
     const done = t(isEdit.value ? 'changes_saved' : 'announcement_published');
     if (photoProblem) show(`${done} ${t('errors.PHOTO_INVALID')}`, 'alert');
     else show(done, 'success');
-    await navigateTo(`/main/announcement/${id}`);
+    const offerId = !isEdit.value && role.value === 'person_in_need' && typeof route.query.offer === 'string' && /^\d+$/.test(route.query.offer) ? route.query.offer : null;
+    await navigateTo(offerId ? `/main/announcement/${offerId}?request=${id}#help` : `/main/announcement/${id}`);
   } catch (error) {
     const apiError = toApiError(error);
     if (apiError.status === 401) {
