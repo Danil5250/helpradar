@@ -11,6 +11,7 @@ import ua.helpradar.app.presentation.auth.ForgotPasswordScreen
 import ua.helpradar.app.presentation.auth.LoginScreen
 import ua.helpradar.app.presentation.auth.RegisterScreen
 import ua.helpradar.app.presentation.feed.FeedScreen
+import ua.helpradar.app.presentation.profile.ProfileScreen
 import ua.helpradar.app.presentation.request.CreateRequestScreen
 import ua.helpradar.app.presentation.splash.SplashScreen
 
@@ -33,9 +34,7 @@ fun AppNavHost(
                     } else {
                         Screen.Login.route
                     }
-
                     navController.navigate(nextScreen) {
-                        // Видаляємо Splash з бекстеку, щоб кнопка "Назад" не повертала на нього
                         popUpTo(Screen.Splash.route) { inclusive = true }
                     }
                 }
@@ -84,6 +83,9 @@ fun AppNavHost(
                 onCreateRequestClick = {
                     navController.navigate(Screen.CreateRequest.route)
                 },
+                onProfileClick = {
+                    navController.navigate(Screen.Profile.route)
+                },
                 onSignOutClick = {
                     AuthRepository().logout()
                     navController.navigate(Screen.Login.route) {
@@ -102,6 +104,14 @@ fun AppNavHost(
                     navController.navigate(Screen.Feed.route) {
                         popUpTo(Screen.Feed.route) { inclusive = true }
                     }
+                }
+            )
+        }
+
+        composable(Screen.Profile.route) {
+            ProfileScreen(
+                onNavigateBack = {
+                    navController.popBackStack()
                 }
             )
         }

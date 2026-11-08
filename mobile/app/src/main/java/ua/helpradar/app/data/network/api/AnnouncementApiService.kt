@@ -23,6 +23,9 @@ interface AnnouncementApiService {
         @Body request: CreateAnnouncementRequest
     ): Response<CreateAnnouncementResponse>
 
+    @GET("api/announcements/mine")
+    suspend fun getMyAnnouncements(): Response<AnnouncementListResponse>
+
     @Multipart
     @POST("api/announcements/{id}/photos")
     suspend fun addPhoto(

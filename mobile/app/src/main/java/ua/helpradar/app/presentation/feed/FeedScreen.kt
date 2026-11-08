@@ -3,6 +3,7 @@ package ua.helpradar.app.presentation.feed
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -13,8 +14,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Person
@@ -29,6 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -37,6 +41,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
 import ua.helpradar.app.R
+import ua.helpradar.app.data.local.SessionManager
 import ua.helpradar.app.ui.theme.*
 import ua.helpradar.app.util.ShareUtils.shareAnnouncement
 
@@ -44,6 +49,7 @@ import ua.helpradar.app.util.ShareUtils.shareAnnouncement
 @Composable
 fun FeedScreen(
     onCreateRequestClick: () -> Unit,
+    onProfileClick: () -> Unit,
     onSignOutClick: () -> Unit = {},
     viewModel: FeedViewModel = viewModel()
 ) {
@@ -51,6 +57,16 @@ fun FeedScreen(
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val coroutineScope = rememberCoroutineScope()
     var selectedDrawerItem by remember { mutableStateOf("Announcements") }
+
+    // Динамічна літера для аватара замість статичної "Д"
+    val avatarLetter = remember(SessionManager.currentUserName) {
+        val name = SessionManager.currentUserName.trim()
+        if (name.isNotEmpty()) {
+            name.first().uppercaseChar().toString()
+        } else {
+            "U"
+        }
+    }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -82,15 +98,20 @@ fun FeedScreen(
                             .clip(RoundedCornerShape(10.dp))
                     )
 
+                    // Аватар у бічній шторці (при кліку переходить до профілю)
                     Box(
                         modifier = Modifier
                             .size(36.dp)
                             .clip(CircleShape)
-                            .background(TacticalOlive.copy(alpha = 0.5f)),
+                            .background(TacticalOlive.copy(alpha = 0.5f))
+                            .clickable {
+                                coroutineScope.launch { drawerState.close() }
+                                onProfileClick()
+                            },
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "Д", // FIXME: Change to actual icon
+                            text = avatarLetter,
                             fontFamily = Montserrat,
                             fontWeight = FontWeight.Bold,
                             color = CharcoalDark,
@@ -146,6 +167,7 @@ fun FeedScreen(
                         onClick = {
                             selectedDrawerItem = "Profile"
                             coroutineScope.launch { drawerState.close() }
+                            onProfileClick()
                         }
                     )
 
@@ -215,15 +237,17 @@ fun FeedScreen(
                                 )
                             }
 
+                            // Аватар у правому верхньому кутку
                             Box(
                                 modifier = Modifier
                                     .size(36.dp)
                                     .clip(CircleShape)
-                                    .background(TacticalOlive.copy(alpha = 0.5f)),
+                                    .background(TacticalOlive.copy(alpha = 0.5f))
+                                    .clickable { onProfileClick() },
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
-                                    text = "Д",
+                                    text = avatarLetter,
                                     fontFamily = Montserrat,
                                     fontWeight = FontWeight.Bold,
                                     color = CharcoalDark,
@@ -231,6 +255,7 @@ fun FeedScreen(
                                 )
                             }
                         }
+
                         HorizontalDivider(color = BorderSand.copy(alpha = 0.6f), thickness = 1.dp)
                     }
                 }
@@ -277,16 +302,20 @@ fun FeedScreen(
                         .padding(horizontal = 16.dp, vertical = 8.dp)
                 )
 
-                // Фільтр: Усі / Потреби / Пропозиції
+                // Фільтри типу + фільтр "Мої оголошення"
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState())
                         .padding(horizontal = 16.dp, vertical = 2.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     FilterChip(
-                        selected = state.selectedType == null,
-                        onClick = { viewModel.onTypeSelect(null) },
+                        selected = state.selectedType == null && !state.onlyMyAnnouncements,
+                        onClick = {
+                            viewModel.onToggleOnlyMy(false)
+                            viewModel.onTypeSelect(null)
+                        },
                         label = { Text("Усі", fontFamily = Montserrat) },
                         colors = FilterChipDefaults.filterChipColors(
                             selectedContainerColor = OliveGreen,
@@ -295,14 +324,18 @@ fun FeedScreen(
                         ),
                         border = FilterChipDefaults.filterChipBorder(
                             enabled = true,
-                            selected = state.selectedType == null,
+                            selected = state.selectedType == null && !state.onlyMyAnnouncements,
                             borderColor = BorderSand,
                             selectedBorderColor = OliveGreen
                         )
                     )
+
                     FilterChip(
-                        selected = state.selectedType == AnnouncementType.REQUEST,
-                        onClick = { viewModel.onTypeSelect(AnnouncementType.REQUEST) },
+                        selected = state.selectedType == AnnouncementType.REQUEST && !state.onlyMyAnnouncements,
+                        onClick = {
+                            viewModel.onToggleOnlyMy(false)
+                            viewModel.onTypeSelect(AnnouncementType.REQUEST)
+                        },
                         label = { Text("Потреби", fontFamily = Montserrat) },
                         colors = FilterChipDefaults.filterChipColors(
                             selectedContainerColor = OliveGreen,
@@ -311,14 +344,18 @@ fun FeedScreen(
                         ),
                         border = FilterChipDefaults.filterChipBorder(
                             enabled = true,
-                            selected = state.selectedType == AnnouncementType.REQUEST,
+                            selected = state.selectedType == AnnouncementType.REQUEST && !state.onlyMyAnnouncements,
                             borderColor = BorderSand,
                             selectedBorderColor = OliveGreen
                         )
                     )
+
                     FilterChip(
-                        selected = state.selectedType == AnnouncementType.OFFER,
-                        onClick = { viewModel.onTypeSelect(AnnouncementType.OFFER) },
+                        selected = state.selectedType == AnnouncementType.OFFER && !state.onlyMyAnnouncements,
+                        onClick = {
+                            viewModel.onToggleOnlyMy(false)
+                            viewModel.onTypeSelect(AnnouncementType.OFFER)
+                        },
                         label = { Text("Пропозиції", fontFamily = Montserrat) },
                         colors = FilterChipDefaults.filterChipColors(
                             selectedContainerColor = OliveGreen,
@@ -327,9 +364,34 @@ fun FeedScreen(
                         ),
                         border = FilterChipDefaults.filterChipBorder(
                             enabled = true,
-                            selected = state.selectedType == AnnouncementType.OFFER,
+                            selected = state.selectedType == AnnouncementType.OFFER && !state.onlyMyAnnouncements,
                             borderColor = BorderSand,
                             selectedBorderColor = OliveGreen
+                        )
+                    )
+
+                    FilterChip(
+                        selected = state.onlyMyAnnouncements,
+                        onClick = { viewModel.onToggleOnlyMy(!state.onlyMyAnnouncements) },
+                        label = { Text("Мої оголошення", fontFamily = Montserrat, fontWeight = FontWeight.SemiBold) },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Default.Person,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp),
+                                tint = if (state.onlyMyAnnouncements) Color.White else DeepSage
+                            )
+                        },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = RadarOrange,
+                            selectedLabelColor = Color.White,
+                            containerColor = Color.White.copy(alpha = 0.7f)
+                        ),
+                        border = FilterChipDefaults.filterChipBorder(
+                            enabled = true,
+                            selected = state.onlyMyAnnouncements,
+                            borderColor = BorderSand,
+                            selectedBorderColor = RadarOrange
                         )
                     )
                 }
@@ -363,7 +425,7 @@ fun FeedScreen(
                     }
                 }
 
-                // Відображення контенту: Завантаження / Помилка / Лелека порожнього списку / Список карток
+                // Відображення контенту
                 when {
                     state.isLoading -> {
                         Box(
@@ -375,21 +437,21 @@ fun FeedScreen(
                             CircularProgressIndicator(color = OliveGreen)
                         }
                     }
-
                     state.errorMessage != null -> {
                         FeedErrorView(
                             errorMessage = state.errorMessage ?: "Не вдалося завантажити оголошення",
                             onRetry = { viewModel.loadFeed() }
                         )
                     }
-
                     state.announcements.isEmpty() -> {
                         FeedEmptyView(
-                            message = "Оголошень не знайдено",
-                            subMessage = "За вибраними критеріями немає оголошень. Спробуйте змінити фільтри або створіть власне"
+                            message = if (state.onlyMyAnnouncements) "У вас немає власних оголошень" else "Оголошень не знайдено",
+                            subMessage = if (state.onlyMyAnnouncements)
+                                "Ви ще не публікували оголошень. Натисніть кнопку «+» нижче, щоб створити перше."
+                            else
+                                "За вибраними критеріями немає оголошень. Спробуйте змінити фільтри або створіть власне"
                         )
                     }
-
                     else -> {
                         LazyColumn(
                             modifier = Modifier.fillMaxSize(),
@@ -444,7 +506,7 @@ private fun DrawerItem(
 @Composable
 fun AnnouncementCard(item: AnnouncementItem) {
     val isOffer = item.type == AnnouncementType.OFFER
-    val context = androidx.compose.ui.platform.LocalContext.current
+    val context = LocalContext.current
 
     val cardBgColor = if (isOffer) SelectedRoleBg.copy(alpha = 0.9f) else Color.White.copy(alpha = 0.85f)
     val cardBorderColor = if (isOffer) OliveGreen.copy(alpha = 0.4f) else BorderSand
@@ -460,6 +522,7 @@ fun AnnouncementCard(item: AnnouncementItem) {
             modifier = Modifier.padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
+            // Верхній рядок: Тип, Категорія, Терміновість
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -526,6 +589,7 @@ fun AnnouncementCard(item: AnnouncementItem) {
                 }
             }
 
+            // Заголовок
             Text(
                 text = item.title,
                 fontFamily = KharkivTone,
@@ -536,6 +600,7 @@ fun AnnouncementCard(item: AnnouncementItem) {
                 overflow = TextOverflow.Ellipsis
             )
 
+            // Опис
             Text(
                 text = item.description,
                 fontFamily = Montserrat,
@@ -545,8 +610,63 @@ fun AnnouncementCard(item: AnnouncementItem) {
                 overflow = TextOverflow.Ellipsis
             )
 
+            // Блок дат створення та закінчення строку
+            if (item.createdDateFormatted != null || item.expiryDateFormatted != null) {
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = BorderSand.copy(alpha = 0.35f),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        item.createdDateFormatted?.let { created ->
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.Event,
+                                    contentDescription = null,
+                                    tint = DeepSage,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = "Створено: $created",
+                                    fontFamily = Montserrat,
+                                    fontSize = 11.sp,
+                                    color = CharcoalDark
+                                )
+                            }
+                        }
+
+                        item.expiryDateFormatted?.let { expiry ->
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.AccessTime,
+                                    contentDescription = null,
+                                    tint = RadarOrange,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = "Діє до: $expiry",
+                                    fontFamily = Montserrat,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = RadarOrange
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
             HorizontalDivider(color = BorderSand.copy(alpha = 0.6f), thickness = 1.dp)
 
+            // Нижня частина
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -567,6 +687,7 @@ fun AnnouncementCard(item: AnnouncementItem) {
                         color = CharcoalDark
                     )
                 }
+
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = item.authorName,

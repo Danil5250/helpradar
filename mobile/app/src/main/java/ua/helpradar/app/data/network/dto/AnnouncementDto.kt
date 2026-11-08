@@ -25,7 +25,9 @@ data class AnnouncementApiItem(
     @SerializedName("excerpt") val excerpt: String?,
     @SerializedName("category") val category: CategoryDto,
     @SerializedName("isUrgent") val isUrgent: Boolean,
-    @SerializedName("datePosted") val datePosted: String?,
+    @SerializedName("datePosted") val datePosted: String? = null,
+    @SerializedName("createdAt") val createdAt: String? = null,
+    @SerializedName("expiresAt") val expiresAt: String? = null,
     @SerializedName("distanceKm") val distanceKm: Double? = null,
     @SerializedName("author") val author: AuthorDto? = null
 )

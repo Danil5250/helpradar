@@ -288,10 +288,15 @@ fun RegisterScreen(
             // Блок вибору ролі "Я хочу..."
             CustomLabel("Я хочу... *")
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(IntrinsicSize.Max),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 FigmaRoleCard(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight(),
                     title = "Волонтер",
                     subtitle = "Допомагати іншим",
                     isSelected = state.selectedRole == UserRole.VOLUNTEER,
@@ -303,10 +308,12 @@ fun RegisterScreen(
                             modifier = Modifier.size(28.dp)
                         )
                     },
-                    modifier = Modifier.weight(1f),
                     onClick = { viewModel.onRoleSelect(UserRole.VOLUNTEER) }
                 )
                 FigmaRoleCard(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight(),
                     title = "Потребую допомоги",
                     subtitle = "Отримати підтримку",
                     isSelected = state.selectedRole == UserRole.PERSON_IN_NEED,
@@ -318,7 +325,6 @@ fun RegisterScreen(
                             modifier = Modifier.size(28.dp)
                         )
                     },
-                    modifier = Modifier.weight(1f),
                     onClick = { viewModel.onRoleSelect(UserRole.PERSON_IN_NEED) }
                 )
             }
