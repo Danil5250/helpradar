@@ -77,7 +77,7 @@
           </div>
 
           <div class="flex items-center justify-start p-4 mb-2 mt-4 ml-4">
-            <img src="/avatar-placeholder.svg" alt="" class="w-16 h-16 rounded-full object-cover mr-3" />
+            <img :src="details.author.avatarUrl" alt="" class="w-16 h-16 rounded-full object-cover mr-3" />
             <div class="pl-[1vw]">
               <p class="font-montserratMedium font-semibold uppercase">{{ t('ad_author') }}:</p>
               <h4 class="font-montserratMedium" data-test="author">

@@ -17,6 +17,7 @@ export const LIMITS = {
   maxPhotoBytes: 10 * 1024 * 1024,
   aboutMax: 500,
   streetMax: 255,
+  maxAvatarBytes: 5 * 1024 * 1024,
 } as const;
 
 export const NAME_REGEX = /^(?=.*\p{L})[\p{L} '’ʼ-]{2,50}$/u;
@@ -118,6 +119,11 @@ export function validateAnnouncement(
 
 export function validatePhoto(file: { type: string; size: number }): string | null {
   if (!PHOTO_TYPES.includes(file.type) || file.size <= 0 || file.size > LIMITS.maxPhotoBytes) return 'PHOTO_INVALID';
+  return null;
+}
+
+export function validateAvatar(file: { type: string; size: number }): string | null {
+  if (!PHOTO_TYPES.includes(file.type) || file.size <= 0 || file.size > LIMITS.maxAvatarBytes) return 'AVATAR_INVALID';
   return null;
 }
 

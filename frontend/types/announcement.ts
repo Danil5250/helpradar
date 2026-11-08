@@ -10,6 +10,7 @@ export interface Category {
 export interface Author {
   id: number;
   name: string;
+  avatarUrl: string;
   rating: number | null;
 }
 

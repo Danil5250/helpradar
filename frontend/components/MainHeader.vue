@@ -14,7 +14,7 @@
         <LanguageSelector />
         <template v-if="isAuthenticated && user">
           <NuxtLink to="/profile" class="font-montserratMedium flex items-center gap-2 hover:text-forest" :aria-label="t('my_profile')" data-test="user-name">
-            <AppIcon name="user" class="text-forest" />{{ user.firstName }} {{ user.lastName }}
+            <img :src="user.avatarUrl" alt="" class="w-8 h-8 rounded-full object-cover" />{{ user.firstName }} {{ user.lastName }}
           </NuxtLink>
           <AppButton has-outline data-test="logout" @click="logout">{{ t('log_outUPPER') }}</AppButton>
         </template>

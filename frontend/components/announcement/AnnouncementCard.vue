@@ -3,7 +3,7 @@
     <img v-if="a.thumbnailUrl" :src="a.thumbnailUrl" alt="" class="h-40 w-full object-cover" loading="lazy" />
 
     <div class="flex items-center p-4 mb-2 mt-4 ml-4">
-      <img src="/avatar-placeholder.svg" alt="" class="w-16 h-16 rounded-full object-cover mr-3" />
+      <img :src="a.author.avatarUrl" alt="" class="w-16 h-16 rounded-full object-cover mr-3" />
       <div>
         <h4 class="text-relative-h5 xl:text-pl font-montserratMedium">{{ a.author.name }}</h4>
         <span class="text-sm font-montserratMedium flex items-center gap-2">

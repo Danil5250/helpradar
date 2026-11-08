@@ -5,6 +5,12 @@ export const useProfile = () => ({
 
   update: (payload: ProfilePayload): Promise<ProfileUpdated> => apiFetch<ProfileUpdated>('/profile', { method: 'PATCH', body: payload }),
 
+  uploadAvatar: (file: File): Promise<{ code: string; avatarUrl: string }> => {
+    const body = new FormData();
+    body.append('avatar', file);
+    return apiFetch('/profile/avatar', { method: 'POST', body });
+  },
+
   confirmEmail: (token: string): Promise<{ code: string; message: string }> =>
     apiFetch('/profile/confirm-email', { method: 'POST', body: { token } }),
 
