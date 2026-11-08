@@ -5,6 +5,7 @@ import type {
   AnnouncementSort,
   AnnouncementTypeFilter,
   Category,
+  MapAnnouncements,
   OwnAnnouncementItem,
   Photo,
   PlaceSuggestion,
@@ -19,8 +20,11 @@ interface ActionResult {
 export const useAnnouncements = () => ({
   categories: async (): Promise<Category[]> => (await apiFetch<{ items: Category[] }>('/categories')).items,
 
-  list: (query: { page?: number; sort?: AnnouncementSort; type?: AnnouncementTypeFilter; lat?: number; lng?: number }): Promise<AnnouncementPage> =>
+  list: (query: { page?: number; sort?: AnnouncementSort; type?: AnnouncementTypeFilter; lat?: number; lng?: number; radius?: number }): Promise<AnnouncementPage> =>
     apiFetch<AnnouncementPage>('/announcements', { query }),
+
+  map: (query: { lat: number; lng: number; radius: number; type?: AnnouncementTypeFilter }): Promise<MapAnnouncements> =>
+    apiFetch<MapAnnouncements>('/announcements/map', { query }),
 
   mine: async (): Promise<OwnAnnouncementItem[]> =>
     (await apiFetch<{ items: OwnAnnouncementItem[] }>('/announcements/mine')).items,
