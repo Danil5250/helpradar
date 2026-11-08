@@ -15,50 +15,34 @@
 
     <div class="relative">
       <label for="profile-city" class="font-montserratRegular mb-2 block">{{ t('city_of_living') }}*</label>
-      <input
+      <AppSelect
         id="profile-city"
         v-model="form.city"
-        type="text"
-        role="combobox"
-        autocomplete="off"
+        :options="cityOptions"
+        searchable
+        full-width
         :placeholder="t('city_placeholder')"
-        :aria-expanded="cityOpen && cityOptions.length > 0"
-        aria-controls="profile-city-list"
-        aria-autocomplete="list"
-        :class="[inputClass, { 'border-radar': shown('city') }]"
-        :aria-invalid="!!shown('city')"
+        :invalid="!!shown('city')"
         data-test="city"
-        @input="onCityInput"
-        @blur="cityOpen = false"
+        @search="onCityInput"
+        @change="selectCity"
       />
-      <ul v-if="cityOptions.length > 0" id="profile-city-list" role="listbox" class="absolute w-full border-2 border-sage bg-almost-white rounded-lg z-10 max-h-48 overflow-y-auto shadow-lg">
-        <li v-for="option in cityOptions" :key="`${option.region}-${option.city}`" role="option" :aria-selected="false" class="p-2 cursor-pointer hover:bg-sand" @mousedown.prevent="selectCity(option)">
-          {{ option.city }} <span class="text-sage text-sm">({{ option.region }})</span>
-        </li>
-      </ul>
       <FieldError :text="fieldText(shown('city'))" />
     </div>
 
     <div v-if="role === 'person_in_need'" class="relative">
       <label for="profile-street" class="font-montserratRegular mb-2 block">{{ t('street') }} <span class="text-sage text-sm">({{ t('optional') }})</span></label>
-      <input
+      <AppSelect
         id="profile-street"
         v-model="form.street"
-        type="text"
-        role="combobox"
-        autocomplete="off"
-        :aria-expanded="streetOptions.length > 0"
-        aria-controls="profile-street-list"
-        aria-autocomplete="list"
-        :class="[inputClass, { 'border-radar': shown('street') }]"
-        :aria-invalid="!!shown('street')"
+        :options="selectStreetOptions"
+        searchable
+        full-width
+        :invalid="!!shown('street')"
         data-test="street"
-        @input="onStreetInput"
-        @blur="streetOptions = []"
+        @search="onStreetInput"
+        @change="selectStreet"
       />
-      <ul v-if="streetOptions.length > 0" id="profile-street-list" role="listbox" class="absolute w-full border-2 border-sage bg-almost-white rounded-lg z-10 max-h-48 overflow-y-auto shadow-lg">
-        <li v-for="option in streetOptions" :key="option" role="option" :aria-selected="false" class="p-2 cursor-pointer hover:bg-sand" @mousedown.prevent="selectStreet(option)">{{ option }}</li>
-      </ul>
       <FieldError :text="fieldText(shown('street'))" />
     </div>
 
@@ -146,7 +130,6 @@ const errors = ref<Errors<ProfileField>>({});
 const serverErrors = ref<Errors<ProfileField>>({});
 const submitError = ref('');
 const busy = ref(false);
-const cityOpen = ref(false);
 const streetOptions = ref<string[]>([]);
 let streetTimer: ReturnType<typeof setTimeout> | undefined;
 
@@ -156,18 +139,17 @@ const shown = (field: ProfileField) => errors.value[field] ?? serverErrors.value
 
 // Computed
 const role = computed(() => props.profile.role);
-const cityOptions = computed(() => (cityOpen.value ? searchCities(form.value.city) : []));
+const cityOptions = computed(() => searchCities(form.value.city).map((option) => ({ value: option.city, label: `${option.city} (${option.region})` })));
+const selectStreetOptions = computed(() => streetOptions.value.map((street) => ({ value: street, label: street })));
 
 // Methods
 function onCityInput() {
   form.value.region = '';
-  cityOpen.value = true;
 }
 
-function selectCity(option: CityOption) {
-  form.value.city = option.city;
-  form.value.region = option.region;
-  cityOpen.value = false;
+function selectCity(city: string) {
+  form.value.city = city;
+  form.value.region = findCity(city)?.region ?? '';
 }
 
 function onStreetInput() {

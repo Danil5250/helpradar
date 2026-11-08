@@ -10,6 +10,7 @@ import { EmailOutbox } from '../modules/email/entities/email-outbox.entity';
 import { PersonInNeed } from '../modules/users/entities/person-in-need.entity';
 import { User } from '../modules/users/entities/user.entity';
 import { Volunteer } from '../modules/users/entities/volunteer.entity';
+import { HelpResponse } from '../modules/help/entities/help-response.entity';
 
 export const ALL_ENTITIES = [
   User,
@@ -24,4 +25,5 @@ export const ALL_ENTITIES = [
   PasswordResetToken,
   LoginAttempt,
   EmailOutbox,
+  HelpResponse,
 ];

@@ -18,6 +18,7 @@
     "lint": "oxlint --type-aware src/ test/",
     "test": "jest",
     "test:cov": "jest --coverage",
+    "test:help": "npm run build && node --test test/help-flow.integration.cjs",
     "pretest:e2e": "node scripts/ensure-database.js --test",
     "test:e2e": "jest --config test/jest-e2e.json --runInBand",
     "migration:run": "npm run build && typeorm migration:run -d dist/config/data-source.js",

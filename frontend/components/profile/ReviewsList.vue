@@ -2,7 +2,7 @@
   <section>
     <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
       <h2 class="font-kharkiv text-h5 xl:text-h4">{{ t('reviews') }}</h2>
-      <AppDropdown v-model="sort" :options="sortOptions" :prefix="t('sort_by')" data-test="reviews-sort" />
+      <AppSelect v-model="sort" :options="sortOptions" :prefix="t('sort_by')" data-test="reviews-sort" />
     </div>
 
     <LoadingSpinner v-if="loading && items.length === 0" />
@@ -19,7 +19,17 @@
           </div>
           <ProfileRatingStars :value="review.rating" :show-value="false" />
         </div>
-        <p v-if="review.description" class="mt-3 whitespace-pre-line break-words">{{ review.description }}</p>
+        <ProfileReviewForm
+          v-if="editingId === review.id"
+          :announcement-id="review.announcementId"
+          :review="review"
+          @saved="saved"
+          @cancel="editingId = null"
+        />
+        <template v-else>
+          <p v-if="review.description" class="mt-3 whitespace-pre-line break-words">{{ review.description }}</p>
+          <AppButton v-if="canEditReview(review, user?.id, now)" has-outline class="mt-3" :disabled="loading" :data-test="`review-edit-${review.id}`" @click="editingId = review.id">{{ t('edit_review') }}</AppButton>
+        </template>
       </li>
     </ul>
 
@@ -32,12 +42,17 @@
 <script setup lang="ts">
 // Imports
 import type { Review, ReviewSort } from '~/types/profile';
+import { canEditReview } from '~/utils/reviews';
 
 // Props
 const props = defineProps<{ userId: number }>();
 
+// Emits
+const emit = defineEmits<{ updated: [] }>();
+
 // Composables
 const profile = useProfile();
+const { user } = useAuth();
 
 // Utils
 const { t, locale } = useI18n();
@@ -50,6 +65,9 @@ const hasMore = ref(false);
 const loading = ref(false);
 const loadError = ref('');
 const sort = ref<ReviewSort>('newest');
+const editingId = ref<number | null>(null);
+const now = ref(Date.now());
+let editTimer: ReturnType<typeof setInterval> | undefined;
 
 // Computed
 const sortOptions = computed<{ value: ReviewSort; label: string }[]>(() => [
@@ -58,6 +76,12 @@ const sortOptions = computed<{ value: ReviewSort; label: string }[]>(() => [
 ]);
 
 // Methods
+function saved(review: Review) {
+  items.value = items.value.map((item) => (item.id === review.id ? review : item));
+  editingId.value = null;
+  emit('updated');
+}
+
 async function load(reset: boolean) {
   if (loading.value) return;
   loading.value = true;
@@ -76,8 +100,16 @@ async function load(reset: boolean) {
 }
 
 // Watchers
-watch(sort, () => load(true));
+watch(sort, () => {
+  editingId.value = null;
+  void load(true);
+});
+watch(() => user.value?.id, () => (editingId.value = null));
 
 // Lifecycle
-onMounted(() => load(true));
+onMounted(() => {
+  void load(true);
+  editTimer = setInterval(() => (now.value = Date.now()), 1000);
+});
+onBeforeUnmount(() => clearInterval(editTimer));
 </script>

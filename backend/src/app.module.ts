@@ -14,6 +14,7 @@ import { CommentsModule } from './modules/comments/comments.module';
 import { ProfileModule } from './modules/profile/profile.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { HealthController } from './modules/health/health.controller';
+import { HelpModule } from './modules/help/help.module';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { HealthController } from './modules/health/health.controller';
     AnnouncementModule,
     CommentsModule,
     ProfileModule,
+    HelpModule,
   ],
   controllers: [HealthController],
 })

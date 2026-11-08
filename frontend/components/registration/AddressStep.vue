@@ -3,44 +3,20 @@
     <h2 class="sm:text-xs-pxl xl:text-relative-h4 font-kharkiv mb-4">{{ t('fill_in_the_data') }}</h2>
     <div class="w-full mb-4 relative">
       <label for="reg-city" class="font-montserratRegular mb-2 block">{{ t('city_of_living') }}*</label>
-      <input
+      <AppSelect
         id="reg-city"
         v-model="form.city"
-        type="text"
-        role="combobox"
-        autocomplete="off"
+        :options="options"
+        searchable
+        full-width
+        :disabled="submitting"
         :placeholder="t('city_placeholder')"
-        :aria-expanded="cityOpen && options.length > 0"
-        aria-controls="reg-city-list"
-        aria-autocomplete="list"
-        :aria-activedescendant="activeIndex >= 0 ? `reg-city-option-${activeIndex}` : undefined"
-        :aria-invalid="!!shown('city')"
-        aria-describedby="reg-city-error"
-        :class="[inputClass, { 'border-radar': shown('city') }]"
+        :invalid="!!shown('city')"
+        described-by="reg-city-error"
         data-test="city"
-        @input="onCityInput"
-        @keydown="onCityKeydown"
-        @blur="cityOpen = false"
+        @search="onCityInput"
+        @change="selectCity"
       />
-      <ul
-        v-if="options.length > 0"
-        id="reg-city-list"
-        role="listbox"
-        class="absolute w-full border-2 border-sage bg-almost-white rounded-lg z-10 max-h-48 overflow-y-auto shadow-lg"
-      >
-        <li
-          v-for="(option, index) in options"
-          :id="`reg-city-option-${index}`"
-          :key="`${option.region}-${option.city}`"
-          role="option"
-          :aria-selected="index === activeIndex"
-          class="p-2 cursor-pointer hover:bg-sand"
-          :class="{ 'bg-sand': index === activeIndex }"
-          @mousedown.prevent="selectCity(option)"
-        >
-          {{ option.city }} <span class="text-sage text-sm">({{ option.region }})</span>
-        </li>
-      </ul>
       <FieldError id="reg-city-error" :text="fieldText(shown('city'))" />
     </div>
     <div class="w-full mb-4">
@@ -94,44 +70,22 @@ const fieldText = useFieldErrorText();
 
 // Data
 const errors = ref<Partial<Record<RegistrationField, string>>>({});
-const cityOpen = ref(false);
-const activeIndex = ref(-1);
 
 // Constants
 const inputClass = 'w-full p-3 border-2 rounded-lg outline-none bg-almost-white border-sage focus:border-forest';
 const shown = (field: RegistrationField) => errors.value[field] ?? props.serverErrors[field];
 
 // Computed
-const options = computed(() => (cityOpen.value ? searchCities(form.value.city) : []));
+const options = computed(() => searchCities(form.value.city).map((option) => ({ value: option.city, label: `${option.city} (${option.region})` })));
 
 // Methods
 function onCityInput() {
   form.value.region = '';
-  cityOpen.value = true;
-  activeIndex.value = -1;
 }
 
-function selectCity(option: CityOption) {
-  form.value.city = option.city;
-  form.value.region = option.region;
-  cityOpen.value = false;
-  activeIndex.value = -1;
-}
-
-function onCityKeydown(event: KeyboardEvent) {
-  if (event.key === 'ArrowDown') {
-    event.preventDefault();
-    cityOpen.value = true;
-    activeIndex.value = Math.min(activeIndex.value + 1, options.value.length - 1);
-  } else if (event.key === 'ArrowUp') {
-    event.preventDefault();
-    activeIndex.value = Math.max(activeIndex.value - 1, 0);
-  } else if (event.key === 'Enter' && cityOpen.value && activeIndex.value >= 0) {
-    event.preventDefault();
-    selectCity(options.value[activeIndex.value]);
-  } else if (event.key === 'Escape') {
-    cityOpen.value = false;
-  }
+function selectCity(city: string) {
+  form.value.city = city;
+  form.value.region = findCity(city)?.region ?? '';
 }
 
 function handleSubmit() {

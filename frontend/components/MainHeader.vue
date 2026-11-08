@@ -7,7 +7,7 @@
       <NuxtLink to="/main" :aria-label="t('main')">
         <HelpRadarLogo class="xl:mr-10 md:mr-14" />
       </NuxtLink>
-      <nav class="flex-grow hidden xl:flex xl:space-x-20 items-center" :aria-label="t('navigationUPPER')">
+      <nav class="flex-grow hidden xl:flex xl:space-x-6 items-center" :aria-label="t('navigationUPPER')">
         <NavItem v-for="item in navItems" :key="item.to" :text="item.text" :to="item.to" is-last />
       </nav>
       <div class="hidden xl:flex items-center space-x-5">
@@ -57,6 +57,7 @@ const lastScrollY = ref(0);
 const navItems = computed(() => [
   { text: t('advertisementUPPER'), to: '/main' },
   ...(isAuthenticated.value ? [{ text: t('my_announcementsUPPER'), to: '/my-announcements' }] : []),
+  ...(isAuthenticated.value ? [{ text: t('help.my_help'), to: '/my-help' }] : []),
 ]);
 
 // Methods

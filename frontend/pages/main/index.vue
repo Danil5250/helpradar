@@ -9,31 +9,7 @@
             <AppIcon name="plus" class="inline mr-1" />{{ role === 'volunteer' ? t('offer_help') : t('create_request') }}
           </AppButton>
         </NuxtLink>
-        <div v-if="view === 'list'" class="relative w-full md:w-auto">
-          <AppButton has-outline class="px-2 w-full md:w-auto flex items-center justify-center space-x-3" :class="dropdownOpen ? '!rounded-b-none !rounded-t-3xl' : 'rounded-3xl'" aria-haspopup="listbox" :aria-expanded="dropdownOpen" data-test="sort-button" @click="dropdownOpen = !dropdownOpen">
-            <span class="font-montserratMedium inline-grid items-center text-center">
-              <span class="col-start-1 row-start-1">{{ t('sort_by') }}: {{ t(sortOptions.find((option) => option.value === sort)?.label ?? 'sort_newest') }}</span>
-              <span v-for="option in visibleSortOptions" :key="option.value" class="col-start-1 row-start-1 invisible" aria-hidden="true">{{ t('sort_by') }}: {{ t(option.label) }}</span>
-            </span>
-            <AppIcon name="chevron-down" class="h-4 w-4 transition-transform duration-300" :class="{ 'rotate-180': dropdownOpen }" />
-          </AppButton>
-          <ul v-if="dropdownOpen" role="listbox" class="w-full min-w-[14rem] bg-almost-white border-2 border-forest rounded-b-3xl absolute left-0 top-full z-10 -mt-1 overflow-hidden">
-            <li
-              v-for="option in visibleSortOptions"
-              :key="option.value"
-              role="option"
-              tabindex="0"
-              :aria-selected="sort === option.value"
-              class="cursor-pointer py-2 px-4 hover:bg-sand"
-              :class="sort === option.value ? 'font-bold text-forest' : 'text-charcoal'"
-              :data-test="`sort-${option.value}`"
-              @click="chooseSort(option.value)"
-              @keydown.enter="chooseSort(option.value)"
-            >
-              {{ t(option.label) }}
-            </li>
-          </ul>
-        </div>
+        <AppSelect v-if="view === 'list'" :model-value="sort" :options="selectSortOptions" :prefix="t('sort_by')" data-test="sort-button" @update:model-value="chooseSort" />
       </div>
     </div>
 
@@ -52,7 +28,7 @@
           {{ t(`view_${option}`) }}
         </button>
       </div>
-      <AppDropdown v-model="radius" :options="radiusOptions" :prefix="t('radius')" data-test="radius" @change="chooseRadius" />
+      <AppSelect v-model="radius" :options="radiusOptions" :prefix="t('radius')" data-test="radius" @change="chooseRadius" />
       <p v-if="radiusCounter" class="font-montserratMedium text-forest" data-test="radius-counter">{{ radiusCounter }}</p>
     </div>
 
@@ -116,7 +92,6 @@ const loading = ref(false);
 const loadedOnce = ref(false);
 const loadError = ref('');
 const sort = ref<AnnouncementSort>('newest');
-const dropdownOpen = ref(false);
 const position = ref<{ lat: number; lng: number } | null>(null);
 const locationNote = ref('');
 const sentinel = ref<HTMLElement | null>(null);
@@ -127,6 +102,7 @@ const mapError = ref('');
 
 // Constants
 let observer: IntersectionObserver | null = null;
+let resetQueued = false;
 let mapTimer: ReturnType<typeof setInterval> | undefined;
 const viewOptions = ['list', 'map'] as const;
 const KYIV = { lat: 50.4501, lng: 30.5234 };
@@ -145,6 +121,7 @@ const listType = computed<AnnouncementTypeFilter | undefined>(() => {
   return undefined;
 });
 const visibleSortOptions = computed(() => (listType.value === 'helpOffer' ? sortOptions.filter((option) => option.value !== 'urgent') : sortOptions));
+const selectSortOptions = computed(() => visibleSortOptions.value.map((option) => ({ value: option.value, label: t(option.label) })));
 const radiusOptions = computed<{ value: SearchRadiusKm | null; label: string }[]>(() => [
   ...(view.value === 'list' ? [{ value: null, label: t('radius_any') }] : []),
   ...SEARCH_RADII_KM.map((km) => ({ value: km, label: t('radius_km', { km }) })),
@@ -180,7 +157,10 @@ async function requestDevicePosition(): Promise<'ok' | 'denied' | 'unavailable'>
 }
 
 async function load(reset: boolean) {
-  if (loading.value) return;
+  if (loading.value) {
+    if (reset) resetQueued = true;
+    return;
+  }
   loading.value = true;
   loadError.value = '';
   if (reset) {
@@ -204,11 +184,14 @@ async function load(reset: boolean) {
   } finally {
     loading.value = false;
     loadedOnce.value = true;
+    if (resetQueued) {
+      resetQueued = false;
+      void load(true);
+    }
   }
 }
 
 async function chooseSort(next: AnnouncementSort) {
-  dropdownOpen.value = false;
   locationNote.value = '';
   if (next === 'nearest' && !position.value) {
     const granted = (await requestDevicePosition()) === 'ok' || useProfileCity();
@@ -306,6 +289,7 @@ onMounted(() => {
   }, { immediate: true });
 });
 onBeforeUnmount(() => {
+  resetQueued = false;
   observer?.disconnect();
   stopMapRefresh();
 });
