@@ -9,7 +9,7 @@ export class ApiError extends Error {
     public readonly code: string,
     message: string,
     public readonly fields: Record<string, ApiFieldError> = {},
-    public readonly data: Record<string, any> = {},
+    public readonly data: Record<string, any> = {}
   ) {
     super(message);
   }

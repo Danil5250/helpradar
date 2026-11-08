@@ -6,7 +6,10 @@
       class="pointer-events-auto flex items-center gap-3 max-w-xl w-full rounded-2xl border-l-8 shadow-lg px-5 py-3 text-charcoal"
       :class="look"
     >
-      <AppIcon :name="message.kind === 'alert' ? 'alert' : 'check'" :class="message.kind === 'alert' ? 'text-radar' : message.kind === 'info' ? 'text-sage' : 'text-forest'" />
+      <AppIcon
+        :name="message.kind === 'alert' ? 'alert' : 'check'"
+        :class="message.kind === 'alert' ? 'text-radar' : message.kind === 'info' ? 'text-sage' : 'text-forest'"
+      />
       <p class="flex-1 font-montserratMedium">{{ message.text }}</p>
       <button type="button" class="text-charcoal hover:text-forest" :aria-label="t('close')" @click="clear">
         <AppIcon name="close" />
@@ -44,7 +47,7 @@ watch(
     if (timer) clearTimeout(timer);
     if (current) timer = setTimeout(clear, 7000);
   },
-  { immediate: true },
+  { immediate: true }
 );
 
 // Lifecycle

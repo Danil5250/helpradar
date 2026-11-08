@@ -1,12 +1,10 @@
 <template>
-  <button
-    :type="type"
-    :disabled="disabled || loading"
-    :aria-busy="loading || undefined"
-    :class="looks"
-    @click="emit('click', $event)"
-  >
-    <span v-if="loading" class="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent align-[-2px] mr-2" aria-hidden="true" />
+  <button :type="type" :disabled="disabled || loading" :aria-busy="loading || undefined" :class="looks" @click="emit('click', $event)">
+    <span
+      v-if="loading"
+      class="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent align-[-2px] mr-2"
+      aria-hidden="true"
+    />
     <slot />
   </button>
 </template>
@@ -22,7 +20,7 @@ const props = withDefaults(
     disabled?: boolean;
     loading?: boolean;
   }>(),
-  { hasBorder: false, hasOutline: false, isFilled: false, type: 'button', disabled: false, loading: false },
+  { hasBorder: false, hasOutline: false, isFilled: false, type: 'button', disabled: false, loading: false }
 );
 
 // Emits

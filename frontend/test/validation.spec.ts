@@ -108,7 +108,7 @@ describe('announcement rules (SRS 3.2.4.2)', () => {
   it('checks title 5-100, description 10-2000, category, location and expiry 1-30', () => {
     const errors = validateAnnouncement(
       { title: 'Hey', description: 'short', categoryId: null, address: '', latitude: null, longitude: null, expiryDays: 31, isUrgent: false },
-      true,
+      true
     );
     expect(errors).toEqual({
       title: 'TITLE_INVALID',

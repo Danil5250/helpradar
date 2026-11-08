@@ -9,8 +9,17 @@
         <h1 class="font-kharkiv text-h3 mb-4" data-test="link-invalid">{{ errorMessage }}</h1>
         <form class="flex flex-col gap-3 mt-6 text-left" novalidate @submit.prevent="resend">
           <label for="resend-email" class="font-montserratRegular">{{ t('email') }}</label>
-          <input id="resend-email" v-model="resendEmail" type="email" autocomplete="email" :placeholder="t('email_address')" class="w-full p-3 border-2 rounded-lg outline-none bg-almost-white border-sage focus:border-forest" />
-          <AppButton type="submit" is-filled :loading="resendBusy" class="w-full text-charcoal py-3 rounded-full" data-test="resend">{{ t('resend_emailUPPER') }}</AppButton>
+          <input
+            id="resend-email"
+            v-model="resendEmail"
+            type="email"
+            autocomplete="email"
+            :placeholder="t('email_address')"
+            class="w-full p-3 border-2 rounded-lg outline-none bg-almost-white border-sage focus:border-forest"
+          />
+          <AppButton type="submit" is-filled :loading="resendBusy" class="w-full text-charcoal py-3 rounded-full" data-test="resend">{{
+            t('resend_emailUPPER')
+          }}</AppButton>
           <p v-if="resendInfo" class="text-charcoal border-l-4 border-sage bg-almost-white rounded-r-lg px-3 py-2" role="status">{{ resendInfo }}</p>
         </form>
         <NuxtLink to="/login" class="inline-block mt-6 font-bold underline hover:text-forest">{{ t('log_in') }}</NuxtLink>

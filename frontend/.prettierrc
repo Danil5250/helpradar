@@ -1,0 +1,6 @@
+{
+  "singleQuote": true,
+  "printWidth": 160,
+  "endOfLine": "auto",
+  "trailingComma": "es5"
+}

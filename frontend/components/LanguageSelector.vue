@@ -1,9 +1,23 @@
 <template>
   <div class="flex items-center gap-2">
-    <button type="button" class="rounded-sm" :class="locale === 'en' ? 'ring-2 ring-forest' : 'opacity-70 hover:opacity-100'" aria-label="English" :aria-pressed="locale === 'en'" @click="changeLanguage('en')">
+    <button
+      type="button"
+      class="rounded-sm"
+      :class="locale === 'en' ? 'ring-2 ring-forest' : 'opacity-70 hover:opacity-100'"
+      aria-label="English"
+      :aria-pressed="locale === 'en'"
+      @click="changeLanguage('en')"
+    >
       <img :src="engImg" alt="EN" class="h-6 w-auto" />
     </button>
-    <button type="button" class="rounded-sm" :class="locale === 'uk' ? 'ring-2 ring-forest' : 'opacity-70 hover:opacity-100'" aria-label="Українська" :aria-pressed="locale === 'uk'" @click="changeLanguage('uk')">
+    <button
+      type="button"
+      class="rounded-sm"
+      :class="locale === 'uk' ? 'ring-2 ring-forest' : 'opacity-70 hover:opacity-100'"
+      aria-label="Українська"
+      :aria-pressed="locale === 'uk'"
+      @click="changeLanguage('uk')"
+    >
       <img :src="ukrImg" alt="UA" class="h-6 w-auto" />
     </button>
   </div>
@@ -24,6 +38,7 @@ function changeLanguage(lng: 'uk' | 'en') {
   try {
     localStorage.setItem(LANGUAGE_KEY, lng);
   } catch {
+    // keep language changes in memory when storage is unavailable.
   }
 }
 </script>

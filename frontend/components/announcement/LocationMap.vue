@@ -1,6 +1,12 @@
 <template>
   <div>
-    <div ref="element" class="h-56 w-full rounded-2xl border-2 border-sage z-0" role="img" :aria-label="exact ? t('exact_location') : t('approximate_area')" data-test="location-map" />
+    <div
+      ref="element"
+      class="h-56 w-full rounded-2xl border-2 border-sage z-0"
+      role="img"
+      :aria-label="exact ? t('exact_location') : t('approximate_area')"
+      data-test="location-map"
+    />
     <p class="text-sm mt-1 text-sage">{{ exact ? t('exact_location_hint') : t('approximate_area') }}</p>
   </div>
 </template>

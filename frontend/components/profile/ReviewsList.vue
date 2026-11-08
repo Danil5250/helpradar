@@ -19,16 +19,18 @@
           </div>
           <ProfileRatingStars :value="review.rating" :show-value="false" />
         </div>
-        <ProfileReviewForm
-          v-if="editingId === review.id"
-          :announcement-id="review.announcementId"
-          :review="review"
-          @saved="saved"
-          @cancel="editingId = null"
-        />
+        <ProfileReviewForm v-if="editingId === review.id" :announcement-id="review.announcementId" :review="review" @saved="saved" @cancel="editingId = null" />
         <template v-else>
           <p v-if="review.description" class="mt-3 whitespace-pre-line break-words">{{ review.description }}</p>
-          <AppButton v-if="canEditReview(review, user?.id, now)" has-outline class="mt-3" :disabled="loading" :data-test="`review-edit-${review.id}`" @click="editingId = review.id">{{ t('edit_review') }}</AppButton>
+          <AppButton
+            v-if="canEditReview(review, user?.id, now)"
+            has-outline
+            class="mt-3"
+            :disabled="loading"
+            :data-test="`review-edit-${review.id}`"
+            @click="editingId = review.id"
+            >{{ t('edit_review') }}</AppButton
+          >
         </template>
       </li>
     </ul>
@@ -104,7 +106,10 @@ watch(sort, () => {
   editingId.value = null;
   void load(true);
 });
-watch(() => user.value?.id, () => (editingId.value = null));
+watch(
+  () => user.value?.id,
+  () => (editingId.value = null)
+);
 
 // Lifecycle
 onMounted(() => {

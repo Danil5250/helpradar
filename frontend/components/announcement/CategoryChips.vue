@@ -9,7 +9,11 @@
         role="radio"
         :aria-checked="model === category.id"
         class="py-2 px-4 rounded-full mt-1 border-2 text-center transition"
-        :class="model === category.id ? 'bg-forest border-forest text-almost-white' : 'border-sage bg-almost-white hover:border-olive hover:ring-2 hover:ring-olive/40'"
+        :class="
+          model === category.id
+            ? 'bg-forest border-forest text-almost-white'
+            : 'border-sage bg-almost-white hover:border-olive hover:ring-2 hover:ring-olive/40'
+        "
         :data-test="`category-${category.id}`"
         @click="model = category.id"
       >

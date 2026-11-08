@@ -1,7 +1,9 @@
 <template>
   <form class="max-w-3xl mx-auto" novalidate @submit.prevent="submit">
     <h1 class="text-h3 xl:text-h2 font-kharkiv text-center mb-6">{{ isEdit ? t('edit_announcement') : t('fill_the_data') }}</h1>
-    <p class="mb-6 border-l-8 border-radar bg-almost-white rounded-r-2xl px-4 py-3 font-montserratMedium" role="note" data-test="emergency-note">{{ t('call_112') }}</p>
+    <p class="mb-6 border-l-8 border-radar bg-almost-white rounded-r-2xl px-4 py-3 font-montserratMedium" role="note" data-test="emergency-note">
+      {{ t('call_112') }}
+    </p>
     <div class="w-full flex flex-col mb-4">
       <label for="ann-title" class="font-montserratRegular mb-2">{{ t('announcement_title') }}*</label>
       <input
@@ -60,7 +62,10 @@
       <div v-if="isHelpRequest" class="flex flex-col justify-end">
         <label class="flex items-start gap-3 font-montserratRegular cursor-pointer p-3 border-2 rounded-lg border-sage bg-almost-white">
           <input v-model="values.isUrgent" type="checkbox" class="mt-1 h-5 w-5 accent-forest" data-test="urgent" />
-          <span><span class="font-bold">{{ t('urgent') }}</span><br /><span class="text-sm text-sage">{{ t('urgent_hint') }}</span></span>
+          <span
+            ><span class="font-bold">{{ t('urgent') }}</span
+            ><br /><span class="text-sm text-sage">{{ t('urgent_hint') }}</span></span
+          >
         </label>
         <FieldError :text="fieldText(errors.isUrgent)" />
       </div>
@@ -70,7 +75,13 @@
       <p v-if="generalError" class="mb-4 border-l-4 border-radar bg-almost-white rounded-r-lg px-3 py-2" data-test="form-error">{{ generalError }}</p>
     </div>
 
-    <AppButton type="submit" is-filled :loading="submitting" class="w-full text-charcoal uppercase font-montserratRegular py-4 rounded-full mb-6" data-test="submit">
+    <AppButton
+      type="submit"
+      is-filled
+      :loading="submitting"
+      class="w-full text-charcoal uppercase font-montserratRegular py-4 rounded-full mb-6"
+      data-test="submit"
+    >
       {{ isEdit ? t('save_changes') : t('publish') }}
     </AppButton>
   </form>
@@ -79,12 +90,7 @@
 <script setup lang="ts">
 // Imports
 import type { AnnouncementDetails, AnnouncementPayload, Category, LocationValue, Photo } from '~/types/announcement';
-import {
-  LIMITS,
-  validateAnnouncement,
-  type AnnouncementField,
-  type AnnouncementFormValues,
-} from '~/utils/validation';
+import { LIMITS, validateAnnouncement, type AnnouncementField, type AnnouncementFormValues } from '~/utils/validation';
 
 // Props
 const props = defineProps<{ mode: 'create' | 'edit'; categories: Category[]; initial?: AnnouncementDetails | null }>();
@@ -156,6 +162,7 @@ function clearDraft() {
   try {
     localStorage.removeItem(DRAFT_KEY);
   } catch {
+    // ignore unavailable storage when clearing the draft.
   }
 }
 
@@ -186,8 +193,7 @@ async function submit() {
   if (Object.keys(errors.value).length > 0) {
     generalError.value = t('errors.VALIDATION_FAILED');
     await nextTick();
-    const target =
-      document.querySelector<HTMLElement>('[aria-invalid="true"]') ?? document.querySelector<HTMLElement>('[data-field-error]');
+    const target = document.querySelector<HTMLElement>('[aria-invalid="true"]') ?? document.querySelector<HTMLElement>('[data-field-error]');
     target?.scrollIntoView({ block: 'center', behavior: 'smooth' });
     target?.focus?.({ preventScroll: true });
     return;
@@ -195,9 +201,7 @@ async function submit() {
 
   submitting.value = true;
   try {
-    const result = isEdit.value
-      ? await announcements.update((props.initial as AnnouncementDetails).id, payload())
-      : await announcements.create(payload());
+    const result = isEdit.value ? await announcements.update((props.initial as AnnouncementDetails).id, payload()) : await announcements.create(payload());
     const id = result.announcement.id;
     let photoProblem = false;
     for (const photoId of removedPhotoIds.value) await announcements.removePhoto(id, photoId).catch(() => (photoProblem = true));
@@ -213,7 +217,8 @@ async function submit() {
     const done = t(isEdit.value ? 'changes_saved' : 'announcement_published');
     if (photoProblem) show(`${done} ${t('errors.PHOTO_INVALID')}`, 'alert');
     else show(done, 'success');
-    const offerId = !isEdit.value && role.value === 'person_in_need' && typeof route.query.offer === 'string' && /^\d+$/.test(route.query.offer) ? route.query.offer : null;
+    const offerId =
+      !isEdit.value && role.value === 'person_in_need' && typeof route.query.offer === 'string' && /^\d+$/.test(route.query.offer) ? route.query.offer : null;
     await navigateTo(offerId ? `/main/announcement/${offerId}?request=${id}#help` : `/main/announcement/${id}`);
   } catch (error) {
     const apiError = toApiError(error);
@@ -243,7 +248,7 @@ watch(
   (details) => {
     if (details) applyInitial(details);
   },
-  { immediate: true },
+  { immediate: true }
 );
 watch(
   values,
@@ -254,10 +259,11 @@ watch(
       try {
         localStorage.setItem(DRAFT_KEY, JSON.stringify({ ...values }));
       } catch {
+        // keep editing when draft storage is unavailable.
       }
     }, 500);
   },
-  { deep: true },
+  { deep: true }
 );
 
 // Lifecycle
@@ -267,6 +273,7 @@ onMounted(() => {
     const raw = localStorage.getItem(DRAFT_KEY);
     if (raw) Object.assign(values, JSON.parse(raw));
   } catch {
+    // ignore unavailable storage or invalid drafts.
   }
 });
 onBeforeUnmount(() => draftTimer && clearTimeout(draftTimer));

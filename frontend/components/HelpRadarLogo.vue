@@ -22,7 +22,8 @@
       font-family="Montserrat-Regular, sans-serif"
       :fill="variant === 'light' ? '#FFFFFF' : '#1A2421'"
     >
-      Help<tspan :fill="variant === 'light' ? '#EAE6D7' : '#4A5D23'">Radar</tspan>
+      Help
+      <tspan :fill="variant === 'light' ? '#EAE6D7' : '#4A5D23'">Radar</tspan>
     </text>
   </svg>
 </template>

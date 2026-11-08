@@ -3,10 +3,35 @@
     <NuxtLink v-if="actions.includes('edit')" :to="`/main/announcement/${id}/edit`">
       <AppButton has-outline class="uppercase" data-test="action-edit">{{ t('edit') }}</AppButton>
     </NuxtLink>
-    <AppButton v-if="actions.includes('extend')" is-filled class="uppercase" :loading="busy === 'extend'" data-test="action-extend" @click="run('extend')">{{ t('extend') }}</AppButton>
-    <AppButton v-if="actions.includes('republish')" is-filled class="uppercase" :loading="busy === 'republish'" data-test="action-republish" @click="run('republish')">{{ t('republish') }}</AppButton>
-    <AppButton v-if="actions.includes('close')" has-outline class="uppercase" :loading="busy === 'close'" data-test="action-close" @click="confirming = 'close'">{{ t('close_announcement') }}</AppButton>
-    <AppButton v-if="actions.includes('delete')" has-outline class="uppercase" :loading="busy === 'delete'" data-test="action-delete" @click="confirming = 'delete'">
+    <AppButton v-if="actions.includes('extend')" is-filled class="uppercase" :loading="busy === 'extend'" data-test="action-extend" @click="run('extend')">{{
+      t('extend')
+    }}</AppButton>
+    <AppButton
+      v-if="actions.includes('republish')"
+      is-filled
+      class="uppercase"
+      :loading="busy === 'republish'"
+      data-test="action-republish"
+      @click="run('republish')"
+      >{{ t('republish') }}</AppButton
+    >
+    <AppButton
+      v-if="actions.includes('close')"
+      has-outline
+      class="uppercase"
+      :loading="busy === 'close'"
+      data-test="action-close"
+      @click="confirming = 'close'"
+      >{{ t('close_announcement') }}</AppButton
+    >
+    <AppButton
+      v-if="actions.includes('delete')"
+      has-outline
+      class="uppercase"
+      :loading="busy === 'delete'"
+      data-test="action-delete"
+      @click="confirming = 'delete'"
+    >
       <AppIcon name="trash" class="inline mr-1 h-4 w-4" />{{ t('delete') }}
     </AppButton>
 

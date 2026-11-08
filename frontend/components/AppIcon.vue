@@ -14,7 +14,9 @@
       <circle cx="12" cy="12" r="3" />
     </template>
     <template v-else-if="name === 'eye-off'">
-      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+      <path
+        d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"
+      />
       <line x1="1" y1="1" x2="23" y2="23" />
     </template>
     <template v-else-if="name === 'menu'">
@@ -59,11 +61,14 @@
       <polyline points="20 6 9 17 4 12" />
     </template>
     <template v-else-if="name === 'share'">
-      <circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" />
+      <circle cx="18" cy="5" r="3" />
+      <circle cx="6" cy="12" r="3" />
+      <circle cx="18" cy="19" r="3" />
       <path d="m8.6 10.5 6.8-4m-6.8 7 6.8 4" />
     </template>
     <template v-else-if="name === 'copy'">
-      <rect x="8" y="8" width="12" height="12" rx="2" /><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3" />
+      <rect x="8" y="8" width="12" height="12" rx="2" />
+      <path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3" />
     </template>
     <template v-else-if="name === 'alert'">
       <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
@@ -86,5 +91,24 @@
 
 <script setup lang="ts">
 // Props
-defineProps<{ name: 'eye' | 'eye-off' | 'menu' | 'close' | 'pin' | 'calendar' | 'user' | 'chevron-down' | 'trash' | 'plus' | 'camera' | 'check' | 'share' | 'copy' | 'alert' | 'clock' | 'crosshair' }>();
+defineProps<{
+  name:
+    | 'eye'
+    | 'eye-off'
+    | 'menu'
+    | 'close'
+    | 'pin'
+    | 'calendar'
+    | 'user'
+    | 'chevron-down'
+    | 'trash'
+    | 'plus'
+    | 'camera'
+    | 'check'
+    | 'share'
+    | 'copy'
+    | 'alert'
+    | 'clock'
+    | 'crosshair';
+}>();
 </script>

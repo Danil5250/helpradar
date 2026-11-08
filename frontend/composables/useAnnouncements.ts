@@ -20,20 +20,24 @@ interface ActionResult {
 export const useAnnouncements = () => ({
   categories: async (): Promise<Category[]> => (await apiFetch<{ items: Category[] }>('/categories')).items,
 
-  list: (query: { page?: number; sort?: AnnouncementSort; type?: AnnouncementTypeFilter; lat?: number; lng?: number; radius?: number }): Promise<AnnouncementPage> =>
-    apiFetch<AnnouncementPage>('/announcements', { query }),
+  list: (query: {
+    page?: number;
+    sort?: AnnouncementSort;
+    type?: AnnouncementTypeFilter;
+    lat?: number;
+    lng?: number;
+    radius?: number;
+  }): Promise<AnnouncementPage> => apiFetch<AnnouncementPage>('/announcements', { query }),
 
   map: (query: { lat: number; lng: number; radius: number; type?: AnnouncementTypeFilter }): Promise<MapAnnouncements> =>
     apiFetch<MapAnnouncements>('/announcements/map', { query }),
 
-  mine: async (): Promise<OwnAnnouncementItem[]> =>
-    (await apiFetch<{ items: OwnAnnouncementItem[] }>('/announcements/mine')).items,
+  mine: async (): Promise<OwnAnnouncementItem[]> => (await apiFetch<{ items: OwnAnnouncementItem[] }>('/announcements/mine')).items,
 
   get: async (id: number | string): Promise<AnnouncementDetails> =>
     (await apiFetch<{ announcement: AnnouncementDetails }>(`/announcements/${id}`)).announcement,
 
-  create: (payload: AnnouncementPayload): Promise<ActionResult> =>
-    apiFetch<ActionResult>('/announcements', { method: 'POST', body: payload }),
+  create: (payload: AnnouncementPayload): Promise<ActionResult> => apiFetch<ActionResult>('/announcements', { method: 'POST', body: payload }),
 
   update: (id: number, payload: Partial<AnnouncementPayload>): Promise<ActionResult> =>
     apiFetch<ActionResult>(`/announcements/${id}`, { method: 'PATCH', body: payload }),
@@ -46,8 +50,7 @@ export const useAnnouncements = () => ({
   republish: (id: number, expiryDays?: number): Promise<ActionResult> =>
     apiFetch<ActionResult>(`/announcements/${id}/republish`, { method: 'POST', body: expiryDays ? { expiryDays } : {} }),
 
-  remove: (id: number): Promise<{ code: string; message: string }> =>
-    apiFetch(`/announcements/${id}`, { method: 'DELETE' }),
+  remove: (id: number): Promise<{ code: string; message: string }> => apiFetch(`/announcements/${id}`, { method: 'DELETE' }),
 
   addPhoto: async (id: number, file: File): Promise<Photo> => {
     const body = new FormData();
@@ -55,11 +58,9 @@ export const useAnnouncements = () => ({
     return (await apiFetch<{ photo: Photo }>(`/announcements/${id}/photos`, { method: 'POST', body })).photo;
   },
 
-  removePhoto: (id: number, photoId: number): Promise<{ code: string }> =>
-    apiFetch(`/announcements/${id}/photos/${photoId}`, { method: 'DELETE' }),
+  removePhoto: (id: number, photoId: number): Promise<{ code: string }> => apiFetch(`/announcements/${id}/photos/${photoId}`, { method: 'DELETE' }),
 
-  searchAddress: async (q: string): Promise<PlaceSuggestion[]> =>
-    (await apiFetch<{ items: PlaceSuggestion[] }>('/geocoding/search', { query: { q } })).items,
+  searchAddress: async (q: string): Promise<PlaceSuggestion[]> => (await apiFetch<{ items: PlaceSuggestion[] }>('/geocoding/search', { query: { q } })).items,
 
   reverseGeocode: async (lat: number, lng: number): Promise<PlaceSuggestion | null> =>
     (await apiFetch<{ place: PlaceSuggestion | null }>('/geocoding/reverse', { query: { lat, lng } })).place,

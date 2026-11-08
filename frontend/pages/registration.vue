@@ -8,7 +8,9 @@
       <div v-else class="mb-[150%]" />
     </div>
 
-    <div class="xl:w-5/6 md:w-full sm:w-full bg-sand xl:rounded-l-3xl h-full xl:px-relative-md flex flex-col xl:items-start xl:justify-start sm:items-center sm:justify-center overflow-y-auto">
+    <div
+      class="xl:w-5/6 md:w-full sm:w-full bg-sand xl:rounded-l-3xl h-full xl:px-relative-md flex flex-col xl:items-start xl:justify-start sm:items-center sm:justify-center overflow-y-auto"
+    >
       <div class="flex w-11/12 mt-[2.5vh] xl:hidden">
         <div class="xl:mt-[20%]">
           <BackArrow @click="navigateTo('/main')" />
@@ -57,13 +59,7 @@ import firstShag from '~/assets/images/FirstShag.svg';
 import personInNeedSecond from '~/assets/images/VictimSecond.svg';
 import volunteerSecond from '~/assets/images/VolunteerSecond.svg';
 import emailAccept from '~/assets/images/EmailAccept.svg';
-import {
-  REGISTRATION_STEP2,
-  REGISTRATION_STEP3,
-  type RegistrationField,
-  type RegistrationForm,
-  type Role,
-} from '~/utils/validation';
+import { REGISTRATION_STEP2, REGISTRATION_STEP3, type RegistrationField, type RegistrationForm, type Role } from '~/utils/validation';
 
 // Utils
 const { t, locale } = useI18n();
@@ -139,9 +135,9 @@ async function submitRegistration() {
       serverErrors.value = { email: 'EMAIL_TAKEN' };
       currentStep.value = 2;
     } else if (apiError.code === 'VALIDATION_FAILED') {
-      const fields = Object.fromEntries(
-        Object.entries(apiError.fields).map(([field, info]) => [field, info.code]),
-      ) as Partial<Record<RegistrationField, string>>;
+      const fields = Object.fromEntries(Object.entries(apiError.fields).map(([field, info]) => [field, info.code])) as Partial<
+        Record<RegistrationField, string>
+      >;
       serverErrors.value = fields;
       if (fields.role) currentStep.value = 1;
       else if (REGISTRATION_STEP2.some((field) => fields[field])) currentStep.value = 2;
