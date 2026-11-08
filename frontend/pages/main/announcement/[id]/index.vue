@@ -90,6 +90,9 @@
           </div>
           <p v-if="details.isOwner && details.status === 'Closed' && details.republishUntil" class="pl-[2vw] mt-3 text-sm text-sage">{{ t('republish_until', { date: formatDate(details.republishUntil, locale) }) }}</p>
           <p v-if="details.isOwner && details.status === 'InProgress'" class="pl-[2vw] mt-3 text-sm border-l-4 border-sage ml-[2vw] pl-2">{{ t('errors.EDIT_IN_PROGRESS') }}</p>
+          <div v-if="details.canReview" class="pl-[2vw] mt-2">
+            <ProfileReviewForm :announcement-id="details.id" @saved="load" />
+          </div>
         </aside>
       </div>
     </template>

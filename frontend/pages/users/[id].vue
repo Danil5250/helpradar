@@ -17,8 +17,16 @@
           <h1 class="font-kharkiv text-h4 xl:text-h3" data-test="public-name">{{ user.name }}</h1>
           <p class="text-sm"><span class="bg-sand rounded-full px-3 py-1">{{ t(user.role === 'volunteer' ? 'role_volunteer' : 'role_person_in_need') }}</span></p>
           <p v-if="user.city" class="flex items-center gap-1 text-sm"><AppIcon name="pin" class="h-4 w-4 text-forest" />{{ user.city }}</p>
+          <div v-if="user.rating !== null" class="flex items-center gap-2" data-test="public-rating">
+            <ProfileRatingStars :value="user.rating" />
+            <span class="text-sm text-sage">({{ t('reviews_count', { count: user.reviewsCount }) }})</span>
+          </div>
           <p class="text-xs text-sage">{{ t('member_since', { date: formatDate(user.registeredAt, locale) }) }}</p>
         </div>
+      </div>
+
+      <div v-if="user.role === 'volunteer'" class="bg-almost-white rounded-3xl p-6 mt-8">
+        <ProfileReviewsList :user-id="user.id" />
       </div>
     </template>
   </div>

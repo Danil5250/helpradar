@@ -52,3 +52,26 @@ export interface PublicProfile {
   reviewsCount: number;
   registeredAt: string;
 }
+
+export interface Review {
+  id: number;
+  rating: number;
+  description: string;
+  dateCreated: string;
+  announcementId: number;
+  author: { id: number; name: string; avatarUrl: string };
+}
+
+export type ReviewSort = 'newest' | 'rating';
+
+export interface ReviewPage {
+  items: Review[];
+  page: number;
+  pageSize: number;
+  hasMore: boolean;
+}
+
+export interface ReviewPayload {
+  rating: number;
+  description?: string;
+}

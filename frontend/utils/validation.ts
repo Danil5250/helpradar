@@ -17,6 +17,7 @@ export const LIMITS = {
   maxPhotoBytes: 10 * 1024 * 1024,
   aboutMax: 500,
   streetMax: 255,
+  commentMax: 1000,
   maxAvatarBytes: 5 * 1024 * 1024,
 } as const;
 

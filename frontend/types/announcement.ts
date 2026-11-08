@@ -67,6 +67,7 @@ export interface AnnouncementDetails {
   exactLocation: (GeoPoint & { address: string | null }) | null;
   allowedActions: AnnouncementAction[];
   republishUntil: string | null;
+  canReview: boolean;
 }
 
 export interface AnnouncementPage {
