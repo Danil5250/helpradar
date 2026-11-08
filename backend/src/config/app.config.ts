@@ -1,7 +1,7 @@
 import { registerAs } from '@nestjs/config';
 import './env';
 
-export type MailDriver = 'log' | 'smtp' | 'memory';
+export type MailDriver = 'log' | 'smtp' | 'gmail' | 'memory';
 
 export interface AppConfig {
   nodeEnv: string;
@@ -94,13 +94,16 @@ export function loadAppConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   }
 
   const mailDriver = (env.MAIL_DRIVER ?? 'log').trim().toLowerCase();
-  if (!['log', 'smtp', 'memory'].includes(mailDriver)) {
+  if (!['log', 'smtp', 'gmail', 'memory'].includes(mailDriver)) {
     throw new Error(
-      `MAIL_DRIVER must be one of: log, smtp, memory (got "${mailDriver}").`,
+      `MAIL_DRIVER must be one of: log, smtp, gmail, memory (got "${mailDriver}").`,
     );
   }
 
-  const mailUser = env.SMTP_USER || env.EMAIL_USER || undefined;
+  const mailUser =
+    mailDriver === 'gmail'
+      ? env.EMAIL_USER?.trim() || undefined
+      : env.SMTP_USER || env.EMAIL_USER || undefined;
 
   return {
     nodeEnv,
@@ -136,7 +139,10 @@ export function loadAppConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
       port: int(env.SMTP_PORT, 587),
       secure: bool(env.SMTP_SECURE, false),
       user: mailUser,
-      password: env.SMTP_PASSWORD || env.EMAIL_PASSWORD || undefined,
+      password:
+        mailDriver === 'gmail'
+          ? env.EMAIL_PASSWORD?.replace(/\s/g, '') || undefined
+          : env.SMTP_PASSWORD || env.EMAIL_PASSWORD || undefined,
     },
     storage: {
       dir: env.STORAGE_DIR?.trim() || './storage',
