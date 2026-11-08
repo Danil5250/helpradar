@@ -5,7 +5,7 @@ export interface OutgoingMail {
   html?: string;
 }
 
-/** Transport used to deliver e-mails: console (development), nodemailer SMTP or in-memory (tests). */
+/** Delivery strategy: console (development), SMTP, Gmail or in-memory (tests). */
 export interface MailDriver {
   send(mail: OutgoingMail): Promise<void>;
 }
