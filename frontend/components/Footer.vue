@@ -5,9 +5,15 @@
       <div>
         <h3 class="font-bold mb-2">{{ t('navigationUPPER') }}</h3>
         <ul>
-          <li><NuxtLink to="/main" class="hover:underline">{{ t('advertisement') }}</NuxtLink></li>
-          <li v-if="isAuthenticated"><NuxtLink to="/my-announcements" class="hover:underline">{{ t('my_announcements') }}</NuxtLink></li>
-          <li v-if="isAuthenticated"><NuxtLink to="/add-announcement" class="hover:underline">{{ t('add_announcement') }}</NuxtLink></li>
+          <li>
+            <NuxtLink to="/main" class="hover:underline">{{ t('advertisement') }}</NuxtLink>
+          </li>
+          <li v-if="isAuthenticated">
+            <NuxtLink to="/my-announcements" class="hover:underline">{{ t('my_announcements') }}</NuxtLink>
+          </li>
+          <li v-if="isAuthenticated">
+            <NuxtLink to="/add-announcement" class="hover:underline">{{ t('add_announcement') }}</NuxtLink>
+          </li>
         </ul>
       </div>
       <div class="max-w-xs">

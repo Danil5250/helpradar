@@ -22,8 +22,18 @@
       </div>
       <FieldError :text="fieldText(errors.rating)" />
     </fieldset>
-    <label for="review-text" class="font-montserratRegular mt-3 mb-2 block">{{ t('comment') }} <span class="text-sage text-sm">({{ t('optional') }})</span></label>
-    <textarea id="review-text" v-model="description" rows="4" :maxlength="LIMITS.commentMax" :disabled="busy" class="w-full p-3 border-2 rounded-lg outline-none bg-almost-white border-sage focus:border-forest" data-test="review-text" />
+    <label for="review-text" class="font-montserratRegular mt-3 mb-2 block"
+      >{{ t('comment') }} <span class="text-sage text-sm">({{ t('optional') }})</span></label
+    >
+    <textarea
+      id="review-text"
+      v-model="description"
+      rows="4"
+      :maxlength="LIMITS.commentMax"
+      :disabled="busy"
+      class="w-full p-3 border-2 rounded-lg outline-none bg-almost-white border-sage focus:border-forest"
+      data-test="review-text"
+    />
     <p class="text-xs text-sage text-right">{{ description.length }}/{{ LIMITS.commentMax }}</p>
     <FieldError :text="fieldText(errors.description)" />
     <p v-if="submitError" class="mt-2 border-l-4 border-radar bg-almost-white rounded-r-lg px-3 py-2" role="alert">{{ submitError }}</p>

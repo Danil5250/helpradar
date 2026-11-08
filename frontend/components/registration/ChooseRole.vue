@@ -12,7 +12,9 @@
         @click="emit('selectRole', 'volunteer')"
       >
         <img :src="volunteerImg" alt="" class="illustration xl:w-[50vw] xl:h-[70vh] md:w-[30vw] md:h-[30vh] sm:w-[40vw] sm:h-[40vh] mx-auto object-contain" />
-        <span class="text-almost-white font-montserratRegular font-bold sm:text-xs-pxl xl:text-pl sm:mb-2 xl:mb-10 sm:text-center xl:text-left justify-start">{{ t('volunteer') }}</span>
+        <span class="text-almost-white font-montserratRegular font-bold sm:text-xs-pxl xl:text-pl sm:mb-2 xl:mb-10 sm:text-center xl:text-left justify-start">{{
+          t('volunteer')
+        }}</span>
       </button>
       <button
         type="button"
@@ -20,7 +22,11 @@
         data-test="role-person-in-need"
         @click="emit('selectRole', 'person_in_need')"
       >
-        <img :src="personInNeedImg" alt="" class="illustration xl:w-[50vw] xl:h-[70vh] md:w-[30vw] md:h-[30vh] sm:w-[40vw] sm:h-[40vh] mx-auto object-contain" />
+        <img
+          :src="personInNeedImg"
+          alt=""
+          class="illustration xl:w-[50vw] xl:h-[70vh] md:w-[30vw] md:h-[30vh] sm:w-[40vw] sm:h-[40vh] mx-auto object-contain"
+        />
         <span class="text-almost-white font-montserratRegular font-bold sm:text-xs-pxl xl:text-pl sm:mb-2 xl:mb-10 text-center">{{ t('person_in_need') }}</span>
       </button>
     </div>

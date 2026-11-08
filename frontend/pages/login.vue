@@ -7,7 +7,9 @@
       <img :src="loginMain" alt="" class="pr-[37%] illustration" />
     </div>
 
-    <div class="xl:w-5/6 md:w-full sm:w-full bg-sand xl:rounded-l-3xl h-full xl:px-relative-md flex flex-col xl:items-start xl:justify-start sm:items-center sm:justify-center overflow-y-auto">
+    <div
+      class="xl:w-5/6 md:w-full sm:w-full bg-sand xl:rounded-l-3xl h-full xl:px-relative-md flex flex-col xl:items-start xl:justify-start sm:items-center sm:justify-center overflow-y-auto"
+    >
       <NuxtLink to="/main" class="xl:hidden md:flex sm:flex mt-relative-sm" :aria-label="t('main')">
         <HelpRadarLogo class="!h-10" />
       </NuxtLink>

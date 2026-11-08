@@ -5,8 +5,8 @@ export interface CityOption {
   region: string;
 }
 
-const ALL_CITIES: CityOption[] = Object.entries(regionsWithCities as Record<string, string[]>).flatMap(
-  ([region, cities]) => cities.map((city) => ({ city, region })),
+const ALL_CITIES: CityOption[] = Object.entries(regionsWithCities as Record<string, string[]>).flatMap(([region, cities]) =>
+  cities.map((city) => ({ city, region }))
 );
 
 export function searchCities(query: string, limit = 8): CityOption[] {

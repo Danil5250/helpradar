@@ -3,12 +3,28 @@
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
       <div>
         <label for="profile-first-name" class="font-montserratRegular mb-2 block">{{ t('name') }}*</label>
-        <input id="profile-first-name" v-model="form.firstName" type="text" autocomplete="given-name" :class="[inputClass, { 'border-radar': shown('firstName') }]" :aria-invalid="!!shown('firstName')" data-test="first-name" />
+        <input
+          id="profile-first-name"
+          v-model="form.firstName"
+          type="text"
+          autocomplete="given-name"
+          :class="[inputClass, { 'border-radar': shown('firstName') }]"
+          :aria-invalid="!!shown('firstName')"
+          data-test="first-name"
+        />
         <FieldError :text="fieldText(shown('firstName'))" />
       </div>
       <div>
         <label for="profile-last-name" class="font-montserratRegular mb-2 block">{{ t('surname') }}*</label>
-        <input id="profile-last-name" v-model="form.lastName" type="text" autocomplete="family-name" :class="[inputClass, { 'border-radar': shown('lastName') }]" :aria-invalid="!!shown('lastName')" data-test="last-name" />
+        <input
+          id="profile-last-name"
+          v-model="form.lastName"
+          type="text"
+          autocomplete="family-name"
+          :class="[inputClass, { 'border-radar': shown('lastName') }]"
+          :aria-invalid="!!shown('lastName')"
+          data-test="last-name"
+        />
         <FieldError :text="fieldText(shown('lastName'))" />
       </div>
     </div>
@@ -31,7 +47,9 @@
     </div>
 
     <div v-if="role === 'person_in_need'" class="relative">
-      <label for="profile-street" class="font-montserratRegular mb-2 block">{{ t('street') }} <span class="text-sage text-sm">({{ t('optional') }})</span></label>
+      <label for="profile-street" class="font-montserratRegular mb-2 block"
+        >{{ t('street') }} <span class="text-sage text-sm">({{ t('optional') }})</span></label
+      >
       <AppSelect
         id="profile-street"
         v-model="form.street"
@@ -47,21 +65,50 @@
     </div>
 
     <div>
-      <label for="profile-phone" class="font-montserratRegular mb-2 block">{{ t('telephone_number') }} <span class="text-sage text-sm">({{ t('optional') }})</span></label>
-      <input id="profile-phone" v-model="form.phoneNumber" type="tel" autocomplete="tel" inputmode="tel" placeholder="+380XXXXXXXXX" :class="[inputClass, { 'border-radar': shown('phoneNumber') }]" :aria-invalid="!!shown('phoneNumber')" data-test="phone" />
+      <label for="profile-phone" class="font-montserratRegular mb-2 block"
+        >{{ t('telephone_number') }} <span class="text-sage text-sm">({{ t('optional') }})</span></label
+      >
+      <input
+        id="profile-phone"
+        v-model="form.phoneNumber"
+        type="tel"
+        autocomplete="tel"
+        inputmode="tel"
+        placeholder="+380XXXXXXXXX"
+        :class="[inputClass, { 'border-radar': shown('phoneNumber') }]"
+        :aria-invalid="!!shown('phoneNumber')"
+        data-test="phone"
+      />
       <FieldError :text="fieldText(shown('phoneNumber'))" />
     </div>
 
     <div>
       <label for="profile-email" class="font-montserratRegular mb-2 block">{{ t('email') }}*</label>
-      <input id="profile-email" v-model="form.email" type="email" autocomplete="email" :class="[inputClass, { 'border-radar': shown('email') }]" :aria-invalid="!!shown('email')" data-test="email" />
+      <input
+        id="profile-email"
+        v-model="form.email"
+        type="email"
+        autocomplete="email"
+        :class="[inputClass, { 'border-radar': shown('email') }]"
+        :aria-invalid="!!shown('email')"
+        data-test="email"
+      />
       <p class="text-xs text-sage mt-1">{{ t('email_change_hint') }}</p>
       <FieldError :text="fieldText(shown('email'))" />
     </div>
 
     <div>
-      <label for="profile-about" class="font-montserratRegular mb-2 block">{{ t('about_me') }} <span class="text-sage text-sm">({{ t('optional') }})</span></label>
-      <textarea id="profile-about" v-model="form.aboutMe" rows="4" :maxlength="LIMITS.aboutMax" :class="[inputClass, { 'border-radar': shown('aboutMe') }]" data-test="about" />
+      <label for="profile-about" class="font-montserratRegular mb-2 block"
+        >{{ t('about_me') }} <span class="text-sage text-sm">({{ t('optional') }})</span></label
+      >
+      <textarea
+        id="profile-about"
+        v-model="form.aboutMe"
+        rows="4"
+        :maxlength="LIMITS.aboutMax"
+        :class="[inputClass, { 'border-radar': shown('aboutMe') }]"
+        data-test="about"
+      />
       <p class="text-xs text-sage text-right">{{ form.aboutMe.length }}/{{ LIMITS.aboutMax }}</p>
       <FieldError :text="fieldText(shown('aboutMe'))" />
     </div>

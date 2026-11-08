@@ -20,27 +20,56 @@
       <FieldError id="reg-city-error" :text="fieldText(shown('city'))" />
     </div>
     <div class="w-full mb-4">
-      <label for="reg-phone" class="font-montserratRegular mb-2 block">{{ t('telephone_number') }} <span class="text-sage text-sm">({{ t('optional') }})</span></label>
-      <input id="reg-phone" v-model="form.phoneNumber" type="tel" name="phoneNumber" autocomplete="tel" inputmode="tel" placeholder="+380XXXXXXXXX" :class="[inputClass, { 'border-radar': shown('phoneNumber') }]" :aria-invalid="!!shown('phoneNumber')" aria-describedby="reg-phone-error" />
+      <label for="reg-phone" class="font-montserratRegular mb-2 block"
+        >{{ t('telephone_number') }} <span class="text-sage text-sm">({{ t('optional') }})</span></label
+      >
+      <input
+        id="reg-phone"
+        v-model="form.phoneNumber"
+        type="tel"
+        name="phoneNumber"
+        autocomplete="tel"
+        inputmode="tel"
+        placeholder="+380XXXXXXXXX"
+        :class="[inputClass, { 'border-radar': shown('phoneNumber') }]"
+        :aria-invalid="!!shown('phoneNumber')"
+        aria-describedby="reg-phone-error"
+      />
       <FieldError id="reg-phone-error" :text="fieldText(shown('phoneNumber'))" />
     </div>
     <div class="w-full mb-2">
       <label class="flex items-start gap-3 font-montserratRegular cursor-pointer">
-        <input v-model="form.termsAccepted" type="checkbox" class="mt-1 h-5 w-5 accent-forest" :aria-invalid="!!shown('termsAccepted')" aria-describedby="reg-terms-error" data-test="terms" />
+        <input
+          v-model="form.termsAccepted"
+          type="checkbox"
+          class="mt-1 h-5 w-5 accent-forest"
+          :aria-invalid="!!shown('termsAccepted')"
+          aria-describedby="reg-terms-error"
+          data-test="terms"
+        />
         <span>{{ t('accept_terms') }}</span>
       </label>
       <FieldError id="reg-terms-error" :text="fieldText(shown('termsAccepted'))" />
     </div>
     <div class="w-full mb-6">
       <label class="flex items-start gap-3 font-montserratRegular cursor-pointer">
-        <input v-model="form.ageConfirmed" type="checkbox" class="mt-1 h-5 w-5 accent-forest" :aria-invalid="!!shown('ageConfirmed')" aria-describedby="reg-age-error" data-test="age" />
+        <input
+          v-model="form.ageConfirmed"
+          type="checkbox"
+          class="mt-1 h-5 w-5 accent-forest"
+          :aria-invalid="!!shown('ageConfirmed')"
+          aria-describedby="reg-age-error"
+          data-test="age"
+        />
         <span>{{ t('confirm_age') }}</span>
       </label>
       <FieldError id="reg-age-error" :text="fieldText(shown('ageConfirmed'))" />
     </div>
 
     <div role="alert" class="w-full">
-      <p v-if="submitError" class="text-charcoal mb-4 border-l-4 border-radar bg-almost-white rounded-r-lg px-3 py-2" data-test="register-error">{{ submitError }}</p>
+      <p v-if="submitError" class="text-charcoal mb-4 border-l-4 border-radar bg-almost-white rounded-r-lg px-3 py-2" data-test="register-error">
+        {{ submitError }}
+      </p>
     </div>
 
     <AppButton type="submit" is-filled :loading="submitting" class="w-full text-charcoal py-3 rounded-full mb-5" data-test="register-submit">

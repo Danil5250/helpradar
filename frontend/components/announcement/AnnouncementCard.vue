@@ -14,7 +14,9 @@
     </div>
 
     <div class="flex justify-end w-full items-end gap-2">
-      <span v-if="a.isUrgent" class="bg-radar text-charcoal font-bold font-montserratMedium px-4 py-1 rounded-full text-sm mr-2" data-test="urgent">{{ t('urgent') }}</span>
+      <span v-if="a.isUrgent" class="bg-radar text-charcoal font-bold font-montserratMedium px-4 py-1 rounded-full text-sm mr-2" data-test="urgent">{{
+        t('urgent')
+      }}</span>
       <span
         class="text-almost-white text-sm px-4 pr-5 pl-10 py-1 font-montserratRegular tracking-wide rounded-l-full"
         :class="a.type === 'HelpRequest' ? 'bg-forest' : 'bg-sage'"
@@ -27,7 +29,9 @@
       <h3 class="font-montserratMedium text-lg mb-1 break-words">{{ a.title }}</h3>
       <p class="text-sm text-sage mb-2">{{ t(`category.${a.category.id}`, a.category.name) }}</p>
       <p class="mb-2 font-montserratMedium break-words">{{ a.excerpt }}</p>
-      <p v-if="a.distanceKm !== null" class="text-sm flex items-center gap-1"><AppIcon name="pin" class="h-4 w-4 text-forest" />{{ formatDistance(a.distanceKm) }}</p>
+      <p v-if="a.distanceKm !== null" class="text-sm flex items-center gap-1">
+        <AppIcon name="pin" class="h-4 w-4 text-forest" />{{ formatDistance(a.distanceKm) }}
+      </p>
       <p v-if="showStatus" class="mt-2">
         <span class="text-sm px-3 py-1 rounded-full font-montserratMedium" :class="statusLook[a.status]">{{ t(`status.${a.status}`) }}</span>
         <span class="text-sm ml-2 text-charcoal">{{ t('expires') }}: {{ formatDate(a.expiresAt, locale) }}</span>

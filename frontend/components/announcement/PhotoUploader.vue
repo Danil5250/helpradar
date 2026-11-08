@@ -1,7 +1,9 @@
 <template>
   <div class="w-full mb-4">
     <div class="flex flex-col">
-      <span class="font-montserratRegular">{{ t('add_photo') }} <span class="text-sage text-sm">({{ t('optional') }}, {{ t('photos_limit', { max: LIMITS.maxPhotos }) }})</span></span>
+      <span class="font-montserratRegular"
+        >{{ t('add_photo') }} <span class="text-sage text-sm">({{ t('optional') }}, {{ t('photos_limit', { max: LIMITS.maxPhotos }) }})</span></span
+      >
       <button
         type="button"
         class="w-52 mb-2 mt-2 p-2 uppercase text-center border-2 rounded-lg outline-none border-sage text-forest font-bold hover:border-olive disabled:opacity-50"
@@ -15,12 +17,20 @@
       <FieldError :text="fieldText(error)" />
 
       <ul class="flex flex-col gap-1">
-        <li v-for="photo in existing" :key="`photo-${photo.id}`" class="flex items-center justify-between mt-1 p-3 rounded-lg border-2 bg-almost-white border-sand-dark">
+        <li
+          v-for="photo in existing"
+          :key="`photo-${photo.id}`"
+          class="flex items-center justify-between mt-1 p-3 rounded-lg border-2 bg-almost-white border-sand-dark"
+        >
           <img :src="photo.url" alt="" class="h-12 w-12 object-cover rounded mr-3" />
           <p class="font-montserratRegular text-sm flex-1">{{ t('photo_attached') }}</p>
           <button type="button" :aria-label="t('delete')" @click="emit('removeExisting', photo.id)"><img :src="deleteImg" alt="" /></button>
         </li>
-        <li v-for="file in files" :key="file.name + file.size" class="flex items-center justify-between mt-1 p-3 rounded-lg border-2 bg-almost-white border-sand-dark">
+        <li
+          v-for="file in files"
+          :key="file.name + file.size"
+          class="flex items-center justify-between mt-1 p-3 rounded-lg border-2 bg-almost-white border-sand-dark"
+        >
           <img :src="preview(file)" alt="" class="h-12 w-12 object-cover rounded mr-3" />
           <p class="font-montserratRegular text-sm flex-1 break-all">{{ file.name }}</p>
           <button type="button" :aria-label="t('delete')" @click="remove(file)"><img :src="deleteImg" alt="" /></button>

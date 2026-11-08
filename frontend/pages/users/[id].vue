@@ -6,7 +6,9 @@
       <p class="inline-block border-l-4 border-radar bg-almost-white rounded-r-lg px-4 py-3 mb-6" data-test="public-problem">{{ problem.text }}</p>
       <div>
         <AppButton v-if="problem.retry" is-filled class="mr-3" @click="load">{{ t('try_again') }}</AppButton>
-        <NuxtLink to="/main"><AppButton has-outline>{{ t('back_to_list') }}</AppButton></NuxtLink>
+        <NuxtLink to="/main"
+          ><AppButton has-outline>{{ t('back_to_list') }}</AppButton></NuxtLink
+        >
       </div>
     </div>
 
@@ -15,7 +17,9 @@
         <img :src="user.avatarUrl" alt="" class="w-32 h-32 rounded-full object-cover border-4 border-sand" />
         <div class="flex flex-col gap-2 items-center md:items-start text-center md:text-left">
           <h1 class="font-kharkiv text-h4 xl:text-h3" data-test="public-name">{{ user.name }}</h1>
-          <p class="text-sm"><span class="bg-sand rounded-full px-3 py-1">{{ t(user.role === 'volunteer' ? 'role_volunteer' : 'role_person_in_need') }}</span></p>
+          <p class="text-sm">
+            <span class="bg-sand rounded-full px-3 py-1">{{ t(user.role === 'volunteer' ? 'role_volunteer' : 'role_person_in_need') }}</span>
+          </p>
           <p v-if="user.city" class="flex items-center gap-1 text-sm"><AppIcon name="pin" class="h-4 w-4 text-forest" />{{ user.city }}</p>
           <div v-if="user.rating !== null" class="flex items-center gap-2" data-test="public-rating">
             <ProfileRatingStars :value="user.rating" />

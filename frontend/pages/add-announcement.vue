@@ -2,7 +2,12 @@
   <div class="mx-[2vw]">
     <LoadingSpinner v-if="loading" />
     <div v-else-if="loadError" class="text-center my-10" role="alert">{{ loadError }}</div>
-    <div v-else-if="!canPublish" class="text-center my-10 border-l-4 border-radar bg-almost-white rounded-r-lg px-3 py-2 max-w-xl mx-auto" role="alert" data-test="role-not-allowed">
+    <div
+      v-else-if="!canPublish"
+      class="text-center my-10 border-l-4 border-radar bg-almost-white rounded-r-lg px-3 py-2 max-w-xl mx-auto"
+      role="alert"
+      data-test="role-not-allowed"
+    >
       {{ t('errors.ROLE_NOT_ALLOWED') }}
     </div>
     <AnnouncementForm v-else mode="create" :categories="categories" />

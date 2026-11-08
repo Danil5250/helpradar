@@ -6,7 +6,9 @@
         <p class="text-sm text-sage mt-1" data-test="active-count">{{ t('active_count', { count: activeCount, max: 10 }) }}</p>
       </div>
       <NuxtLink v-if="canPublish" to="/add-announcement">
-        <AppButton is-filled class="px-4"><AppIcon name="plus" class="inline mr-1" />{{ role === 'volunteer' ? t('offer_help') : t('create_request') }}</AppButton>
+        <AppButton is-filled class="px-4"
+          ><AppIcon name="plus" class="inline mr-1" />{{ role === 'volunteer' ? t('offer_help') : t('create_request') }}</AppButton
+        >
       </NuxtLink>
     </div>
 
@@ -14,7 +16,9 @@
 
     <div v-else-if="loadError" class="my-10 text-center" role="alert">
       <p class="inline-block mb-4 border-l-4 border-radar bg-almost-white rounded-r-lg px-3 py-2">{{ loadError }}</p>
-      <div><AppButton has-outline @click="load">{{ t('try_again') }}</AppButton></div>
+      <div>
+        <AppButton has-outline @click="load">{{ t('try_again') }}</AppButton>
+      </div>
     </div>
 
     <div v-else-if="items.length === 0" class="flex flex-col items-center justify-center my-[8%] text-center" data-test="mine-empty">
@@ -25,8 +29,12 @@
     <div v-else class="grid sm:grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mt-8" data-test="mine-list">
       <div v-for="item in items" :key="item.id" class="flex flex-col gap-3">
         <AnnouncementCard :announcement="item" show-status />
-        <p v-if="item.status === 'Active' && hoursLeft(item.expiresAt) <= 24" class="px-2"><span class="bg-radar text-charcoal font-bold rounded-full px-3 py-1 text-sm" data-test="expires-soon">{{ t('expires_soon') }}</span></p>
-        <p v-if="item.status === 'Closed' && item.republishUntil" class="px-2 text-sm text-sage">{{ t('republish_until', { date: formatDate(item.republishUntil, locale) }) }}</p>
+        <p v-if="item.status === 'Active' && hoursLeft(item.expiresAt) <= 24" class="px-2">
+          <span class="bg-radar text-charcoal font-bold rounded-full px-3 py-1 text-sm" data-test="expires-soon">{{ t('expires_soon') }}</span>
+        </p>
+        <p v-if="item.status === 'Closed' && item.republishUntil" class="px-2 text-sm text-sage">
+          {{ t('republish_until', { date: formatDate(item.republishUntil, locale) }) }}
+        </p>
         <div class="px-2">
           <AnnouncementOwnerActions :id="item.id" :actions="item.allowedActions" @updated="updated" @deleted="load" />
         </div>

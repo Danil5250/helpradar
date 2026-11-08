@@ -24,12 +24,18 @@ export function socialShareUrl(channel: SocialChannel, url: string, title: strin
   const encodedText = encodeURIComponent(text);
   const message = encodeURIComponent(`${text}\n${url}`);
   switch (channel) {
-    case 'telegram': return `https://t.me/share/url?url=${encodedUrl}&text=${encodedText}`;
-    case 'whatsapp': return `https://wa.me/?text=${message}`;
-    case 'viber': return `viber://forward?text=${encodeURIComponent(`${url}\n${Array.from(text).slice(0, 100).join('')}`)}`;
-    case 'x': return `https://x.com/intent/tweet?url=${encodedUrl}&text=${encodeURIComponent(Array.from(text).slice(0, 110).join(''))}`;
-    case 'facebook': return `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`;
-    case 'email': return `mailto:?subject=${encodeURIComponent(title)}&body=${message}`;
+    case 'telegram':
+      return `https://t.me/share/url?url=${encodedUrl}&text=${encodedText}`;
+    case 'whatsapp':
+      return `https://wa.me/?text=${message}`;
+    case 'viber':
+      return `viber://forward?text=${encodeURIComponent(`${url}\n${Array.from(text).slice(0, 100).join('')}`)}`;
+    case 'x':
+      return `https://x.com/intent/tweet?url=${encodedUrl}&text=${encodeURIComponent(Array.from(text).slice(0, 110).join(''))}`;
+    case 'facebook':
+      return `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`;
+    case 'email':
+      return `mailto:?subject=${encodeURIComponent(title)}&body=${message}`;
   }
 }
 

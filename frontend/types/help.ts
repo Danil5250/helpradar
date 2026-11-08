@@ -1,7 +1,11 @@
 import type { AnnouncementStatus } from '~/types/announcement';
 
 export type HelpAction = 'accept' | 'decline' | 'withdraw' | 'complete' | 'cancel';
-export interface HelpPerson { id: number; name: string; avatarUrl: string }
+export interface HelpPerson {
+  id: number;
+  name: string;
+  avatarUrl: string;
+}
 export interface HelpConnection {
   id: number;
   status: 'Pending' | 'Accepted' | 'Rejected';

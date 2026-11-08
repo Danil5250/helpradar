@@ -44,7 +44,9 @@
       <p v-if="errors.password" class="text-charcoal text-sm mt-1 border-l-4 border-radar pl-2">{{ fieldText(errors.password) }}</p>
     </div>
     <div class="w-full flex justify-end -mt-3 mb-6">
-      <NuxtLink to="/forgot-password" class="font-montserratMedium text-sm underline hover:text-forest" data-test="forgot-password">{{ t('forgot_password') }}</NuxtLink>
+      <NuxtLink to="/forgot-password" class="font-montserratMedium text-sm underline hover:text-forest" data-test="forgot-password">{{
+        t('forgot_password')
+      }}</NuxtLink>
     </div>
     <div id="login-error" role="alert" aria-live="assertive">
       <p v-if="generalError" class="text-charcoal text-center mb-5 border-l-4 border-radar bg-almost-white rounded-r-lg px-3 py-2" data-test="login-error">
@@ -56,7 +58,9 @@
       <AppButton has-outline :disabled="resendCooldown > 0" data-test="resend" @click="resendEmail">
         {{ t('resend_emailUPPER') }}<template v-if="resendCooldown > 0"> ({{ resendCooldown }})</template>
       </AppButton>
-      <p v-if="resendMessage" class="mt-3 text-sm text-charcoal border-l-4 border-sage bg-almost-white rounded-r-lg px-3 py-2" role="status">{{ resendMessage }}</p>
+      <p v-if="resendMessage" class="mt-3 text-sm text-charcoal border-l-4 border-sage bg-almost-white rounded-r-lg px-3 py-2" role="status">
+        {{ resendMessage }}
+      </p>
     </div>
 
     <AppButton type="submit" is-filled :loading="loading" class="w-full text-charcoal py-3 rounded-full mb-5" data-test="login-submit">
@@ -102,9 +106,7 @@ let cooldownTimer: ReturnType<typeof setInterval> | undefined;
 // Methods
 function redirectTarget(): string {
   const target = route.query.redirect;
-  return typeof target === 'string' && target.startsWith('/') && !target.startsWith('//') && !target.startsWith('/login')
-    ? target
-    : '/main';
+  return typeof target === 'string' && target.startsWith('/') && !target.startsWith('//') && !target.startsWith('/login') ? target : '/main';
 }
 
 async function handleLogin() {

@@ -7,7 +7,9 @@
 
       <template v-else-if="state === 'invalid'">
         <h1 class="font-kharkiv text-h3 mb-4" data-test="reset-invalid">{{ t('errors.RESET_LINK_INVALID') }}</h1>
-        <NuxtLink to="/forgot-password"><AppButton is-filled>{{ t('request_new_linkUPPER') }}</AppButton></NuxtLink>
+        <NuxtLink to="/forgot-password"
+          ><AppButton is-filled>{{ t('request_new_linkUPPER') }}</AppButton></NuxtLink
+        >
       </template>
 
       <template v-else>
@@ -26,7 +28,13 @@
               aria-describedby="reset-password-hint"
               data-test="reset-password"
             />
-            <button type="button" class="absolute right-3 top-[2.9rem] text-charcoal hover:text-forest" :aria-label="showPassword ? t('hide_password') : t('show_password')" :aria-pressed="showPassword" @click="showPassword = !showPassword">
+            <button
+              type="button"
+              class="absolute right-3 top-[2.9rem] text-charcoal hover:text-forest"
+              :aria-label="showPassword ? t('hide_password') : t('show_password')"
+              :aria-pressed="showPassword"
+              @click="showPassword = !showPassword"
+            >
               <AppIcon :name="showPassword ? 'eye-off' : 'eye'" />
             </button>
             <p id="reset-password-hint" class="text-xs text-sage mt-1">{{ t('password_rules') }}</p>
@@ -47,7 +55,9 @@
             <FieldError :text="fieldText(errors.passwordConfirm)" />
           </div>
           <p v-if="submitError" class="border-l-4 border-radar bg-almost-white rounded-r-lg px-3 py-2" role="alert">{{ submitError }}</p>
-          <AppButton type="submit" is-filled :loading="busy" class="w-full text-charcoal py-3 rounded-full" data-test="reset-submit">{{ t('save_passwordUPPER') }}</AppButton>
+          <AppButton type="submit" is-filled :loading="busy" class="w-full text-charcoal py-3 rounded-full" data-test="reset-submit">{{
+            t('save_passwordUPPER')
+          }}</AppButton>
         </form>
       </template>
     </div>

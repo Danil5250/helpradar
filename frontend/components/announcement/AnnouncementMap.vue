@@ -1,6 +1,12 @@
 <template>
   <div class="relative">
-    <div ref="element" class="h-[60vh] min-h-[22rem] w-full rounded-3xl border-2 border-sage z-0" role="application" :aria-label="t('map_label')" data-test="announcements-map" />
+    <div
+      ref="element"
+      class="h-[60vh] min-h-[22rem] w-full rounded-3xl border-2 border-sage z-0"
+      role="application"
+      :aria-label="t('map_label')"
+      data-test="announcements-map"
+    />
     <p class="text-sm mt-2 text-sage">{{ t('map_click_hint') }}</p>
   </div>
 </template>
@@ -32,8 +38,7 @@ let centerMarker: import('leaflet').CircleMarker | null = null;
 let markerLayer: import('leaflet').LayerGroup | null = null;
 
 // Methods
-const escapeHtml = (value: string) =>
-  value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+const escapeHtml = (value: string) => value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 
 function cardHtml(marker: MapMarker): string {
   const type = t(marker.type === 'HelpRequest' ? 'help_request' : 'help_offer');
@@ -91,7 +96,9 @@ function drawCircle(fit: boolean) {
   const center: [number, number] = [props.center.lat, props.center.lng];
   circle?.remove();
   centerMarker?.remove();
-  circle = L.circle(center, { radius: props.radiusKm * 1000, color: '#4A5D23', weight: 2, fillColor: '#4A5D23', fillOpacity: 0.08, interactive: false }).addTo(map);
+  circle = L.circle(center, { radius: props.radiusKm * 1000, color: '#4A5D23', weight: 2, fillColor: '#4A5D23', fillOpacity: 0.08, interactive: false }).addTo(
+    map
+  );
   centerMarker = L.circleMarker(center, { radius: 7, color: '#ffffff', weight: 3, fillColor: '#1A2421', fillOpacity: 1 })
     .bindTooltip(t('search_center'))
     .addTo(map);
@@ -100,7 +107,10 @@ function drawCircle(fit: boolean) {
 
 // Watchers
 watch(() => props.markers, drawMarkers);
-watch(() => [props.center.lat, props.center.lng, props.radiusKm], () => drawCircle(true));
+watch(
+  () => [props.center.lat, props.center.lng, props.radiusKm],
+  () => drawCircle(true)
+);
 
 // Lifecycle
 onMounted(async () => {
