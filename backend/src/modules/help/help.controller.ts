@@ -62,6 +62,18 @@ export class HelpController {
     return this.help.requestHelp(user, id, dto.requestId);
   }
 
+  @Post('announcements/:id/receive-help')
+  @ApiOperation({
+    summary:
+      'Request the help advertised in this offer without creating an announcement',
+  })
+  receiveOffer(
+    @CurrentUser() user: AuthUser,
+    @Param('id', ParseAnnouncementIdPipe) id: number,
+  ): Promise<HelpConnectionDto> {
+    return this.help.receiveOffer(user, id);
+  }
+
   @Post('help/:id/accept')
   @HttpCode(200)
   accept(

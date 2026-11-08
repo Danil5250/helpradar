@@ -338,6 +338,11 @@
     "offer_help_hint": "Send a response. The person who needs help will confirm you as their volunteer.",
     "offer_help_button": "I can help",
     "request_title": "Need this volunteer’s help?",
+    "receive_offer_title": "Does this help offer suit you?",
+    "receive_offer_hint": "Respond without creating an announcement. The volunteer will see your response in My help and confirm whether they can help you.",
+    "receive_offer_button": "I want to receive this help",
+    "custom_request_title": "Want to send the volunteer a separate request?",
+    "direct_request_sent": "Your response was sent to the volunteer. Follow their confirmation in My help.",
     "request_hint": "Choose your request and send it to the volunteer. Help starts after they accept.",
     "your_request": "Your help request",
     "request_button": "Ask for help",
@@ -362,7 +367,8 @@
       "cancel": "Cancel arrangement"
     },
     "confirm_complete_title": "Did you receive the help?",
-    "confirm_complete_text": "Confirm only when the volunteer has provided the help. The request will be completed and you can leave a review.",
+    "confirm_complete_text": "Confirm only when the volunteer has provided the help. The arrangement will be completed and you can leave a review.",
+    "confirm_offer_cancel_text": "Your arrangement will be cancelled. The volunteer’s offer and arrangements with other recipients will remain available.",
     "confirm_cancel_title": "Cancel this arrangement?",
     "confirm_cancel_text": "The volunteer will no longer be assigned. If the request has not expired, it will be available for other volunteers again.",
     "success": {
@@ -377,8 +383,7 @@
     "state": {
       "Pending": "Awaiting confirmation",
       "Accepted": "Confirmed",
-      "Declined": "Declined",
-      "Withdrawn": "Cancelled",
+      "Rejected": "Rejected / cancelled",
       "InProgress": "Help in progress",
       "Completed": "Completed",
       "Closed": "Request closed",
@@ -389,10 +394,10 @@
       "all": "All",
       "pending": "Awaiting reply",
       "active": "In progress",
-      "completed": "Completed"
+      "completed": "Completed",
+      "rejected": "Rejected / cancelled"
     },
     "filter_label": "Filter help",
-    "refresh": "Refresh",
     "volunteer_intro": "Requests from people who need you, your responses, and the help you are already providing — all in one place.",
     "requester_intro": "Follow your requests, confirm a volunteer, and share your experience after receiving help.",
     "empty_title": "Your help starts here",

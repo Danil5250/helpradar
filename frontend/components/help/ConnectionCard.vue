@@ -19,7 +19,7 @@
       <NuxtLink v-if="connection.hasReview" :to="`/users/${connection.volunteer.id}`" class="text-sm font-montserratMedium underline text-forest">{{ t('help.view_review') }}</NuxtLink>
     </div>
     <p v-if="error" role="alert" class="mt-4 border-l-4 border-radar pl-3 text-sm">{{ error }}</p>
-    <ModalAsk :is-open="confirming !== null" :title="t(`help.confirm_${confirming ?? 'complete'}_title`)" :message="t(`help.confirm_${confirming ?? 'complete'}_text`)" @confirm="confirm" @close="confirming = null" />
+    <ModalAsk :is-open="confirming !== null" :title="t(`help.confirm_${confirming ?? 'complete'}_title`)" :message="t(confirming === 'cancel' && connection.isDirect ? 'help.confirm_offer_cancel_text' : `help.confirm_${confirming ?? 'complete'}_text`)" @confirm="confirm" @close="confirming = null" />
   </article>
 </template>
 
@@ -52,8 +52,7 @@ const isRequester = computed(() => user.value?.id === props.connection.requester
 const partner = computed(() => (isRequester.value ? props.connection.volunteer : props.connection.requester));
 const state = computed(() =>
   ['InProgress', 'Completed', 'Closed', 'Deleted', 'Hidden'].includes(props.connection.request.status) &&
-  props.connection.status !== 'Declined' &&
-  props.connection.status !== 'Withdrawn'
+  props.connection.status !== 'Rejected'
     ? props.connection.request.status
     : props.connection.status,
 );

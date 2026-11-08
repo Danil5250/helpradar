@@ -10,7 +10,6 @@
     </header>
     <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
       <div class="flex flex-wrap gap-2" role="group" :aria-label="t('help.filter_label')"><button v-for="tab in tabs" :key="tab" type="button" class="rounded-full px-4 py-2 text-sm font-montserratMedium border-2 border-forest" :class="filter === tab ? 'bg-forest text-almost-white' : 'text-forest'" :aria-pressed="filter === tab" @click="filter = tab">{{ t(`help.filter.${tab}`) }}</button></div>
-      <button type="button" class="text-sm text-forest underline" :disabled="loading" @click="load">{{ t('help.refresh') }}</button>
     </div>
     <LoadingSpinner v-if="loading && !loaded" />
     <p v-if="error" class="border-l-4 border-radar bg-almost-white px-4 py-3 rounded-r-xl mb-5" role="alert">{{ error }}</p>
@@ -38,24 +37,26 @@ useHead({ title: computed(() => `${t('help.my_help')} - HelpRadar`) });
 
 // Data
 const items = ref<HelpConnection[]>([]);
-const filter = ref<'all' | 'pending' | 'active' | 'completed'>('all');
+const filter = ref<'all' | 'pending' | 'active' | 'completed' | 'rejected'>('all');
 const loading = ref(false);
 const loaded = ref(false);
 const error = ref('');
 let timer: ReturnType<typeof setInterval> | undefined;
 
 // Constants
-const tabs = ['all', 'pending', 'active', 'completed'] as const;
+const tabs = ['all', 'pending', 'active', 'completed', 'rejected'] as const;
+const summaryTabs = ['pending', 'active', 'completed'] as const;
 
 // Computed
 const visible = computed(() => items.value.filter((item) => matches(item, filter.value)));
 const countedTabs = computed(() =>
-  tabs.filter((tab) => tab !== 'all').map((key) => ({ key, count: items.value.filter((item) => matches(item, key)).length })),
+  summaryTabs.map((key) => ({ key, count: items.value.filter((item) => matches(item, key)).length })),
 );
 
 // Methods
 function matches(connection: HelpConnection, tab: string) {
   if (tab === 'all') return true;
+  if (tab === 'rejected') return connection.status === 'Rejected';
   if (tab === 'pending') return connection.status === 'Pending' && connection.request.status === 'Active';
   return connection.status === 'Accepted' && connection.request.status === (tab === 'active' ? 'InProgress' : 'Completed');
 }
