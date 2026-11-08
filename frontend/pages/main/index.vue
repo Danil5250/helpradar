@@ -9,7 +9,14 @@
             <AppIcon name="plus" class="inline mr-1" />{{ role === 'volunteer' ? t('offer_help') : t('create_request') }}
           </AppButton>
         </NuxtLink>
-        <AppSelect v-if="view === 'list'" :model-value="sort" :options="selectSortOptions" :prefix="t('sort_by')" data-test="sort-button" @update:model-value="chooseSort" />
+        <AppSelect
+          v-if="view === 'list'"
+          :model-value="sort"
+          :options="selectSortOptions"
+          :prefix="t('sort_by')"
+          data-test="sort-button"
+          @update:model-value="chooseSort"
+        />
       </div>
     </div>
 
@@ -41,7 +48,9 @@
 
     <div v-if="view === 'map'" class="mt-6">
       <AnnouncementMap :center="mapCenter" :radius-km="mapRadius" :markers="mapData?.items ?? []" @center-change="changeCenter" @unavailable="mapUnavailable" />
-      <p v-if="mapData && mapData.total === 0" class="mt-4 text-center font-montserratMedium" data-test="map-empty">{{ t('radius_empty', { km: mapRadius }) }}</p>
+      <p v-if="mapData && mapData.total === 0" class="mt-4 text-center font-montserratMedium" data-test="map-empty">
+        {{ t('radius_empty', { km: mapRadius }) }}
+      </p>
       <p v-if="mapError" class="mt-4 border-l-4 border-radar bg-almost-white rounded-r-lg px-3 py-2" role="alert">{{ mapError }}</p>
     </div>
 
@@ -61,7 +70,9 @@
 
       <div v-if="loadError" class="my-10 text-center" role="alert">
         <p class="mb-4 border-l-4 border-radar bg-almost-white rounded-r-lg px-3 py-2 inline-block" data-test="list-error">{{ loadError }}</p>
-        <div><AppButton has-outline @click="load(items.length === 0)">{{ t('try_again') }}</AppButton></div>
+        <div>
+          <AppButton has-outline @click="load(items.length === 0)">{{ t('try_again') }}</AppButton>
+        </div>
       </div>
       <div v-if="hasMore && items.length > 0 && !loadError" class="w-full flex justify-center mt-8">
         <AppButton is-filled class="uppercase" :loading="loading" data-test="show-more" @click="load(false)">{{ t('show_more') }}</AppButton>
@@ -73,7 +84,14 @@
 
 <script setup lang="ts">
 // Imports
-import { SEARCH_RADII_KM, type AnnouncementListItem, type AnnouncementSort, type AnnouncementTypeFilter, type MapAnnouncements, type SearchRadiusKm } from '~/types/announcement';
+import {
+  SEARCH_RADII_KM,
+  type AnnouncementListItem,
+  type AnnouncementSort,
+  type AnnouncementTypeFilter,
+  type MapAnnouncements,
+  type SearchRadiusKm,
+} from '~/types/announcement';
 
 // Composables
 const { user, isAuthenticated, role, canPublish } = useAuth();
@@ -128,7 +146,9 @@ const radiusOptions = computed<{ value: SearchRadiusKm | null; label: string }[]
 ]);
 const mapCenter = computed(() => position.value ?? KYIV);
 const mapRadius = computed<SearchRadiusKm>(() => radius.value ?? MAP_DEFAULT_RADIUS);
-const radiusCounter = computed(() => (view.value === 'map' && mapData.value ? t('radius_counter', { count: mapData.value.total, km: mapData.value.radiusKm }) : ''));
+const radiusCounter = computed(() =>
+  view.value === 'map' && mapData.value ? t('radius_counter', { count: mapData.value.total, km: mapData.value.radiusKm }) : ''
+);
 
 // Methods
 function useProfileCity(): boolean {
@@ -145,7 +165,7 @@ function askPosition(options: PositionOptions): Promise<'ok' | 'denied' | 'unava
         resolve('ok');
       },
       (error) => resolve(error.code === error.PERMISSION_DENIED ? 'denied' : 'unavailable'),
-      options,
+      options
     );
   });
 }
@@ -278,15 +298,22 @@ onMounted(async () => {
   await load(true);
 });
 onMounted(() => {
-  observer = new IntersectionObserver((entries) => {
-    if (entries.some((entry) => entry.isIntersecting) && hasMore.value && !loading.value && loadedOnce.value && !loadError.value) {
-      void load(false);
-    }
-  }, { rootMargin: '200px' });
-  watch(sentinel, (element, previous) => {
-    if (previous) observer?.unobserve(previous);
-    if (element) observer?.observe(element);
-  }, { immediate: true });
+  observer = new IntersectionObserver(
+    (entries) => {
+      if (entries.some((entry) => entry.isIntersecting) && hasMore.value && !loading.value && loadedOnce.value && !loadError.value) {
+        void load(false);
+      }
+    },
+    { rootMargin: '200px' }
+  );
+  watch(
+    sentinel,
+    (element, previous) => {
+      if (previous) observer?.unobserve(previous);
+      if (element) observer?.observe(element);
+    },
+    { immediate: true }
+  );
 });
 onBeforeUnmount(() => {
   resetQueued = false;

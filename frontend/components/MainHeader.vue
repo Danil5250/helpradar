@@ -19,8 +19,12 @@
           <AppButton has-outline data-test="logout" @click="logout">{{ t('log_outUPPER') }}</AppButton>
         </template>
         <template v-else>
-          <NuxtLink to="/login"><AppButton has-outline>{{ t('log_inUPPER') }}</AppButton></NuxtLink>
-          <NuxtLink to="/registration"><AppButton is-filled>{{ t('registrationUPPER') }}</AppButton></NuxtLink>
+          <NuxtLink to="/login"
+            ><AppButton has-outline>{{ t('log_inUPPER') }}</AppButton></NuxtLink
+          >
+          <NuxtLink to="/registration"
+            ><AppButton is-filled>{{ t('registrationUPPER') }}</AppButton></NuxtLink
+          >
         </template>
       </div>
       <button
@@ -75,7 +79,10 @@ async function logout() {
 }
 
 // Watchers
-watch(() => route.fullPath, () => (isMobileMenuOpen.value = false));
+watch(
+  () => route.fullPath,
+  () => (isMobileMenuOpen.value = false)
+);
 
 // Lifecycle
 onMounted(() => window.addEventListener('scroll', handleScroll, { passive: true }));

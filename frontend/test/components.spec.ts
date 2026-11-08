@@ -24,14 +24,29 @@ const pascal = (value: string) =>
     .join('');
 
 function componentName(file: string): string {
-  const parts = relative(join(root, 'components'), file).replace(/\.vue$/, '').split(sep);
+  const parts = relative(join(root, 'components'), file)
+    .replace(/\.vue$/, '')
+    .split(sep);
   return parts.reduce((name, part) => {
     const next = pascal(part);
     return next.startsWith(name) ? next : name + next;
   }, '');
 }
 
-const BUILT_IN = new Set(['Transition', 'TransitionGroup', 'KeepAlive', 'Teleport', 'Suspense', 'Component', 'NuxtLink', 'NuxtPage', 'NuxtLayout', 'ClientOnly', 'RouterView', 'RouterLink']);
+const BUILT_IN = new Set([
+  'Transition',
+  'TransitionGroup',
+  'KeepAlive',
+  'Teleport',
+  'Suspense',
+  'Component',
+  'NuxtLink',
+  'NuxtPage',
+  'NuxtLayout',
+  'ClientOnly',
+  'RouterView',
+  'RouterLink',
+]);
 
 describe('component names in templates', () => {
   const registered = new Set(walk(join(root, 'components')).map(componentName));

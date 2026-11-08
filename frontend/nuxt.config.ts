@@ -4,7 +4,7 @@ export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   ssr: false,
   devtools: { enabled: false },
-  modules: ['@nuxtjs/tailwindcss'],
+  modules: ['@nuxtjs/tailwindcss', '@nuxt/eslint'],
   devServer: { port: 5173 },
 
   css: ['normalize.css', 'leaflet/dist/leaflet.css', '~/assets/css/main.css'],
@@ -29,6 +29,7 @@ export default defineNuxtConfig({
   },
 
   runtimeConfig: {
+    apiBase: apiTarget,
     public: {
       mapTileUrl: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
       mapAttribution: '&copy; OpenStreetMap contributors',

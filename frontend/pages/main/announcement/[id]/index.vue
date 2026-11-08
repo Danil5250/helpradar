@@ -5,7 +5,9 @@
       <p class="inline-block border-l-4 border-radar bg-almost-white rounded-r-lg px-4 py-3 mb-6" data-test="details-problem">{{ problem.text }}</p>
       <div>
         <AppButton v-if="problem.code !== 'ANNOUNCEMENT_UNAVAILABLE'" is-filled class="mr-3" @click="load">{{ t('try_again') }}</AppButton>
-        <NuxtLink to="/main"><AppButton has-outline>{{ t('back_to_list') }}</AppButton></NuxtLink>
+        <NuxtLink to="/main"
+          ><AppButton has-outline>{{ t('back_to_list') }}</AppButton></NuxtLink
+        >
       </div>
     </div>
 
@@ -34,11 +36,37 @@
                 @click="selectedImage = index"
               />
             </div>
-            <div v-if="viewerOpen" class="fixed inset-0 bg-charcoal/80 flex items-center justify-center z-50" role="dialog" aria-modal="true" :aria-label="t('photo')" @click="viewerOpen = false" @keydown.esc="viewerOpen = false">
+            <div
+              v-if="viewerOpen"
+              class="fixed inset-0 bg-charcoal/80 flex items-center justify-center z-50"
+              role="dialog"
+              aria-modal="true"
+              :aria-label="t('photo')"
+              @click="viewerOpen = false"
+              @keydown.esc="viewerOpen = false"
+            >
               <img :src="photos[selectedImage].url" alt="" class="max-w-[90vw] max-h-[85vh] rounded-lg" />
-              <button v-if="photos.length > 1" type="button" class="absolute left-[4vw] top-1/2 -translate-y-1/2 text-almost-white text-4xl px-3" :aria-label="t('previous')" @click.stop="prevImage">‹</button>
-              <button v-if="photos.length > 1" type="button" class="absolute right-[4vw] top-1/2 -translate-y-1/2 text-almost-white text-4xl px-3" :aria-label="t('next')" @click.stop="nextImage">›</button>
-              <button type="button" class="absolute top-6 right-6 text-almost-white" :aria-label="t('close')" @click.stop="viewerOpen = false"><AppIcon name="close" class="h-8 w-8" /></button>
+              <button
+                v-if="photos.length > 1"
+                type="button"
+                class="absolute left-[4vw] top-1/2 -translate-y-1/2 text-almost-white text-4xl px-3"
+                :aria-label="t('previous')"
+                @click.stop="prevImage"
+              >
+                ‹
+              </button>
+              <button
+                v-if="photos.length > 1"
+                type="button"
+                class="absolute right-[4vw] top-1/2 -translate-y-1/2 text-almost-white text-4xl px-3"
+                :aria-label="t('next')"
+                @click.stop="nextImage"
+              >
+                ›
+              </button>
+              <button type="button" class="absolute top-6 right-6 text-almost-white" :aria-label="t('close')" @click.stop="viewerOpen = false">
+                <AppIcon name="close" class="h-8 w-8" />
+              </button>
             </div>
           </template>
           <div class="mt-6">
@@ -50,19 +78,32 @@
         </div>
         <aside class="w-full xl:w-1/3 sm:order-1 xl:order-2 flex flex-col bg-almost-white h-auto rounded-3xl pr-[2vw] py-[4vh] flex-1 self-start">
           <div class="flex justify-between w-full items-center gap-2">
-            <span class="text-almost-white px-4 pr-[5vw] py-1 rounded-r-full" :class="details.type === 'HelpRequest' ? 'bg-forest' : 'bg-sage'" data-test="type">
+            <span
+              class="text-almost-white px-4 pr-[5vw] py-1 rounded-r-full"
+              :class="details.type === 'HelpRequest' ? 'bg-forest' : 'bg-sage'"
+              data-test="type"
+            >
               {{ t(details.type === 'HelpRequest' ? 'help_request' : 'help_offer') }}
             </span>
             <span v-if="details.isUrgent" class="bg-radar text-charcoal font-bold rounded-full px-4 py-1" data-test="urgent">{{ t('urgent') }}</span>
           </div>
 
-          <p class="pl-[2vw] mt-4"><span class="px-3 py-1 rounded-full text-sm font-montserratMedium" :class="details.status === 'Active' ? 'bg-olive text-charcoal' : 'bg-sand-dark text-charcoal'" data-test="status">{{ t(`status.${details.status}`) }}</span></p>
+          <p class="pl-[2vw] mt-4">
+            <span
+              class="px-3 py-1 rounded-full text-sm font-montserratMedium"
+              :class="details.status === 'Active' ? 'bg-olive text-charcoal' : 'bg-sand-dark text-charcoal'"
+              data-test="status"
+              >{{ t(`status.${details.status}`) }}</span
+            >
+          </p>
 
           <div class="flex items-center pl-[2vw] mt-4">
             <AppIcon name="calendar" class="mr-2 text-forest" />
             <p class="font-montserratRegular font-semibold">{{ formatDate(details.datePosted, locale) }} – {{ formatDate(details.expiresAt, locale) }}</p>
           </div>
-          <p v-if="details.status === 'Active' && hoursToExpiry > 0 && hoursToExpiry <= 24" class="pl-[2vw] mt-2"><span class="bg-radar text-charcoal font-bold rounded-full px-3 py-1 text-sm">{{ t('expires_soon') }}</span></p>
+          <p v-if="details.status === 'Active' && hoursToExpiry > 0 && hoursToExpiry <= 24" class="pl-[2vw] mt-2">
+            <span class="bg-radar text-charcoal font-bold rounded-full px-3 py-1 text-sm">{{ t('expires_soon') }}</span>
+          </p>
 
           <div class="flex items-center pl-[2vw] mt-4">
             <AppIcon name="pin" class="mr-2 text-forest" />
@@ -81,18 +122,23 @@
             <div class="pl-[1vw]">
               <p class="font-montserratMedium font-semibold uppercase">{{ t('ad_author') }}:</p>
               <h4 class="font-montserratMedium" data-test="author">
-                <NuxtLink :to="`/users/${details.author.id}`" class="underline hover:text-forest">{{ details.author.name }}</NuxtLink><span v-if="details.author.rating !== null" class="ml-2">★ {{ details.author.rating.toFixed(1) }}</span>
+                <NuxtLink :to="`/users/${details.author.id}`" class="underline hover:text-forest">{{ details.author.name }}</NuxtLink
+                ><span v-if="details.author.rating !== null" class="ml-2">★ {{ details.author.rating.toFixed(1) }}</span>
               </h4>
             </div>
+          </div>
+          <div v-if="details.status !== 'Hidden' && details.status !== 'Deleted'" class="pl-[2vw] mt-4">
+            <AnnouncementShare :announcement="details" />
           </div>
           <div v-if="details.isOwner && details.allowedActions.length > 0" class="pl-[2vw] mt-4">
             <AnnouncementOwnerActions :id="details.id" :actions="details.allowedActions" @updated="updated" @deleted="deleted" />
           </div>
-          <p v-if="details.isOwner && details.status === 'Closed' && details.republishUntil" class="pl-[2vw] mt-3 text-sm text-sage">{{ t('republish_until', { date: formatDate(details.republishUntil, locale) }) }}</p>
-          <div v-if="details.status === 'Active' && !details.isOwner && ((details.type === 'HelpOffer' && role === 'person_in_need') || (details.type === 'HelpRequest' && role === 'volunteer'))" class="pl-[2vw] mt-5">
-            <a href="#help"><AppButton is-filled>{{ t(details.type === 'HelpOffer' ? 'help.request_button' : 'help.offer_help_button') }}</AppButton></a>
-          </div>
-          <p v-if="details.isOwner && details.status === 'InProgress'" class="pl-[2vw] mt-3 text-sm border-l-4 border-sage ml-[2vw] pl-2">{{ t('errors.EDIT_IN_PROGRESS') }}</p>
+          <p v-if="details.isOwner && details.status === 'Closed' && details.republishUntil" class="pl-[2vw] mt-3 text-sm text-sage">
+            {{ t('republish_until', { date: formatDate(details.republishUntil, locale) }) }}
+          </p>
+          <p v-if="details.isOwner && details.status === 'InProgress'" class="pl-[2vw] mt-3 text-sm border-l-4 border-sage ml-[2vw] pl-2">
+            {{ t('errors.EDIT_IN_PROGRESS') }}
+          </p>
         </aside>
       </div>
       <AnnouncementHelpPanel :announcement="details" @updated="load" />
@@ -106,7 +152,6 @@ import type { AnnouncementDetails } from '~/types/announcement';
 
 // Composables
 const announcements = useAnnouncements();
-const { role } = useAuth();
 
 // Data
 const details = ref<AnnouncementDetails | null>(null);

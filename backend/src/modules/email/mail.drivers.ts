@@ -60,10 +60,29 @@ export class SmtpMailDriver implements MailDriver {
   }
 }
 
+/** Gmail strategy: authenticates with a Google app password over Gmail's secure SMTP. */
+export class GmailMailDriver extends SmtpMailDriver {
+  constructor(config: AppConfig['mail']) {
+    if (!config.user?.trim() || !config.password?.trim()) {
+      throw new Error(
+        'MAIL_DRIVER=gmail requires EMAIL_USER and EMAIL_PASSWORD (Google app password).',
+      );
+    }
+    super({
+      ...config,
+      service: 'gmail',
+      user: config.user.trim(),
+      password: config.password.replace(/\s/g, ''),
+    });
+  }
+}
+
 export function createMailDriver(config: AppConfig['mail']): MailDriver {
   switch (config.driver) {
     case 'memory':
       return new MemoryMailDriver();
+    case 'gmail':
+      return new GmailMailDriver(config);
     case 'smtp':
       if (!config.service && !config.host) {
         throw new Error(

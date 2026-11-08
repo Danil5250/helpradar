@@ -17,8 +17,7 @@ export const useProfile = () => ({
     return apiFetch('/profile/avatar', { method: 'POST', body });
   },
 
-  confirmEmail: (token: string): Promise<{ code: string; message: string }> =>
-    apiFetch('/profile/confirm-email', { method: 'POST', body: { token } }),
+  confirmEmail: (token: string): Promise<{ code: string; message: string }> => apiFetch('/profile/confirm-email', { method: 'POST', body: { token } }),
 
   publicProfile: (id: number | string): Promise<PublicProfile> => apiFetch<PublicProfile>(`/users/${id}`),
 
@@ -28,6 +27,5 @@ export const useProfile = () => ({
   leaveReview: (announcementId: number, payload: ReviewPayload): Promise<ReviewSaved> =>
     apiFetch<ReviewSaved>(`/announcements/${announcementId}/comments`, { method: 'POST', body: payload }),
 
-  updateReview: (id: number, payload: ReviewPayload): Promise<ReviewSaved> =>
-    apiFetch<ReviewSaved>(`/comments/${id}`, { method: 'PATCH', body: payload }),
+  updateReview: (id: number, payload: ReviewPayload): Promise<ReviewSaved> => apiFetch<ReviewSaved>(`/comments/${id}`, { method: 'PATCH', body: payload }),
 });

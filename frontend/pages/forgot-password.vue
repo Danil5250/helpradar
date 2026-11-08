@@ -20,7 +20,9 @@
           data-test="forgot-email"
         />
         <FieldError id="forgot-error" :text="error" />
-        <AppButton type="submit" is-filled :loading="busy" class="w-full text-charcoal py-3 rounded-full mt-2" data-test="forgot-submit">{{ t('send_reset_linkUPPER') }}</AppButton>
+        <AppButton type="submit" is-filled :loading="busy" class="w-full text-charcoal py-3 rounded-full mt-2" data-test="forgot-submit">{{
+          t('send_reset_linkUPPER')
+        }}</AppButton>
       </form>
 
       <p v-else class="border-l-4 border-sage bg-almost-white rounded-r-lg px-3 py-2" role="status" data-test="forgot-sent">{{ t('reset_link_sent') }}</p>

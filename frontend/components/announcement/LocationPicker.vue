@@ -125,7 +125,7 @@ function useMyLocation(silent = false) {
       locating.value = false;
       locationHint.value = t('location_denied');
     },
-    { enableHighAccuracy: false, timeout: 8000, maximumAge: 60_000 },
+    { enableHighAccuracy: false, timeout: 8000, maximumAge: 60_000 }
   );
 }
 
@@ -178,7 +178,7 @@ watch(
     if (!current || Math.abs(current.lat - latitude) > 1e-7 || Math.abs(current.lng - longitude) > 1e-7) {
       placeMarker(latitude, longitude, true);
     }
-  },
+  }
 );
 
 // Lifecycle

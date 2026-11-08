@@ -5,26 +5,72 @@
     <div class="grid xl:grid-cols-2 gap-x-4 w-full mb-0">
       <div class="flex flex-col mb-4">
         <label for="reg-first-name" class="font-montserratRegular mb-2">{{ t('name') }}*</label>
-        <input id="reg-first-name" v-model="form.firstName" type="text" name="firstName" autocomplete="given-name" :placeholder="t('your_name')" :class="[inputClass, { 'border-radar': shown('firstName', serverErrors) }]" :aria-invalid="!!shown('firstName', serverErrors)" aria-describedby="reg-first-name-error" />
+        <input
+          id="reg-first-name"
+          v-model="form.firstName"
+          type="text"
+          name="firstName"
+          autocomplete="given-name"
+          :placeholder="t('your_name')"
+          :class="[inputClass, { 'border-radar': shown('firstName', serverErrors) }]"
+          :aria-invalid="!!shown('firstName', serverErrors)"
+          aria-describedby="reg-first-name-error"
+        />
         <FieldError id="reg-first-name-error" :text="fieldText(shown('firstName', serverErrors))" />
       </div>
       <div class="flex flex-col mb-4">
         <label for="reg-last-name" class="font-montserratRegular mb-2">{{ t('surname') }}*</label>
-        <input id="reg-last-name" v-model="form.lastName" type="text" name="lastName" autocomplete="family-name" :placeholder="t('your_surname')" :class="[inputClass, { 'border-radar': shown('lastName', serverErrors) }]" :aria-invalid="!!shown('lastName', serverErrors)" aria-describedby="reg-last-name-error" />
+        <input
+          id="reg-last-name"
+          v-model="form.lastName"
+          type="text"
+          name="lastName"
+          autocomplete="family-name"
+          :placeholder="t('your_surname')"
+          :class="[inputClass, { 'border-radar': shown('lastName', serverErrors) }]"
+          :aria-invalid="!!shown('lastName', serverErrors)"
+          aria-describedby="reg-last-name-error"
+        />
         <FieldError id="reg-last-name-error" :text="fieldText(shown('lastName', serverErrors))" />
       </div>
     </div>
 
     <div class="w-full mb-4">
       <label for="reg-email" class="font-montserratRegular mb-2 block">{{ t('email') }}*</label>
-      <input id="reg-email" v-model="form.email" type="email" name="email" autocomplete="email" :placeholder="t('email_address')" :class="[inputClass, { 'border-radar': shown('email', serverErrors) }]" :aria-invalid="!!shown('email', serverErrors)" aria-describedby="reg-email-error" />
+      <input
+        id="reg-email"
+        v-model="form.email"
+        type="email"
+        name="email"
+        autocomplete="email"
+        :placeholder="t('email_address')"
+        :class="[inputClass, { 'border-radar': shown('email', serverErrors) }]"
+        :aria-invalid="!!shown('email', serverErrors)"
+        aria-describedby="reg-email-error"
+      />
       <FieldError id="reg-email-error" :text="fieldText(shown('email', serverErrors))" />
     </div>
 
     <div class="w-full mb-4 relative">
       <label for="reg-password" class="font-montserratRegular mb-2 block">{{ t('password') }}*</label>
-      <input id="reg-password" v-model="form.password" :type="showPassword ? 'text' : 'password'" name="password" autocomplete="new-password" :placeholder="t('your_password')" :class="[inputClass, 'pr-12', { 'border-radar': shown('password', serverErrors) }]" :aria-invalid="!!shown('password', serverErrors)" aria-describedby="reg-password-hint reg-password-error" />
-      <button type="button" class="absolute right-3 top-[2.9rem] text-charcoal hover:text-forest" :aria-label="showPassword ? t('hide_password') : t('show_password')" :aria-pressed="showPassword" @click="showPassword = !showPassword">
+      <input
+        id="reg-password"
+        v-model="form.password"
+        :type="showPassword ? 'text' : 'password'"
+        name="password"
+        autocomplete="new-password"
+        :placeholder="t('your_password')"
+        :class="[inputClass, 'pr-12', { 'border-radar': shown('password', serverErrors) }]"
+        :aria-invalid="!!shown('password', serverErrors)"
+        aria-describedby="reg-password-hint reg-password-error"
+      />
+      <button
+        type="button"
+        class="absolute right-3 top-[2.9rem] text-charcoal hover:text-forest"
+        :aria-label="showPassword ? t('hide_password') : t('show_password')"
+        :aria-pressed="showPassword"
+        @click="showPassword = !showPassword"
+      >
         <AppIcon :name="showPassword ? 'eye-off' : 'eye'" />
       </button>
       <p id="reg-password-hint" class="text-sm mt-1 text-sage">{{ t('password_hint') }}</p>
@@ -33,8 +79,24 @@
 
     <div class="w-full mb-6 relative">
       <label for="reg-password-confirm" class="font-montserratRegular mb-2 block">{{ t('repeat_password') }}*</label>
-      <input id="reg-password-confirm" v-model="form.passwordConfirm" :type="showConfirm ? 'text' : 'password'" name="passwordConfirm" autocomplete="new-password" :placeholder="t('repeat_password')" :class="[inputClass, 'pr-12', { 'border-radar': shown('passwordConfirm', serverErrors) }]" :aria-invalid="!!shown('passwordConfirm', serverErrors)" aria-describedby="reg-password-confirm-error" />
-      <button type="button" class="absolute right-3 top-[2.9rem] text-charcoal hover:text-forest" :aria-label="showConfirm ? t('hide_password') : t('show_password')" :aria-pressed="showConfirm" @click="showConfirm = !showConfirm">
+      <input
+        id="reg-password-confirm"
+        v-model="form.passwordConfirm"
+        :type="showConfirm ? 'text' : 'password'"
+        name="passwordConfirm"
+        autocomplete="new-password"
+        :placeholder="t('repeat_password')"
+        :class="[inputClass, 'pr-12', { 'border-radar': shown('passwordConfirm', serverErrors) }]"
+        :aria-invalid="!!shown('passwordConfirm', serverErrors)"
+        aria-describedby="reg-password-confirm-error"
+      />
+      <button
+        type="button"
+        class="absolute right-3 top-[2.9rem] text-charcoal hover:text-forest"
+        :aria-label="showConfirm ? t('hide_password') : t('show_password')"
+        :aria-pressed="showConfirm"
+        @click="showConfirm = !showConfirm"
+      >
         <AppIcon :name="showConfirm ? 'eye-off' : 'eye'" />
       </button>
       <FieldError id="reg-password-confirm-error" :text="fieldText(shown('passwordConfirm', serverErrors))" />

@@ -93,10 +93,7 @@ export interface AnnouncementFormValues {
 
 export type AnnouncementField = 'title' | 'description' | 'categoryId' | 'location' | 'expiryDays' | 'isUrgent';
 
-export function validateAnnouncement(
-  form: AnnouncementFormValues,
-  isHelpRequest: boolean,
-): Errors<AnnouncementField> {
+export function validateAnnouncement(form: AnnouncementFormValues, isHelpRequest: boolean): Errors<AnnouncementField> {
   const errors: Errors<AnnouncementField> = {};
   const title = form.title.trim();
   const description = form.description.trim();
@@ -107,11 +104,7 @@ export function validateAnnouncement(
   if (!form.categoryId) errors.categoryId = 'CATEGORY_INVALID';
   const hasPoint = form.latitude !== null && form.longitude !== null;
   if (!hasPoint && !form.address.trim()) errors.location = 'LOCATION_REQUIRED';
-  if (
-    !Number.isInteger(form.expiryDays) ||
-    form.expiryDays < LIMITS.expiryMin ||
-    form.expiryDays > LIMITS.expiryMax
-  ) {
+  if (!Number.isInteger(form.expiryDays) || form.expiryDays < LIMITS.expiryMin || form.expiryDays > LIMITS.expiryMax) {
     errors.expiryDays = 'EXPIRY_INVALID';
   }
   if (form.isUrgent && !isHelpRequest) errors.isUrgent = 'URGENT_NOT_ALLOWED';

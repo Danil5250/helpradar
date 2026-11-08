@@ -4,22 +4,48 @@
       <span class="rounded-full px-3 py-1 text-xs font-montserratMedium" :class="badgeClass">{{ t(`help.state.${state}`) }}</span>
       <span class="text-xs text-sage">{{ formatDate(connection.dateCreated, locale) }}</span>
     </div>
-    <NuxtLink :to="`/main/announcement/${connection.request.id}#help`" class="font-kharkiv text-xl leading-snug break-words hover:text-forest">{{ connection.request.title }}</NuxtLink>
+    <NuxtLink :to="`/main/announcement/${connection.request.id}#help`" class="font-kharkiv text-xl leading-snug break-words hover:text-forest">{{
+      connection.request.title
+    }}</NuxtLink>
     <NuxtLink :to="`/users/${partner.id}`" class="flex items-center gap-3 my-5 self-start hover:text-forest">
       <img :src="partner.avatarUrl" alt="" class="w-11 h-11 rounded-full object-cover bg-sand" />
-      <div><p class="text-xs text-sage">{{ t(isRequester ? 'role_volunteer' : 'help.recipient') }}</p><p class="font-montserratMedium">{{ partner.name }}</p></div>
+      <div>
+        <p class="text-xs text-sage">{{ t(isRequester ? 'role_volunteer' : 'help.recipient') }}</p>
+        <p class="font-montserratMedium">{{ partner.name }}</p>
+      </div>
     </NuxtLink>
     <p class="text-sm text-sage leading-relaxed mb-4">{{ t(hint) }}</p>
-    <a v-if="connection.contactPhone" :href="`tel:${connection.contactPhone}`" class="mb-4 font-montserratMedium text-forest underline self-start">{{ connection.contactPhone }}</a>
+    <a v-if="connection.contactPhone" :href="`tel:${connection.contactPhone}`" class="mb-4 font-montserratMedium text-forest underline self-start">{{
+      connection.contactPhone
+    }}</a>
     <div class="flex flex-wrap items-center gap-3 mt-auto">
-      <AppButton v-for="action in connection.actions" :key="action" :is-filled="action === 'accept' || action === 'complete'" :has-outline="action === 'decline'" :loading="busy === action" :disabled="busy !== null" :data-test="`help-${action}-${connection.id}`" @click="choose(action)">
+      <AppButton
+        v-for="action in connection.actions"
+        :key="action"
+        :is-filled="action === 'accept' || action === 'complete'"
+        :has-outline="action === 'decline'"
+        :loading="busy === action"
+        :disabled="busy !== null"
+        :data-test="`help-${action}-${connection.id}`"
+        @click="choose(action)"
+      >
         <AppIcon v-if="action === 'accept' || action === 'complete'" name="check" class="inline mr-1" />{{ t(`help.action.${action}`) }}
       </AppButton>
-      <NuxtLink v-if="connection.canReview && showReviewLink" :to="`/main/announcement/${connection.request.id}#review`"><AppButton is-filled>{{ t('leave_review') }}</AppButton></NuxtLink>
-      <NuxtLink v-if="connection.hasReview" :to="`/users/${connection.volunteer.id}`" class="text-sm font-montserratMedium underline text-forest">{{ t('help.view_review') }}</NuxtLink>
+      <NuxtLink v-if="connection.canReview && showReviewLink" :to="`/main/announcement/${connection.request.id}#review`"
+        ><AppButton is-filled>{{ t('leave_review') }}</AppButton></NuxtLink
+      >
+      <NuxtLink v-if="connection.hasReview" :to="`/users/${connection.volunteer.id}`" class="text-sm font-montserratMedium underline text-forest">{{
+        t('help.view_review')
+      }}</NuxtLink>
     </div>
     <p v-if="error" role="alert" class="mt-4 border-l-4 border-radar pl-3 text-sm">{{ error }}</p>
-    <ModalAsk :is-open="confirming !== null" :title="t(`help.confirm_${confirming ?? 'complete'}_title`)" :message="t(`help.confirm_${confirming ?? 'complete'}_text`)" @confirm="confirm" @close="confirming = null" />
+    <ModalAsk
+      :is-open="confirming !== null"
+      :title="t(`help.confirm_${confirming ?? 'complete'}_title`)"
+      :message="t(confirming === 'cancel' && connection.isDirect ? 'help.confirm_offer_cancel_text' : `help.confirm_${confirming ?? 'complete'}_text`)"
+      @confirm="confirm"
+      @close="confirming = null"
+    />
   </article>
 </template>
 
@@ -51,18 +77,12 @@ const error = ref('');
 const isRequester = computed(() => user.value?.id === props.connection.requester.id);
 const partner = computed(() => (isRequester.value ? props.connection.volunteer : props.connection.requester));
 const state = computed(() =>
-  ['InProgress', 'Completed', 'Closed', 'Deleted', 'Hidden'].includes(props.connection.request.status) &&
-  props.connection.status !== 'Declined' &&
-  props.connection.status !== 'Withdrawn'
+  ['InProgress', 'Completed', 'Closed', 'Deleted', 'Hidden'].includes(props.connection.request.status) && props.connection.status !== 'Rejected'
     ? props.connection.request.status
-    : props.connection.status,
+    : props.connection.status
 );
 const badgeClass = computed(() =>
-  state.value === 'InProgress'
-    ? 'bg-radar/15 text-charcoal'
-    : state.value === 'Completed'
-      ? 'bg-forest text-almost-white'
-      : 'bg-sand text-sage',
+  state.value === 'InProgress' ? 'bg-radar/15 text-charcoal' : state.value === 'Completed' ? 'bg-forest text-almost-white' : 'bg-sand text-sage'
 );
 const hint = computed(() => {
   if (state.value === 'InProgress') return isRequester.value ? 'help.in_progress_recipient' : 'help.in_progress_volunteer';

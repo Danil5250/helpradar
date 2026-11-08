@@ -12,7 +12,12 @@
       <h2 id="modal-ask-title" class="xl:text-relative-h4 md:text-relative-h2 sm:text-relative-h1 font-kharkiv mb-4 text-center">{{ title }}</h2>
       <p id="modal-ask-message" class="w-[85%] mx-auto text-center font-montserratRegular mb-6">{{ message }}</p>
       <div class="flex justify-center space-x-4">
-        <AppButton has-outline class="bg-forest uppercase !text-almost-white xl:py-2 sm:py-1 xl:px-4 sm:px-2 min-w-[5rem] hover:bg-forest-dark" @click="emit('confirm')">{{ t('yes') }}</AppButton>
+        <AppButton
+          has-outline
+          class="bg-forest uppercase !text-almost-white xl:py-2 sm:py-1 xl:px-4 sm:px-2 min-w-[5rem] hover:bg-forest-dark"
+          @click="emit('confirm')"
+          >{{ t('yes') }}</AppButton
+        >
         <AppButton has-outline class="uppercase xl:py-2 sm:py-1 xl:px-4 sm:px-2 min-w-[5rem]" @click="emit('close')">{{ t('no') }}</AppButton>
       </div>
     </div>
@@ -40,6 +45,6 @@ watch(
       await nextTick();
       dialog.value?.querySelector<HTMLElement>('button')?.focus();
     }
-  },
+  }
 );
 </script>

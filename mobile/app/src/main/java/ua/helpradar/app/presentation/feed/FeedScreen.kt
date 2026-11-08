@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.WarningAmber
 import androidx.compose.material3.*
@@ -31,6 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -41,6 +43,7 @@ import kotlinx.coroutines.launch
 import ua.helpradar.app.R
 import ua.helpradar.app.data.local.SessionManager
 import ua.helpradar.app.ui.theme.*
+import ua.helpradar.app.util.ShareUtils.shareAnnouncement
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -95,7 +98,7 @@ fun FeedScreen(
                             .clip(RoundedCornerShape(10.dp))
                     )
 
-                    // Аватар у бічній шторці (при кліку також переходить до профілю)
+                    // Аватар у бічній шторці (при кліку переходить до профілю)
                     Box(
                         modifier = Modifier
                             .size(36.dp)
@@ -393,7 +396,7 @@ fun FeedScreen(
                     )
                 }
 
-                // Категорії з бекенду
+                // Динамічні категорії з бекенду
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -422,7 +425,7 @@ fun FeedScreen(
                     }
                 }
 
-                // Контент списку
+                // Відображення контенту
                 when {
                     state.isLoading -> {
                         Box(
@@ -503,6 +506,8 @@ private fun DrawerItem(
 @Composable
 fun AnnouncementCard(item: AnnouncementItem) {
     val isOffer = item.type == AnnouncementType.OFFER
+    val context = LocalContext.current
+
     val cardBgColor = if (isOffer) SelectedRoleBg.copy(alpha = 0.9f) else Color.White.copy(alpha = 0.85f)
     val cardBorderColor = if (isOffer) OliveGreen.copy(alpha = 0.4f) else BorderSand
 
@@ -708,23 +713,51 @@ fun AnnouncementCard(item: AnnouncementItem) {
                 }
             }
 
-            Button(
-                onClick = { },
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = if (isOffer) DeepSage else OliveGreen
-                ),
-                shape = RoundedCornerShape(10.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(44.dp)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = if (isOffer) "Зв'язатися з волонтером" else "Допомогти",
-                    fontFamily = Montserrat,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 14.sp,
-                    color = Color.White
-                )
+                // Головна кнопка
+                Button(
+                    onClick = { },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (isOffer) DeepSage else OliveGreen
+                    ),
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(44.dp)
+                ) {
+                    Text(
+                        text = if (isOffer) "Зв'язатися з волонтером" else "Допомогти",
+                        fontFamily = Montserrat,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp,
+                        color = Color.White
+                    )
+                }
+
+                // Кнопка нативного поширення (SRS 3.2.24)
+                OutlinedButton(
+                    onClick = {
+                        shareAnnouncement(context, item)
+                    },
+                    shape = RoundedCornerShape(10.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, BorderSand),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        containerColor = Color.White.copy(alpha = 0.8f)
+                    ),
+                    contentPadding = PaddingValues(0.dp),
+                    modifier = Modifier.size(44.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Share,
+                        contentDescription = "Поділитися",
+                        tint = DeepSage,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
             }
         }
     }

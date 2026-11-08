@@ -1,6 +1,10 @@
 <template>
   <div ref="root" class="relative min-w-0 max-w-full" :class="[fullWidth ? 'w-full' : 'w-full md:w-auto', { 'z-30': menuVisible }]" @focusout="onFocusOut">
-    <div v-if="searchable" class="flex min-w-0 items-center border-2 bg-almost-white text-charcoal transition focus-within:ring-2 focus-within:ring-olive/40" :class="[shape, invalid ? 'border-radar' : 'border-forest', { 'opacity-60': disabled }]">
+    <div
+      v-if="searchable"
+      class="flex min-w-0 items-center border-2 bg-almost-white text-charcoal transition focus-within:ring-2 focus-within:ring-olive/40"
+      :class="[shape, invalid ? 'border-radar' : 'border-forest', { 'opacity-60': disabled }]"
+    >
       <input
         :id="controlId"
         ref="control"
@@ -25,7 +29,14 @@
         @focus="openMenu()"
         @keydown="onKeydown"
       />
-      <button type="button" tabindex="-1" :disabled="disabled" :aria-label="t('select_options')" class="shrink-0 py-3 pl-2 pr-5 text-forest disabled:cursor-not-allowed" @click="toggle">
+      <button
+        type="button"
+        tabindex="-1"
+        :disabled="disabled"
+        :aria-label="t('select_options')"
+        class="shrink-0 py-3 pl-2 pr-5 text-forest disabled:cursor-not-allowed"
+        @click="toggle"
+      >
         <AppIcon name="chevron-down" class="h-4 w-4 transition-transform duration-200" :class="{ 'rotate-180': menuVisible }" />
       </button>
     </div>
@@ -51,7 +62,9 @@
     >
       <span class="inline-grid min-w-0 text-left">
         <span class="col-start-1 row-start-1 truncate" :title="displayLabel">{{ displayLabel }}</span>
-        <span v-for="(option, index) in options" :key="index" class="col-start-1 row-start-1 invisible truncate" aria-hidden="true">{{ prefix ? `${prefix}: ${option.label}` : option.label }}</span>
+        <span v-for="(option, index) in options" :key="index" class="col-start-1 row-start-1 invisible truncate" aria-hidden="true">{{
+          prefix ? `${prefix}: ${option.label}` : option.label
+        }}</span>
       </span>
       <AppIcon name="chevron-down" class="h-4 w-4 shrink-0 transition-transform duration-200" :class="{ 'rotate-180': menuVisible }" />
     </button>
@@ -77,7 +90,9 @@
         @pointermove="activeIndex = index"
         @mousedown.prevent
         @click="choose(index)"
-      >{{ option.label }}</li>
+      >
+        {{ option.label }}
+      </li>
     </ul>
   </div>
 </template>
@@ -100,7 +115,19 @@ const props = withDefaults(
     disabled?: boolean;
     invalid?: boolean;
   }>(),
-  { searchable: false, fullWidth: false, disabled: false, invalid: false },
+  {
+    id: undefined,
+    label: undefined,
+    prefix: undefined,
+    placeholder: undefined,
+    dataTest: undefined,
+    describedBy: undefined,
+    maxlength: undefined,
+    searchable: false,
+    fullWidth: false,
+    disabled: false,
+    invalid: false,
+  }
 );
 
 // Emits
@@ -131,9 +158,7 @@ const displayLabel = computed(() => {
   const text = selected.value?.label ?? props.placeholder ?? '';
   return props.prefix ? `${props.prefix}: ${text}` : text;
 });
-const shape = computed(() =>
-  !menuVisible.value ? 'rounded-full' : above.value ? 'rounded-b-3xl rounded-t-none' : 'rounded-t-3xl rounded-b-none',
-);
+const shape = computed(() => (!menuVisible.value ? 'rounded-full' : above.value ? 'rounded-b-3xl rounded-t-none' : 'rounded-t-3xl rounded-b-none'));
 
 // Methods
 function positionMenu() {
@@ -204,12 +229,7 @@ function onKeydown(event: KeyboardEvent) {
     event.preventDefault();
     if (!open.value) openMenu();
     if (!props.options.length) return;
-    const next =
-      activeIndex.value < 0
-        ? event.key === 'ArrowDown'
-          ? 0
-          : props.options.length - 1
-        : activeIndex.value + (event.key === 'ArrowDown' ? 1 : -1);
+    const next = activeIndex.value < 0 ? (event.key === 'ArrowDown' ? 0 : props.options.length - 1) : activeIndex.value + (event.key === 'ArrowDown' ? 1 : -1);
     move((next + props.options.length) % props.options.length);
   } else if ((event.key === 'Enter' || (!props.searchable && event.key === ' ')) && menuVisible.value) {
     if (activeIndex.value >= 0) {
@@ -243,7 +263,7 @@ watch(
   () => props.disabled,
   (disabled) => {
     if (disabled) closeMenu();
-  },
+  }
 );
 watch(
   () => props.options,
@@ -252,7 +272,7 @@ watch(
       positionMenu();
       activeIndex.value = -1;
     }
-  },
+  }
 );
 
 // Lifecycle

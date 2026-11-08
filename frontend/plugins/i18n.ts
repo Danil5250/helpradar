@@ -5,7 +5,7 @@ import uk from '~/locales/uk.json';
 export const LANGUAGE_KEY = 'hr_language';
 
 export default defineNuxtPlugin((nuxtApp) => {
-  let saved: string | null = null;
+  let saved: string | null;
   try {
     saved = localStorage.getItem(LANGUAGE_KEY);
   } catch {
