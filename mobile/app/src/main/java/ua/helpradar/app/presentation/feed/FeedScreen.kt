@@ -19,6 +19,7 @@ import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.WarningAmber
 import androidx.compose.material3.*
@@ -37,6 +38,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
 import ua.helpradar.app.R
 import ua.helpradar.app.ui.theme.*
+import ua.helpradar.app.util.ShareUtils.shareAnnouncement
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -88,7 +90,7 @@ fun FeedScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "Д",
+                            text = "Д", // FIXME: Change to actual icon
                             fontFamily = Montserrat,
                             fontWeight = FontWeight.Bold,
                             color = CharcoalDark,
@@ -442,6 +444,7 @@ private fun DrawerItem(
 @Composable
 fun AnnouncementCard(item: AnnouncementItem) {
     val isOffer = item.type == AnnouncementType.OFFER
+    val context = androidx.compose.ui.platform.LocalContext.current
 
     val cardBgColor = if (isOffer) SelectedRoleBg.copy(alpha = 0.9f) else Color.White.copy(alpha = 0.85f)
     val cardBorderColor = if (isOffer) OliveGreen.copy(alpha = 0.4f) else BorderSand
@@ -589,23 +592,51 @@ fun AnnouncementCard(item: AnnouncementItem) {
                 }
             }
 
-            Button(
-                onClick = { },
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = if (isOffer) DeepSage else OliveGreen
-                ),
-                shape = RoundedCornerShape(10.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(44.dp)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = if (isOffer) "Зв'язатися з волонтером" else "Допомогти",
-                    fontFamily = Montserrat,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 14.sp,
-                    color = Color.White
-                )
+                // Головна кнопка
+                Button(
+                    onClick = { },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (isOffer) DeepSage else OliveGreen
+                    ),
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(44.dp)
+                ) {
+                    Text(
+                        text = if (isOffer) "Зв'язатися з волонтером" else "Допомогти",
+                        fontFamily = Montserrat,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp,
+                        color = Color.White
+                    )
+                }
+
+                // Кнопка нативного поширення (SRS 3.2.24)
+                OutlinedButton(
+                    onClick = {
+                        shareAnnouncement(context, item)
+                    },
+                    shape = RoundedCornerShape(10.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, BorderSand),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        containerColor = Color.White.copy(alpha = 0.8f)
+                    ),
+                    contentPadding = PaddingValues(0.dp),
+                    modifier = Modifier.size(44.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Share,
+                        contentDescription = "Поділитися",
+                        tint = DeepSage,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
             }
         }
     }
