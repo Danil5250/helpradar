@@ -1,5 +1,8 @@
 package ua.helpradar.app.presentation.profile
 
+import android.content.Context
+import android.net.Uri
+import android.provider.OpenableColumns
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -15,6 +18,7 @@ import ua.helpradar.app.data.repository.ProfileRepository
 data class ProfileUiState(
     val isLoading: Boolean = false,
     val isSaving: Boolean = false,
+    val isAvatarUploading: Boolean = false,
     val profile: ProfileResponse? = null,
     val isEditing: Boolean = false,
     val editFirstName: String = "",
@@ -32,6 +36,9 @@ class ProfileViewModel(
 
     private val _uiState = MutableStateFlow(ProfileUiState())
     val uiState: StateFlow<ProfileUiState> = _uiState.asStateFlow()
+
+    private val maxAvatarSizeBytes = 5 * 1024 * 1024L
+    private val allowedMimeTypes = setOf("image/jpeg", "image/png", "image/webp")
 
     init {
         loadProfile()
@@ -87,6 +94,52 @@ class ProfileViewModel(
     fun onPhoneChange(v: String) = _uiState.update { it.copy(editPhone = v) }
     fun onCityChange(v: String) = _uiState.update { it.copy(editCity = v) }
     fun onAboutMeChange(v: String) = _uiState.update { it.copy(editAboutMe = v) }
+
+    fun onAvatarSelected(context: Context, uri: Uri) {
+        val mimeType = context.contentResolver.getType(uri)
+        if (mimeType != null && mimeType !in allowedMimeTypes) {
+            _uiState.update {
+                it.copy(errorMessage = "Дозволені лише формати JPEG, PNG або WebP (SRS 3.2.12.5)")
+            }
+            return
+        }
+
+        val size = try {
+            context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+                val sizeIndex = cursor.getColumnIndex(OpenableColumns.SIZE)
+                if (sizeIndex != -1 && cursor.moveToFirst()) cursor.getLong(sizeIndex) else 0L
+            } ?: 0L
+        } catch (_: Exception) {
+            0L
+        }
+
+        if (size > maxAvatarSizeBytes) {
+            _uiState.update {
+                it.copy(errorMessage = "Розмір зображення не повинен перевищувати 5 МБ (SRS 3.2.12.5)")
+            }
+            return
+        }
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(isAvatarUploading = true, errorMessage = null, successMessage = null) }
+            when (val res = repository.uploadAvatar(context, uri)) {
+                is Resource.Success -> {
+                    _uiState.update { state ->
+                        state.copy(
+                            isAvatarUploading = false,
+                            profile = state.profile?.copy(avatarUrl = res.data),
+                            successMessage = "Аватар успішно оновлено!"
+                        )
+                    }
+                }
+                is Resource.Error -> {
+                    _uiState.update {
+                        it.copy(isAvatarUploading = false, errorMessage = res.message)
+                    }
+                }
+            }
+        }
+    }
 
     fun saveProfile() {
         val state = _uiState.value

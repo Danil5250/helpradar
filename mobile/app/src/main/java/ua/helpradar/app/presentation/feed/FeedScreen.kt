@@ -32,6 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -39,6 +40,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
 import kotlinx.coroutines.launch
 import ua.helpradar.app.R
 import ua.helpradar.app.data.local.SessionManager
@@ -58,7 +60,6 @@ fun FeedScreen(
     val coroutineScope = rememberCoroutineScope()
     var selectedDrawerItem by remember { mutableStateOf("Announcements") }
 
-    // Динамічна літера для аватара замість статичної "Д"
     val avatarLetter = remember(SessionManager.currentUserName) {
         val name = SessionManager.currentUserName.trim()
         if (name.isNotEmpty()) {
@@ -66,6 +67,13 @@ fun FeedScreen(
         } else {
             "U"
         }
+    }
+
+    val fullAvatarUrl = remember(SessionManager.currentUserAvatarUrl) {
+        val raw = SessionManager.currentUserAvatarUrl
+        if (!raw.isNullOrBlank()) {
+            if (raw.startsWith("http")) raw else "http://10.0.2.2:3000$raw"
+        } else null
     }
 
     ModalNavigationDrawer(
@@ -98,26 +106,15 @@ fun FeedScreen(
                             .clip(RoundedCornerShape(10.dp))
                     )
 
-                    // Аватар у бічній шторці (при кліку переходить до профілю)
-                    Box(
-                        modifier = Modifier
-                            .size(36.dp)
-                            .clip(CircleShape)
-                            .background(TacticalOlive.copy(alpha = 0.5f))
-                            .clickable {
-                                coroutineScope.launch { drawerState.close() }
-                                onProfileClick()
-                            },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = avatarLetter,
-                            fontFamily = Montserrat,
-                            fontWeight = FontWeight.Bold,
-                            color = CharcoalDark,
-                            fontSize = 15.sp
-                        )
-                    }
+                    // Аватар у бічній шторці
+                    UserAvatarBadge(
+                        avatarUrl = fullAvatarUrl,
+                        fallbackLetter = avatarLetter,
+                        onClick = {
+                            coroutineScope.launch { drawerState.close() }
+                            onProfileClick()
+                        }
+                    )
                 }
 
                 HorizontalDivider(color = BorderSand.copy(alpha = 0.5f), thickness = 1.dp)
@@ -237,23 +234,12 @@ fun FeedScreen(
                                 )
                             }
 
-                            // Аватар у правому верхньому кутку
-                            Box(
-                                modifier = Modifier
-                                    .size(36.dp)
-                                    .clip(CircleShape)
-                                    .background(TacticalOlive.copy(alpha = 0.5f))
-                                    .clickable { onProfileClick() },
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = avatarLetter,
-                                    fontFamily = Montserrat,
-                                    fontWeight = FontWeight.Bold,
-                                    color = CharcoalDark,
-                                    fontSize = 15.sp
-                                )
-                            }
+                            // Аватар у правому верхньому кутку панелі
+                            UserAvatarBadge(
+                                avatarUrl = fullAvatarUrl,
+                                fallbackLetter = avatarLetter,
+                                onClick = onProfileClick
+                            )
                         }
 
                         HorizontalDivider(color = BorderSand.copy(alpha = 0.6f), thickness = 1.dp)
@@ -396,7 +382,7 @@ fun FeedScreen(
                     )
                 }
 
-                // Динамічні категорії з бекенду
+                // Категорії з бекенду
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -425,7 +411,7 @@ fun FeedScreen(
                     }
                 }
 
-                // Відображення контенту
+                // Контент списку
                 when {
                     state.isLoading -> {
                         Box(
@@ -465,6 +451,45 @@ fun FeedScreen(
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun UserAvatarBadge(
+    avatarUrl: String?,
+    fallbackLetter: String,
+    onClick: () -> Unit
+) {
+    var isLoaded by remember(avatarUrl) { mutableStateOf(false) }
+
+    Box(
+        modifier = Modifier
+            .size(36.dp)
+            .clip(CircleShape)
+            .background(TacticalOlive.copy(alpha = 0.5f))
+            .clickable { onClick() },
+        contentAlignment = Alignment.Center
+    ) {
+        if (!isLoaded) {
+            Text(
+                text = fallbackLetter,
+                fontFamily = Montserrat,
+                fontWeight = FontWeight.Bold,
+                color = CharcoalDark,
+                fontSize = 15.sp
+            )
+        }
+
+        if (avatarUrl != null) {
+            AsyncImage(
+                model = avatarUrl,
+                contentDescription = "Аватар",
+                contentScale = ContentScale.Crop,
+                onSuccess = { isLoaded = true },
+                onError = { isLoaded = false },
+                modifier = Modifier.fillMaxSize()
+            )
         }
     }
 }
@@ -718,7 +743,6 @@ fun AnnouncementCard(item: AnnouncementItem) {
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Головна кнопка
                 Button(
                     onClick = { },
                     colors = ButtonDefaults.buttonColors(
@@ -738,7 +762,6 @@ fun AnnouncementCard(item: AnnouncementItem) {
                     )
                 }
 
-                // Кнопка нативного поширення (SRS 3.2.24)
                 OutlinedButton(
                     onClick = {
                         shareAnnouncement(context, item)

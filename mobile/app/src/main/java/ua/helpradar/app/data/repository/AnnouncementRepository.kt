@@ -19,7 +19,6 @@ import java.io.ByteArrayOutputStream
 class AnnouncementRepository(
     private val api: AnnouncementApiService = ApiClient.announcementApiService
 ) {
-
     suspend fun getCategories(): Resource<List<CategoryDto>> {
         return try {
             val response = api.getCategories()
@@ -107,7 +106,6 @@ class AnnouncementRepository(
             if (response.isSuccessful && response.body() != null) {
                 Resource.Success(response.body()!!)
             } else {
-                // Витягуємо точне повідомлення від сервера з errorBody
                 val serverMessage = try {
                     val errorJson = response.errorBody()?.string()
                     if (!errorJson.isNullOrBlank()) {
@@ -117,7 +115,6 @@ class AnnouncementRepository(
                 } catch (_: Exception) {
                     null
                 }
-
                 val finalErrorMessage = serverMessage ?: "Помилка створення оголошення: ${response.code()}"
                 Resource.Error(finalErrorMessage, response.code())
             }
@@ -126,24 +123,35 @@ class AnnouncementRepository(
         }
     }
 
+    suspend fun deleteAnnouncement(announcementId: Int): Resource<Unit> {
+        return try {
+            val response = api.deleteAnnouncement(announcementId)
+            if (response.isSuccessful) {
+                Resource.Success(Unit)
+            } else {
+                Resource.Error("Не вдалося видалити оголошення", response.code())
+            }
+        } catch (e: Exception) {
+            Resource.Error(e.localizedMessage ?: "Помилка мережі")
+        }
+    }
+
     suspend fun uploadPhoto(context: Context, announcementId: Int, imageUri: Uri): Resource<Unit> {
         return try {
             val contentResolver = context.contentResolver
             val inputStream = contentResolver.openInputStream(imageUri)
                 ?: return Resource.Error("Неможливо прочитати файл")
-
             val originalBitmap = BitmapFactory.decodeStream(inputStream)
+                ?: return Resource.Error("Помилка декодування зображення")
             val outputStream = ByteArrayOutputStream()
-            originalBitmap.compress(Bitmap.CompressFormat.JPEG, 80, outputStream)
+            originalBitmap.compress(Bitmap.CompressFormat.JPEG, 85, outputStream)
             val compressedBytes = outputStream.toByteArray()
-
             val requestBody = compressedBytes.toRequestBody("image/jpeg".toMediaTypeOrNull())
             val part = MultipartBody.Part.createFormData(
                 "photo",
                 "upload_${System.currentTimeMillis()}.jpg",
                 requestBody
             )
-
             val response = api.addPhoto(announcementId, part)
             if (response.isSuccessful) {
                 Resource.Success(Unit)

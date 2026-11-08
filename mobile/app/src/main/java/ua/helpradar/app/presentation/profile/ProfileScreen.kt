@@ -1,7 +1,11 @@
 package ua.helpradar.app.presentation.profile
 
+import android.util.Log
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -9,6 +13,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.LocationOn
@@ -20,10 +25,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
 import ua.helpradar.app.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -34,11 +42,31 @@ fun ProfileScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
     val profile = state.profile
+    val context = LocalContext.current
+
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        uri?.let { viewModel.onAvatarSelected(context, it) }
+    }
 
     val initialLetter = remember(profile?.firstName, profile?.email) {
-        val source = profile?.firstName?.ifBlank { null } ?: profile?.email.orEmpty()
-        source.firstOrNull()?.uppercaseChar()?.toString() ?: "U"
+        val name = profile?.firstName?.trim().orEmpty()
+        if (name.isNotEmpty()) {
+            name.first().uppercaseChar().toString()
+        } else {
+            profile?.email?.firstOrNull()?.uppercaseChar()?.toString() ?: "U"
+        }
     }
+
+    val fullAvatarUrl = remember(profile?.avatarUrl) {
+        val raw = profile?.avatarUrl
+        if (!raw.isNullOrBlank()) {
+            if (raw.startsWith("http")) raw else "http://10.0.2.2:3000$raw"
+        } else null
+    }
+
+    var isImageLoaded by remember(fullAvatarUrl) { mutableStateOf(false) }
 
     Scaffold(
         containerColor = DesertSand,
@@ -91,21 +119,81 @@ fun ProfileScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Динамічний круглий аватар
+                // Аватар: динамічна літера та плавне накладання фото при успіху
                 Box(
-                    modifier = Modifier
-                        .size(88.dp)
-                        .clip(CircleShape)
-                        .background(TacticalOlive),
-                    contentAlignment = Alignment.Center
+                    contentAlignment = Alignment.BottomEnd,
+                    modifier = Modifier.size(96.dp)
                 ) {
-                    Text(
-                        text = initialLetter,
-                        fontFamily = Montserrat,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White,
-                        fontSize = 36.sp
-                    )
+                    Box(
+                        modifier = Modifier
+                            .size(96.dp)
+                            .clip(CircleShape)
+                            .background(TacticalOlive)
+                            .clickable(enabled = !state.isAvatarUploading) {
+                                photoPickerLauncher.launch("image/*")
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        // Плейсхолдер: літера відображається, доки фото не завантажене або якщо його немає
+                        if (!isImageLoaded) {
+                            Text(
+                                text = initialLetter,
+                                fontFamily = Montserrat,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White,
+                                fontSize = 40.sp
+                            )
+                        }
+
+                        // Завантаження фото за повною адресою
+                        if (fullAvatarUrl != null) {
+                            AsyncImage(
+                                model = fullAvatarUrl,
+                                contentDescription = "Аватар користувача",
+                                contentScale = ContentScale.Crop,
+                                onSuccess = {
+                                    isImageLoaded = true
+                                },
+                                onError = { stateError ->
+                                    isImageLoaded = false
+                                    Log.e("CoilAvatar", "Помилка завантаження фото: ${stateError.result.throwable.message}")
+                                },
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
+
+                        if (state.isAvatarUploading) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(Color.Black.copy(alpha = 0.45f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator(color = Color.White, modifier = Modifier.size(28.dp))
+                            }
+                        }
+                    }
+
+                    // Кнопка камери для зміни фото
+                    Surface(
+                        shape = CircleShape,
+                        color = RadarOrange,
+                        shadowElevation = 2.dp,
+                        modifier = Modifier
+                            .size(30.dp)
+                            .clickable(enabled = !state.isAvatarUploading) {
+                                photoPickerLauncher.launch("image/*")
+                            }
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Default.CameraAlt,
+                                contentDescription = "Змінити фото",
+                                tint = Color.White,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
                 }
 
                 Text(
@@ -163,7 +251,6 @@ fun ProfileScreen(
                 }
 
                 if (!state.isEditing) {
-                    // Режим перегляду
                     Card(
                         shape = RoundedCornerShape(14.dp),
                         colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.85f)),
@@ -213,7 +300,6 @@ fun ProfileScreen(
                         Text("Редагувати профіль", fontFamily = Montserrat, fontWeight = FontWeight.Bold, color = Color.White)
                     }
                 } else {
-                    // Режим редагування (ПІБ, телефон, місто, опис)
                     Card(
                         shape = RoundedCornerShape(14.dp),
                         colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.9f)),

@@ -132,7 +132,6 @@ class CreateRequestViewModel(
         if (bestLocation != null) {
             applyLocation(context, bestLocation.latitude, bestLocation.longitude)
         } else {
-            // Замість Києва виставляємо явну помилку користувачу
             _uiState.update {
                 it.copy(
                     isLocating = false,
@@ -184,7 +183,6 @@ class CreateRequestViewModel(
                     )
                 }
             } else {
-                // Якщо координати є, але geocoder не знайшов текстову адресу
                 _uiState.update {
                     it.copy(
                         isLocating = false,
@@ -268,6 +266,7 @@ class CreateRequestViewModel(
 
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, generalError = null) }
+
             val request = CreateAnnouncementRequest(
                 title = state.title.trim(),
                 description = state.description.trim(),
@@ -283,18 +282,22 @@ class CreateRequestViewModel(
                 is Resource.Success -> {
                     val announcementId = result.data.announcement.id
                     var photoErrorOccurred = false
+
                     for (photoUri in state.selectedPhotos) {
                         val uploadResult = repository.uploadPhoto(context, announcementId, photoUri)
                         if (uploadResult is Resource.Error) {
                             photoErrorOccurred = true
+                            break
                         }
                     }
+
                     if (photoErrorOccurred) {
+                        repository.deleteAnnouncement(announcementId)
                         _uiState.update {
                             it.copy(
                                 isLoading = false,
                                 isSuccess = false,
-                                generalError = "Оголошення створено, але не всі фото вдалося завантажити"
+                                generalError = "Не вдалося завантажити фото. Оголошення не було створено. Спробуйте ще раз."
                             )
                         }
                     } else {

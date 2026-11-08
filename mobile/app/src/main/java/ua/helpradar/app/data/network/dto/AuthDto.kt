@@ -14,7 +14,7 @@ data class UserDto(
     @SerializedName("email") val email: String,
     @SerializedName("role") val role: String,
     @SerializedName("city") val city: String?,
-    @SerializedName("avatarUrl") val avatarUrl: String?
+    @SerializedName("avatarUrl") val avatarUrl: String? = null
 )
 
 data class AuthResponse(

@@ -36,3 +36,9 @@ data class ProfileUpdatedResponse(
     @SerializedName("message") val message: String,
     @SerializedName("profile") val profile: ProfileResponse
 )
+
+data class UploadAvatarResponse(
+    @SerializedName("code") val code: String,
+    @SerializedName("message") val message: String,
+    @SerializedName("avatarUrl") val avatarUrl: String
+)

@@ -5,6 +5,7 @@ object SessionManager {
     var currentUserRole: String = "person_in_need"
     var currentUserName: String = ""
     var currentUserId: Int? = null
+    var currentUserAvatarUrl: String? = null
 
     val isVolunteer: Boolean
         get() = currentUserRole.equals("volunteer", ignoreCase = true)
@@ -16,5 +17,6 @@ object SessionManager {
         currentUserRole = "person_in_need"
         currentUserName = ""
         currentUserId = null
+        currentUserAvatarUrl = null
     }
 }

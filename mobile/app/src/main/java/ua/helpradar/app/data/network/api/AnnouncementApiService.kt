@@ -6,7 +6,6 @@ import retrofit2.http.*
 import ua.helpradar.app.data.network.dto.*
 
 interface AnnouncementApiService {
-
     @GET("api/categories")
     suspend fun getCategories(): Response<CategoriesResponseDto>
 
@@ -22,6 +21,11 @@ interface AnnouncementApiService {
     suspend fun createAnnouncement(
         @Body request: CreateAnnouncementRequest
     ): Response<CreateAnnouncementResponse>
+
+    @DELETE("api/announcements/{id}")
+    suspend fun deleteAnnouncement(
+        @Path("id") id: Int
+    ): Response<Unit>
 
     @GET("api/announcements/mine")
     suspend fun getMyAnnouncements(): Response<AnnouncementListResponse>

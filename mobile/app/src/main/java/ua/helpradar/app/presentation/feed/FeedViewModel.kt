@@ -11,6 +11,7 @@ import ua.helpradar.app.data.local.SessionManager
 import ua.helpradar.app.data.network.Resource
 import ua.helpradar.app.data.network.dto.CategoryDto
 import ua.helpradar.app.data.repository.AnnouncementRepository
+import ua.helpradar.app.data.repository.ProfileRepository
 
 data class FeedUiState(
     val searchQuery: String = "",
@@ -25,7 +26,8 @@ data class FeedUiState(
 )
 
 class FeedViewModel(
-    private val repository: AnnouncementRepository = AnnouncementRepository()
+    private val repository: AnnouncementRepository = AnnouncementRepository(),
+    private val profileRepository: ProfileRepository = ProfileRepository()
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(FeedUiState())
@@ -37,6 +39,14 @@ class FeedViewModel(
     init {
         loadFeed()
         loadCategories()
+        syncUserProfile()
+    }
+
+    private fun syncUserProfile() {
+        viewModelScope.launch {
+            // Оновлює SessionManager (ім'я, роль та аватар) фоново без блокування списку
+            profileRepository.getProfile()
+        }
     }
 
     fun loadFeed() {
@@ -128,8 +138,6 @@ class FeedViewModel(
 
     fun onToggleOnlyMy(onlyMy: Boolean) {
         _uiState.update { it.copy(onlyMyAnnouncements = onlyMy) }
-        loadFeed() // Перезавантажуємо відповідне джерело
+        loadFeed()
     }
-
-
 }

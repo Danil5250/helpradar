@@ -69,4 +69,14 @@ object ApiClient {
     val profileService: ProfileApiService by lazy {
         retrofit.create(ProfileApiService::class.java)
     }
+
+    fun resolveMediaUrl(url: String?): String? {
+        if (url.isNullOrBlank()) return null
+        return if (url.startsWith("http://") || url.startsWith("https://")) {
+            url
+        } else {
+            // Додаємо хост бекенду (для емулятора Android це 10.0.2.2:3000)
+            "http://10.0.2.2:3000${if (url.startsWith("/")) "" else "/"}$url"
+        }
+    }
 }

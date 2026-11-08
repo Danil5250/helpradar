@@ -13,11 +13,12 @@ class AuthRepository {
             val response = ApiClient.authService.login(LoginRequest(email, password))
             val body = response.body()
             if (response.isSuccessful && body != null) {
-                // Зберігаємо сесію та роль увійшовшого користувача
+                // Зберігаємо сесію, роль та аватар увійшовшого користувача
                 body.user?.let { user ->
                     SessionManager.currentUserRole = user.role
                     SessionManager.currentUserName = "${user.firstName} ${user.lastName}".trim()
                     SessionManager.currentUserId = user.id
+                    SessionManager.currentUserAvatarUrl = user.avatarUrl
                 }
 
                 val token = body.token.orEmpty()
@@ -80,6 +81,7 @@ class AuthRepository {
             Resource.Error("Немає зв'язку з сервером")
         }
     }
+
     fun logout() {
         SessionManager.clear()
         ApiClient.clearCookies()
