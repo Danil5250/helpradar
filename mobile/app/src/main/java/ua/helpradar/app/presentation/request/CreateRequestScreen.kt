@@ -59,7 +59,6 @@ fun CreateRequestScreen(
     ) { permissions ->
         val fineGranted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true
         val coarseGranted = permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
-
         if (fineGranted || coarseGranted) {
             viewModel.fetchCurrentLocation(context)
         } else {
@@ -177,7 +176,7 @@ fun CreateRequestScreen(
                 singleLine = true
             )
 
-            // Поле 2: Категорія (Динамічна з бекенду)
+            // Поле 2: Категорія
             ExposedDropdownMenuBox(
                 expanded = isCategoryDropdownExpanded,
                 onExpandedChange = { isCategoryDropdownExpanded = !isCategoryDropdownExpanded }
@@ -203,7 +202,6 @@ fun CreateRequestScreen(
                         .fillMaxWidth()
                         .menuAnchor()
                 )
-
                 ExposedDropdownMenu(
                     expanded = isCategoryDropdownExpanded,
                     onDismissRequest = { isCategoryDropdownExpanded = false }
@@ -239,7 +237,46 @@ fun CreateRequestScreen(
                 maxLines = 6
             )
 
-            // Блок додавання фотографій (до 5 шт.)
+            // Блок вибору тривалості оголошення (Пункт 2)
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    text = "Термін актуальності оголошення *",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = CharcoalDark
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    state.availableExpiryDays.forEach { days ->
+                        val isSelected = state.expiryDays == days
+                        FilterChip(
+                            selected = isSelected,
+                            onClick = { viewModel.onExpiryDaysChange(days) },
+                            label = {
+                                Text(
+                                    text = "$days ${if (days == 3) "дні" else "днів"}",
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                )
+                            },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = OliveGreen,
+                                selectedLabelColor = Color.White
+                            ),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+                Text(
+                    text = "Після завершення строку ви зможете продовжити оголошення ще на 14 днів.",
+                    fontSize = 12.sp,
+                    color = Color.Gray
+                )
+            }
+
+            // Блок додавання фотографій
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
                     text = "Фотографії (до 5 шт.)",
@@ -247,7 +284,6 @@ fun CreateRequestScreen(
                     fontWeight = FontWeight.Medium,
                     color = CharcoalDark
                 )
-
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -274,7 +310,6 @@ fun CreateRequestScreen(
                             }
                         }
                     }
-
                     state.selectedPhotos.forEach { uri ->
                         Box(
                             modifier = Modifier
@@ -299,14 +334,17 @@ fun CreateRequestScreen(
                         }
                     }
                 }
+                state.photoError?.let {
+                    Text(it, color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
+                }
             }
 
-            // Поле 4: Адреса / локація з кнопкою автоматичного визначення
+            // Поле 4: Адреса / локація (Пункт 1: без підстановки Києва)
             OutlinedTextField(
                 value = state.location,
                 onValueChange = viewModel::onLocationChange,
                 label = { Text(if (isVolunteer) "Місто / район надання допомоги *" else "Населений пункт / адреса *") },
-                placeholder = { Text("Введіть або визначте автоматично") },
+                placeholder = { Text("Введіть адресу або вкажіть вручну") },
                 trailingIcon = {
                     if (state.isLocating) {
                         CircularProgressIndicator(
@@ -339,8 +377,8 @@ fun CreateRequestScreen(
                         Text(state.locationError!!, color = MaterialTheme.colorScheme.error)
                     } else {
                         Text(
-                            if (isVolunteer) "Натисніть на значок прицілу для визначення вашого міста"
-                            else "Натисніть на значок прицілу для автоматичного визначення адреси",
+                            if (isVolunteer) "Натисніть на значок для автовизначення міста або введіть його вручну"
+                            else "Натисніть на значок для визначення поточної адреси або введіть її вручну",
                             fontSize = 11.sp
                         )
                     }
@@ -349,6 +387,7 @@ fun CreateRequestScreen(
                 singleLine = true
             )
 
+            // Терміновість (тільки для запитів)
             if (!isVolunteer) {
                 Card(
                     shape = RoundedCornerShape(10.dp),

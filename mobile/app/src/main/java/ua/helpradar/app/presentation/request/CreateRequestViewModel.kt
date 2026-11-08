@@ -4,17 +4,13 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.location.Geocoder
 import android.location.Location
-import android.location.LocationListener
 import android.location.LocationManager
 import android.net.Uri
 import android.os.Build
-import android.os.Bundle
-import android.os.Looper
 import android.provider.OpenableColumns
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -76,7 +72,25 @@ class CreateRequestViewModel(
     fun fetchCurrentLocation(context: Context) {
         val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager
         if (locationManager == null) {
-            _uiState.update { it.copy(locationError = "Служба геолокації недоступна на пристрої") }
+            _uiState.update {
+                it.copy(
+                    isLocating = false,
+                    locationError = "Служба геолокації недоступна. Введіть адресу вручну"
+                )
+            }
+            return
+        }
+
+        val isGpsEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)
+        val isNetworkEnabled = locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
+
+        if (!isGpsEnabled && !isNetworkEnabled) {
+            _uiState.update {
+                it.copy(
+                    isLocating = false,
+                    locationError = "GPS вимкнено на пристрої. Увімкніть його або введіть адресу вручну"
+                )
+            }
             return
         }
 
@@ -84,13 +98,7 @@ class CreateRequestViewModel(
 
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                val provider = if (locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
-                    LocationManager.GPS_PROVIDER
-                } else {
-                    LocationManager.NETWORK_PROVIDER
-                }
-
-                // Запитуємо саме СВІЖУ точку, яку щойно виставили в емуляторі
+                val provider = if (isGpsEnabled) LocationManager.GPS_PROVIDER else LocationManager.NETWORK_PROVIDER
                 locationManager.getCurrentLocation(
                     provider,
                     null,
@@ -99,7 +107,6 @@ class CreateRequestViewModel(
                     if (location != null) {
                         applyLocation(context, location.latitude, location.longitude)
                     } else {
-                        // Якщо свіжа точка не прийшла, шукаємо в кеші
                         fallbackToLastKnownOrCurrent(context, locationManager)
                     }
                 }
@@ -115,7 +122,6 @@ class CreateRequestViewModel(
     private fun fallbackToLastKnownOrCurrent(context: Context, locationManager: LocationManager) {
         val providers = locationManager.getProviders(true)
         var bestLocation: Location? = null
-
         for (p in providers) {
             val loc = locationManager.getLastKnownLocation(p) ?: continue
             if (bestLocation == null || loc.accuracy < bestLocation.accuracy) {
@@ -126,7 +132,13 @@ class CreateRequestViewModel(
         if (bestLocation != null) {
             applyLocation(context, bestLocation.latitude, bestLocation.longitude)
         } else {
-            applyLocation(context, 50.4501, 30.5234)
+            // Замість Києва виставляємо явну помилку користувачу
+            _uiState.update {
+                it.copy(
+                    isLocating = false,
+                    locationError = "Не вдалося визначити координати. Введіть адресу вручну"
+                )
+            }
         }
     }
 
@@ -143,7 +155,6 @@ class CreateRequestViewModel(
     private fun resolveAddressFromCoordinates(context: Context, lat: Double, lon: Double) {
         viewModelScope.launch {
             var resolvedAddress: String? = null
-
             try {
                 resolvedAddress = withContext(Dispatchers.IO) {
                     val geocoder = Geocoder(context, Locale("uk", "UA"))
@@ -164,21 +175,28 @@ class CreateRequestViewModel(
                 resolvedAddress = null
             }
 
-            val textToDisplay = resolvedAddress ?: "м. Київ (%.4f, %.4f)".format(lat, lon)
-
-            _uiState.update {
-                it.copy(
-                    location = textToDisplay,
-                    isLocating = false,
-                    locationError = null
-                )
+            if (resolvedAddress != null) {
+                _uiState.update {
+                    it.copy(
+                        location = resolvedAddress,
+                        isLocating = false,
+                        locationError = null
+                    )
+                }
+            } else {
+                // Якщо координати є, але geocoder не знайшов текстову адресу
+                _uiState.update {
+                    it.copy(
+                        isLocating = false,
+                        locationError = "Адресу за координатами не знайдено. Введіть назву населеного пункту вручну"
+                    )
+                }
             }
         }
     }
 
     fun onAddPhotos(context: Context, uris: List<Uri>) {
         val contentResolver = context.contentResolver
-
         for (uri in uris) {
             val mimeType = contentResolver.getType(uri)
             if (mimeType != null && mimeType !in allowedMimeTypes) {
@@ -187,7 +205,6 @@ class CreateRequestViewModel(
                 }
                 return
             }
-
             if (getFileSize(context, uri) > maxPhotoSizeBytes) {
                 _uiState.update {
                     it.copy(photoError = "Розмір фото не повинен перевищувати 10 МБ (SRS 3.2.4.5)")
@@ -195,7 +212,6 @@ class CreateRequestViewModel(
                 return
             }
         }
-
         _uiState.update {
             val updated = (it.selectedPhotos + uris).distinct().take(5)
             it.copy(selectedPhotos = updated, photoError = null)
@@ -228,13 +244,11 @@ class CreateRequestViewModel(
 
     fun submitRequest(context: Context) {
         val state = _uiState.value
-
         val isTitleValid = state.title.trim().length in 5..100
         val isDescValid = state.description.trim().length in 10..2000
         val category = state.selectedCategory
         val isCategoryValid = category != null
         val isLocationValid = state.location.trim().isNotEmpty()
-
         val hasOversizedPhotos = state.selectedPhotos.any { uri ->
             getFileSize(context, uri) > maxPhotoSizeBytes
         }
@@ -245,7 +259,7 @@ class CreateRequestViewModel(
                     titleError = if (!isTitleValid) "Назва має містити від 5 до 100 символів" else null,
                     descriptionError = if (!isDescValid) "Опис має містити від 10 до 2000 символів" else null,
                     categoryError = if (!isCategoryValid) "Оберіть категорію допомоги" else null,
-                    locationError = if (!isLocationValid) "Вкажіть адресу або населений пункт" else null,
+                    locationError = if (!isLocationValid) "Вкажіть адресу або населений пункт вручну" else null,
                     photoError = if (hasOversizedPhotos) "Розмір фото перевищує 10 МБ" else null
                 )
             }
@@ -254,14 +268,13 @@ class CreateRequestViewModel(
 
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, generalError = null) }
-
             val request = CreateAnnouncementRequest(
                 title = state.title.trim(),
                 description = state.description.trim(),
                 categoryId = category.id,
                 address = state.location.trim(),
-                latitude = state.latitude,
-                longitude = state.longitude,
+                latitude = state.latitude ?: 0.0,
+                longitude = state.longitude ?: 0.0,
                 expiryDays = state.expiryDays,
                 isUrgent = if (state.isVolunteer) false else state.isUrgent
             )
@@ -269,7 +282,6 @@ class CreateRequestViewModel(
             when (val result = repository.createAnnouncement(request)) {
                 is Resource.Success -> {
                     val announcementId = result.data.announcement.id
-
                     var photoErrorOccurred = false
                     for (photoUri in state.selectedPhotos) {
                         val uploadResult = repository.uploadPhoto(context, announcementId, photoUri)
@@ -277,7 +289,6 @@ class CreateRequestViewModel(
                             photoErrorOccurred = true
                         }
                     }
-
                     if (photoErrorOccurred) {
                         _uiState.update {
                             it.copy(

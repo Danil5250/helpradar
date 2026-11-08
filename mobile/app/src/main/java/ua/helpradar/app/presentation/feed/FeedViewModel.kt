@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import ua.helpradar.app.data.local.SessionManager
 import ua.helpradar.app.data.network.Resource
 import ua.helpradar.app.data.network.dto.CategoryDto
 import ua.helpradar.app.data.repository.AnnouncementRepository
@@ -17,6 +18,7 @@ data class FeedUiState(
     val isCategoriesLoading: Boolean = false,
     val selectedCategory: String? = null,
     val selectedType: AnnouncementType? = null,
+    val onlyMyAnnouncements: Boolean = false,
     val announcements: List<AnnouncementItem> = emptyList(),
     val isLoading: Boolean = false,
     val errorMessage: String? = null
@@ -40,7 +42,15 @@ class FeedViewModel(
     fun loadFeed() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
-            when (val result = repository.getAnnouncements()) {
+
+            // Якщо увімкнено "Мої оголошення" - звертаємося до getMyAnnouncements(), інакше до загального списку
+            val result = if (_uiState.value.onlyMyAnnouncements) {
+                repository.getMyAnnouncements()
+            } else {
+                repository.getAnnouncements()
+            }
+
+            when (result) {
                 is Resource.Success -> {
                     rawBackendAnnouncements = result.data
                     applyFilters()
@@ -115,4 +125,11 @@ class FeedViewModel(
 
         _uiState.update { it.copy(announcements = filtered) }
     }
+
+    fun onToggleOnlyMy(onlyMy: Boolean) {
+        _uiState.update { it.copy(onlyMyAnnouncements = onlyMy) }
+        loadFeed() // Перезавантажуємо відповідне джерело
+    }
+
+
 }

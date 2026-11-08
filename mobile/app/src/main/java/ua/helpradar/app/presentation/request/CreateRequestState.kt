@@ -7,8 +7,8 @@ data class CreateRequestFormState(
         val title: String = "",
         val description: String = "",
         val location: String = "",
-        val latitude: Double = 50.4501,
-        val longitude: Double = 30.5234,
+        val latitude: Double? = null,
+        val longitude: Double? = null,
         val isLocating: Boolean = false,
         val selectedCategory: CategoryDto? = null,
         val categories: List<CategoryDto> = emptyList(),
@@ -16,6 +16,7 @@ data class CreateRequestFormState(
         val selectedPhotos: List<Uri> = emptyList(),
         val isUrgent: Boolean = false,
         val expiryDays: Int = 14,
+        val availableExpiryDays: List<Int> = listOf(3, 5, 7, 14),
         val isVolunteer: Boolean = false,
         val isLoading: Boolean = false,
         val isSuccess: Boolean = false,
@@ -25,4 +26,4 @@ data class CreateRequestFormState(
         val locationError: String? = null,
         val photoError: String? = null,
         val generalError: String? = null
-    )
+)
