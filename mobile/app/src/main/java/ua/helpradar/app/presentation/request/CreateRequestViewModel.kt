@@ -27,6 +27,9 @@ import java.util.Locale
 class CreateRequestViewModel(
     private val repository: AnnouncementRepository = AnnouncementRepository()
 ) : ViewModel() {
+    companion object {
+        var itemToEdit: ua.helpradar.app.presentation.feed.AnnouncementItem? = null
+    }
 
     private val _uiState = MutableStateFlow(
         CreateRequestFormState(
@@ -40,6 +43,44 @@ class CreateRequestViewModel(
 
     init {
         loadCategories()
+
+        itemToEdit?.let { item ->
+            setEditMode(
+                id = item.id,
+                title = item.title,
+                description = item.description,
+                location = "Марганець", // FIXME: я хз що сюди передавати
+                categoryName = item.categoryName, // FIXME: не з'являється
+                isUrgent = item.isUrgent
+            )
+            itemToEdit = null // очищаємо тимчасову змінну
+        }
+    }
+
+    fun setEditMode(
+        id: Int,
+        title: String,
+        description: String,
+        categoryName: String,
+        isUrgent: Boolean,
+        location: String,
+        lat: Double? = 50.4501,
+        lon: Double? = 30.5234
+    ) {
+        _uiState.update { current ->
+            val matchingCategory = current.categories.find { it.name.equals(categoryName, ignoreCase = true) }
+            current.copy(
+                editingAnnouncementId = id,
+                title = title.trim(),
+                description = description.trim(),
+                selectedCategory = matchingCategory ?: current.selectedCategory,
+                location = location,
+                latitude = lat,
+                longitude = lon,
+                expiryDays = 14,
+                isUrgent = isUrgent
+            )
+        }
     }
 
     fun loadCategories() {
@@ -279,32 +320,47 @@ class CreateRequestViewModel(
                 isUrgent = if (state.isVolunteer) false else state.isUrgent
             )
 
-            when (val result = repository.createAnnouncement(request)) {
+            val editId = state.editingAnnouncementId
+            val result = if (editId != null) {
+                // PATCH
+                repository.updateAnnouncement(editId, request)
+            } else {
+                // POST
+                repository.createAnnouncement(request)
+            }
+
+            when (result) {
                 is Resource.Success -> {
-                    val announcementId = result.data.announcement.id
-                    var photoErrorOccurred = false
-                    for (photoUri in state.selectedPhotos) {
-                        val uploadResult = repository.uploadPhoto(context, announcementId, photoUri)
-                        if (uploadResult is Resource.Error) {
-                            photoErrorOccurred = true
-                        }
-                    }
-                    if (photoErrorOccurred) {
-                        _uiState.update {
-                            it.copy(
-                                isLoading = false,
-                                isSuccess = false,
-                                generalError = "Оголошення створено, але не всі фото вдалося завантажити"
-                            )
-                        }
-                    } else {
+                    // Якщо це було редагування - успіх без вантаження фото
+                    if (editId != null) {
                         _uiState.update { it.copy(isLoading = false, isSuccess = true) }
+                    } else {
+                        val announcementId = result.data.announcement.id
+                        var photoErrorOccurred = false
+                        for (photoUri in state.selectedPhotos) {
+                            val uploadResult = repository.uploadPhoto(context, announcementId, photoUri)
+                            if (uploadResult is Resource.Error) {
+                                photoErrorOccurred = true
+                            }
+                        }
+                        if (photoErrorOccurred) {
+                            _uiState.update {
+                                it.copy(
+                                    isLoading = false,
+                                    isSuccess = false,
+                                    generalError = "Оголошення створено, але не всі фото вдалося завантажити"
+                                )
+                            }
+                        } else {
+                            _uiState.update { it.copy(isLoading = false, isSuccess = true) }
+                        }
                     }
                 }
                 is Resource.Error -> {
                     _uiState.update { it.copy(isLoading = false, generalError = result.message) }
                 }
             }
+
         }
     }
 }

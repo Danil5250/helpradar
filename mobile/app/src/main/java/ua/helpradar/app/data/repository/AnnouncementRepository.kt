@@ -128,6 +128,32 @@ class AnnouncementRepository(
         }
     }
 
+    suspend fun updateAnnouncement(
+        id: Int,
+        request: CreateAnnouncementRequest
+    ): Resource<CreateAnnouncementResponse> {
+        return try {
+            val response = api.updateAnnouncement(id, request)
+            if (response.isSuccessful && response.body() != null) {
+                Resource.Success(response.body()!!)
+            } else {
+                val serverMessage = try {
+                    val errorJson = response.errorBody()?.string()
+                    if (!errorJson.isNullOrBlank()) {
+                        val jsonObj = org.json.JSONObject(errorJson)
+                        jsonObj.optString("message").ifEmpty { null }
+                    } else null
+                } catch (_: Exception) {
+                    null
+                }
+                val finalErrorMessage = serverMessage ?: "Помилка редагування оголошення: ${response.code()}"
+                Resource.Error(finalErrorMessage, response.code())
+            }
+        } catch (e: Exception) {
+            Resource.Error(e.localizedMessage ?: "Помилка зв'язку із сервером")
+        }
+    }
+
     suspend fun closeAnnouncement(id: Int): Resource<Unit> {
         return try {
             val response = api.closeAnnouncement(id)

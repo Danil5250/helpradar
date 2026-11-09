@@ -17,6 +17,7 @@ import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Menu
@@ -51,6 +52,7 @@ fun FeedScreen(
     onCreateRequestClick: () -> Unit,
     onProfileClick: () -> Unit,
     onSignOutClick: () -> Unit = {},
+    onEditClick: (AnnouncementItem) -> Unit = {},
     viewModel: FeedViewModel = viewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -462,7 +464,8 @@ fun FeedScreen(
                                 AnnouncementCard(
                                     item = item,
                                     isMyAnnouncement = state.onlyMyAnnouncements || (item.authorId != null && item.authorId == SessionManager.currentUserId),
-                                    onCloseClick = { viewModel.onCloseAnnouncement(item.id) }
+                                    onCloseClick = { viewModel.onCloseAnnouncement(item.id) },
+                                    onEditClick = onEditClick
                                 )
                             }
                         }
@@ -511,7 +514,8 @@ private fun DrawerItem(
 fun AnnouncementCard(
     item: AnnouncementItem,
     isMyAnnouncement: Boolean = false,
-    onCloseClick: () -> Unit = {}
+    onCloseClick: () -> Unit = {},
+    onEditClick: (AnnouncementItem) -> Unit = {}
 ) {
     val isOffer = item.type == AnnouncementType.OFFER
     val context = LocalContext.current
@@ -779,17 +783,30 @@ fun AnnouncementCard(
                         )
                     }
                 } else if (isMyAnnouncement) {
-                    // Якщо це моє оголошення — кнопка закриття (SCRUM-24)
+                    // Кнопка редагування (SCRUM-24)
+                    OutlinedButton(
+                        onClick = { onEditClick(item) },
+                        shape = RoundedCornerShape(10.dp),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, OliveGreen),
+                        colors = ButtonDefaults.outlinedButtonColors(containerColor = Color.White.copy(alpha = 0.8f)),
+                        contentPadding = PaddingValues(0.dp),
+                        modifier = Modifier.size(44.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = "Редагувати",
+                            tint = OliveGreen,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+
+                    // Кнопка закриття (Status Management)
                     OutlinedButton(
                         onClick = { showConfirmDialog = true },
                         shape = RoundedCornerShape(10.dp),
                         border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.error),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            containerColor = Color.White.copy(alpha = 0.8f)
-                        ),
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(44.dp)
+                        colors = ButtonDefaults.outlinedButtonColors(containerColor = Color.White.copy(alpha = 0.8f)),
+                        modifier = Modifier.weight(1f).height(44.dp)
                     ) {
                         Text(
                             text = "Позначити як виконане",
