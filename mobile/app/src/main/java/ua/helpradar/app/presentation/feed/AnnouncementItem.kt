@@ -22,7 +22,8 @@ data class AnnouncementItem(
     val authorRating: Double,
     val isUrgent: Boolean = false,
     val createdDateFormatted: String? = null,
-    val expiryDateFormatted: String? = null
+    val expiryDateFormatted: String? = null,
+    val status: String? = "Активно", // FIXME[?]: винести у strings.xml захардкоджені стрінги
 )
 
 // Допоміжний метод для форматування ISO-дати бекенду ("2026-11-08T14:30:00Z" -> "08.11.2026")

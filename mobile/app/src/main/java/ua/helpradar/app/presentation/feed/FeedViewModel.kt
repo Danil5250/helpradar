@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import ua.helpradar.app.data.local.SessionManager
+import ua.helpradar.app.data.network.ApiClient
 import ua.helpradar.app.data.network.Resource
 import ua.helpradar.app.data.network.dto.CategoryDto
 import ua.helpradar.app.data.repository.AnnouncementRepository
@@ -131,5 +132,19 @@ class FeedViewModel(
         loadFeed() // Перезавантажуємо відповідне джерело
     }
 
+    fun onCloseAnnouncement(id: Int) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true) }
+            when (val result = repository.closeAnnouncement(id)) {
+                is Resource.Success -> {
+                    // Перезавантажуємо список після успішного закриття
+                    loadFeed()
+                }
+                is Resource.Error -> {
+                    _uiState.update { it.copy(isLoading = false, errorMessage = result.message) }
+                }
+            }
+        }
+    }
 
 }

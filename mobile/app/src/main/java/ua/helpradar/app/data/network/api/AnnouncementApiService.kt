@@ -32,4 +32,7 @@ interface AnnouncementApiService {
         @Path("id") id: Int,
         @Part photo: MultipartBody.Part
     ): Response<PhotoUploadResponse>
+
+    @POST("api/announcements/{id}/close")
+    suspend fun closeAnnouncement(@Path("id") id: Int): Response<Unit>
 }

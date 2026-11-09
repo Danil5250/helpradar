@@ -29,7 +29,8 @@ data class AnnouncementApiItem(
     @SerializedName("createdAt") val createdAt: String? = null,
     @SerializedName("expiresAt") val expiresAt: String? = null,
     @SerializedName("distanceKm") val distanceKm: Double? = null,
-    @SerializedName("author") val author: AuthorDto? = null
+    @SerializedName("author") val author: AuthorDto? = null,
+    @SerializedName("status") val status: String? = "Active"
 )
 
 data class AnnouncementListResponse(
