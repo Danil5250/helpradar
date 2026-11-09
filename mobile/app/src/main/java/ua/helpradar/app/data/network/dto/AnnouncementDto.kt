@@ -29,7 +29,8 @@ data class AnnouncementApiItem(
     @SerializedName("createdAt") val createdAt: String? = null,
     @SerializedName("expiresAt") val expiresAt: String? = null,
     @SerializedName("distanceKm") val distanceKm: Double? = null,
-    @SerializedName("author") val author: AuthorDto? = null
+    @SerializedName("author") val author: AuthorDto? = null,
+    @SerializedName("approxLocation") val approxLocation: ApproxLocationDto? = null
 )
 
 data class AnnouncementListResponse(
@@ -67,4 +68,9 @@ data class PhotoDto(
 
 data class PhotoUploadResponse(
     @SerializedName("photo") val photo: PhotoDto
+)
+
+data class ApproxLocationDto(
+    @SerializedName("latitude") val latitude: Double,
+    @SerializedName("longitude") val longitude: Double
 )

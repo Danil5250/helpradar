@@ -55,7 +55,9 @@ class AnnouncementRepository(
                         authorRating = dto.author?.rating ?: 5.0,
                         isUrgent = dto.isUrgent,
                         createdDateFormatted = formatIsoDate(dto.createdAt ?: dto.datePosted),
-                        expiryDateFormatted = formatIsoDate(dto.expiresAt)
+                        expiryDateFormatted = formatIsoDate(dto.expiresAt),
+                        latitude = dto.approxLocation?.latitude,
+                        longitude = dto.approxLocation?.longitude
                     )
                 }
                 Resource.Success(items)
