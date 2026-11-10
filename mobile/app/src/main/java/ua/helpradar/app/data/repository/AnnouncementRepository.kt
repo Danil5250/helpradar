@@ -130,6 +130,20 @@ class AnnouncementRepository(
         }
     }
 
+    suspend fun getAnnouncementDetails(id: Int): Resource<AnnouncementDetailsDto> {
+        return try {
+            val response = api.getAnnouncementDetails(id)
+            val body = response.body()
+            if (response.isSuccessful && body != null) {
+                Resource.Success(body.announcement)
+            } else {
+                Resource.Error("Не вдалося завантажити оголошення", response.code())
+            }
+        } catch (e: Exception) {
+            Resource.Error(e.localizedMessage ?: "Помилка зв'язку з сервером")
+        }
+    }
+
     suspend fun updateAnnouncement(
         id: Int,
         request: CreateAnnouncementRequest

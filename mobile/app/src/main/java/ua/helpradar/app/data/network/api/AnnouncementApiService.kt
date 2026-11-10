@@ -41,4 +41,9 @@ interface AnnouncementApiService {
 
     @POST("api/announcements/{id}/close")
     suspend fun closeAnnouncement(@Path("id") id: Int): Response<Unit>
+
+    @GET("api/announcements/{id}")
+    suspend fun getAnnouncementDetails(
+        @Path("id") id: Int
+    ): Response<GetAnnouncementResponseDto>
 }

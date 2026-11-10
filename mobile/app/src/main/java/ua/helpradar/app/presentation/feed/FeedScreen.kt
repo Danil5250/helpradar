@@ -33,6 +33,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -40,6 +41,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
 import kotlinx.coroutines.launch
 import ua.helpradar.app.R
 import ua.helpradar.app.data.local.SessionManager
@@ -53,6 +55,7 @@ fun FeedScreen(
     onProfileClick: () -> Unit,
     onMapClick: () -> Unit = {},
     onSignOutClick: () -> Unit = {},
+    onAnnouncementClick: (Int) -> Unit = {},
     onEditClick: (AnnouncementItem) -> Unit = {},
     viewModel: FeedViewModel = viewModel()
 ) {
@@ -61,14 +64,21 @@ fun FeedScreen(
     val coroutineScope = rememberCoroutineScope()
     var selectedDrawerItem by remember { mutableStateOf("Announcements") }
 
-    // Динамічна літера для аватара замість статичної "Д"
-    val avatarLetter = remember(SessionManager.currentUserName) {
-        val name = SessionManager.currentUserName.trim()
+    val avatarLetter = remember(state.userName) {
+        val name = state.userName.trim()
         if (name.isNotEmpty()) {
             name.first().uppercaseChar().toString()
         } else {
             "U"
         }
+    }
+
+    // Обчислюємо URL на основі стану ViewState, який автоматично оновить UI
+    val fullAvatarUrl = remember(state.userAvatarUrl) {
+        val raw = state.userAvatarUrl?.trim()
+        if (!raw.isNullOrBlank() && !raw.contains("default")) {
+            if (raw.startsWith("http")) raw else "http://10.0.2.2:3000$raw"
+        } else null
     }
 
     ModalNavigationDrawer(
@@ -81,6 +91,7 @@ fun FeedScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .statusBarsPadding()
                         .padding(horizontal = 16.dp, vertical = 14.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
@@ -101,26 +112,15 @@ fun FeedScreen(
                             .clip(RoundedCornerShape(10.dp))
                     )
 
-                    // Аватар у бічній шторці (при клац переходить до профілю)
-                    Box(
-                        modifier = Modifier
-                            .size(36.dp)
-                            .clip(CircleShape)
-                            .background(TacticalOlive.copy(alpha = 0.5f))
-                            .clickable {
-                                coroutineScope.launch { drawerState.close() }
-                                onProfileClick()
-                            },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = avatarLetter,
-                            fontFamily = Montserrat,
-                            fontWeight = FontWeight.Bold,
-                            color = CharcoalDark,
-                            fontSize = 15.sp
-                        )
-                    }
+                    // Аватар у бічній шторці
+                    UserAvatarBadge(
+                        avatarUrl = fullAvatarUrl,
+                        fallbackLetter = avatarLetter,
+                        onClick = {
+                            coroutineScope.launch { drawerState.close() }
+                            onProfileClick()
+                        }
+                    )
                 }
 
                 HorizontalDivider(color = BorderSand.copy(alpha = 0.5f), thickness = 1.dp)
@@ -241,23 +241,12 @@ fun FeedScreen(
                                 )
                             }
 
-                            // Аватар у правому верхньому кутку
-                            Box(
-                                modifier = Modifier
-                                    .size(36.dp)
-                                    .clip(CircleShape)
-                                    .background(TacticalOlive.copy(alpha = 0.5f))
-                                    .clickable { onProfileClick() },
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = avatarLetter,
-                                    fontFamily = Montserrat,
-                                    fontWeight = FontWeight.Bold,
-                                    color = CharcoalDark,
-                                    fontSize = 15.sp
-                                )
-                            }
+                            // Аватар у правому верхньому кутку панелі
+                            UserAvatarBadge(
+                                avatarUrl = fullAvatarUrl,
+                                fallbackLetter = avatarLetter,
+                                onClick = onProfileClick
+                            )
                         }
 
                         HorizontalDivider(color = BorderSand.copy(alpha = 0.6f), thickness = 1.dp)
@@ -429,7 +418,7 @@ fun FeedScreen(
                     }
                 }
 
-                // Відображення контенту
+                // Відображення списку оголошень
                 when {
                     state.isLoading -> {
                         Box(
@@ -467,13 +456,53 @@ fun FeedScreen(
                                     item = item,
                                     isMyAnnouncement = state.onlyMyAnnouncements || (item.authorId != null && item.authorId == SessionManager.currentUserId),
                                     onCloseClick = { viewModel.onCloseAnnouncement(item.id) },
-                                    onEditClick = onEditClick
+                                    onEditClick = onEditClick,
+                                    onCardClick = { onAnnouncementClick(item.id) }
                                 )
                             }
                         }
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun UserAvatarBadge(
+    avatarUrl: String?,
+    fallbackLetter: String,
+    onClick: () -> Unit
+) {
+    var isLoaded by remember(avatarUrl) { mutableStateOf(false) }
+
+    Box(
+        modifier = Modifier
+            .size(36.dp)
+            .clip(CircleShape)
+            .background(TacticalOlive.copy(alpha = 0.5f))
+            .clickable { onClick() },
+        contentAlignment = Alignment.Center
+    ) {
+        if (!isLoaded) {
+            Text(
+                text = fallbackLetter,
+                fontFamily = Montserrat,
+                fontWeight = FontWeight.Bold,
+                color = CharcoalDark,
+                fontSize = 15.sp
+            )
+        }
+
+        if (avatarUrl != null) {
+            AsyncImage(
+                model = avatarUrl,
+                contentDescription = "Аватар",
+                contentScale = ContentScale.Crop,
+                onSuccess = { isLoaded = true },
+                onError = { isLoaded = false },
+                modifier = Modifier.fillMaxSize()
+            )
         }
     }
 }
@@ -517,7 +546,8 @@ fun AnnouncementCard(
     item: AnnouncementItem,
     isMyAnnouncement: Boolean = false,
     onCloseClick: () -> Unit = {},
-    onEditClick: (AnnouncementItem) -> Unit = {}
+    onEditClick: (AnnouncementItem) -> Unit = {},
+    onCardClick: () -> Unit = {}
 ) {
     val isOffer = item.type == AnnouncementType.OFFER
     val context = LocalContext.current
@@ -528,7 +558,6 @@ fun AnnouncementCard(
     val isClosed = item.status?.equals("Closed", ignoreCase = true) == true
     var showConfirmDialog by remember { mutableStateOf(false) }
 
-    // Діалог підтвердження зміни статусу (SRS 3.2.5.3)
     if (showConfirmDialog) {
         AlertDialog(
             onDismissRequest = { showConfirmDialog = false },
@@ -565,12 +594,12 @@ fun AnnouncementCard(
         modifier = Modifier
             .fillMaxWidth()
             .border(width = 1.dp, color = cardBorderColor, shape = RoundedCornerShape(14.dp))
+            .clickable { onCardClick() }
     ) {
         Column(
             modifier = Modifier.padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            // Верхній рядок: Тип, Категорія, Терміновість
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -637,7 +666,6 @@ fun AnnouncementCard(
                 }
             }
 
-            // Заголовок
             Text(
                 text = item.title,
                 fontFamily = KharkivTone,
@@ -648,7 +676,6 @@ fun AnnouncementCard(
                 overflow = TextOverflow.Ellipsis
             )
 
-            // Опис
             Text(
                 text = item.description,
                 fontFamily = Montserrat,
@@ -658,7 +685,6 @@ fun AnnouncementCard(
                 overflow = TextOverflow.Ellipsis
             )
 
-            // Блок дат створення та закінчення строку
             if (item.createdDateFormatted != null || item.expiryDateFormatted != null) {
                 Surface(
                     shape = RoundedCornerShape(8.dp),
@@ -714,7 +740,6 @@ fun AnnouncementCard(
 
             HorizontalDivider(color = BorderSand.copy(alpha = 0.6f), thickness = 1.dp)
 
-            // Нижня частина
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -766,9 +791,7 @@ fun AnnouncementCard(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Головна кнопка дії з підтримкою статус менеджменту
                 if (isClosed) {
-                    // Якщо вже закрито
                     OutlinedButton(
                         onClick = { },
                         enabled = false,
@@ -785,7 +808,6 @@ fun AnnouncementCard(
                         )
                     }
                 } else if (isMyAnnouncement) {
-                    // Кнопка редагування (SCRUM-24)
                     OutlinedButton(
                         onClick = { onEditClick(item) },
                         shape = RoundedCornerShape(10.dp),
@@ -802,7 +824,6 @@ fun AnnouncementCard(
                         )
                     }
 
-                    // Кнопка закриття (Status Management)
                     OutlinedButton(
                         onClick = { showConfirmDialog = true },
                         shape = RoundedCornerShape(10.dp),
@@ -819,9 +840,8 @@ fun AnnouncementCard(
                         )
                     }
                 } else {
-                    // Звичайна кнопка для чужого оголошення
                     Button(
-                        onClick = { },
+                        onClick = { onCardClick() },
                         colors = ButtonDefaults.buttonColors(
                             containerColor = if (isOffer) DeepSage else OliveGreen
                         ),
@@ -840,7 +860,6 @@ fun AnnouncementCard(
                     }
                 }
 
-                // Кнопка нативного поширення (SRS 3.2.24)
                 OutlinedButton(
                     onClick = {
                         shareAnnouncement(context, item)

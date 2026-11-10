@@ -20,10 +20,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.SubcomposeAsyncImage
 import ua.helpradar.app.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -38,6 +40,14 @@ fun ProfileScreen(
     val initialLetter = remember(profile?.firstName, profile?.email) {
         val source = profile?.firstName?.ifBlank { null } ?: profile?.email.orEmpty()
         source.firstOrNull()?.uppercaseChar()?.toString() ?: "U"
+    }
+
+    // Підготовка повного URL аватара
+    val fullAvatarUrl = remember(profile?.avatarUrl) {
+        val raw = profile?.avatarUrl?.trim()
+        if (!raw.isNullOrBlank() && !raw.contains("default")) {
+            if (raw.startsWith("http")) raw else "http://10.0.2.2:3000$raw"
+        } else null
     }
 
     Scaffold(
@@ -91,7 +101,8 @@ fun ProfileScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Динамічний круглий аватар
+                // Аватар профілю: завантажене фото або фолбек на літеру
+                // Динамічний круглий аватар (ідеальне центрування)
                 Box(
                     modifier = Modifier
                         .size(88.dp)
@@ -99,13 +110,47 @@ fun ProfileScreen(
                         .background(TacticalOlive),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = initialLetter,
-                        fontFamily = Montserrat,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White,
-                        fontSize = 36.sp
-                    )
+                    if (fullAvatarUrl != null) {
+                        SubcomposeAsyncImage(
+                            model = fullAvatarUrl,
+                            contentDescription = "Аватар користувача",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize(),
+                            error = {
+                                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                    Text(
+                                        text = initialLetter,
+                                        fontFamily = Montserrat,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.White,
+                                        fontSize = 36.sp,
+                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                    )
+                                }
+                            },
+                            loading = {
+                                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                    Text(
+                                        text = initialLetter,
+                                        fontFamily = Montserrat,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.White,
+                                        fontSize = 36.sp,
+                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                    )
+                                }
+                            }
+                        )
+                    } else {
+                        Text(
+                            text = initialLetter,
+                            fontFamily = Montserrat,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White,
+                            fontSize = 36.sp,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        )
+                    }
                 }
 
                 Text(
@@ -163,7 +208,6 @@ fun ProfileScreen(
                 }
 
                 if (!state.isEditing) {
-                    // Режим перегляду
                     Card(
                         shape = RoundedCornerShape(14.dp),
                         colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.85f)),
@@ -213,7 +257,6 @@ fun ProfileScreen(
                         Text("Редагувати профіль", fontFamily = Montserrat, fontWeight = FontWeight.Bold, color = Color.White)
                     }
                 } else {
-                    // Режим редагування (ПІБ, телефон, місто, опис)
                     Card(
                         shape = RoundedCornerShape(14.dp),
                         colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.9f)),
