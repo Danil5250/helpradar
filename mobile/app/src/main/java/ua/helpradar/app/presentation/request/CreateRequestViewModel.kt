@@ -43,18 +43,6 @@ class CreateRequestViewModel(
 
     init {
         loadCategories()
-
-        itemToEdit?.let { item ->
-            setEditMode(
-                id = item.id,
-                title = item.title,
-                description = item.description,
-                location = "Марганець", // FIXME: я хз що сюди передавати
-                categoryName = item.categoryName, // FIXME: не з'являється
-                isUrgent = item.isUrgent
-            )
-            itemToEdit = null // очищаємо тимчасову змінну
-        }
     }
 
     fun setEditMode(
@@ -88,11 +76,23 @@ class CreateRequestViewModel(
             _uiState.update { it.copy(isCategoriesLoading = true) }
             when (val result = repository.getCategories()) {
                 is Resource.Success -> {
+                    val loadedCategories = result.data
                     _uiState.update {
                         it.copy(
-                            categories = result.data,
+                            categories = loadedCategories,
                             isCategoriesLoading = false
                         )
+                    }
+                    itemToEdit?.let { item ->
+                        setEditMode(
+                            id = item.id,
+                            title = item.title,
+                            description = item.description,
+                            location = "Марганець", // FIXME: item.address
+                            categoryName = item.categoryName,
+                            isUrgent = item.isUrgent
+                        )
+                        itemToEdit = null // очищаємо
                     }
                 }
                 is Resource.Error -> {
