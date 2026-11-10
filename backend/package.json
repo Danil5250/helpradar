@@ -26,7 +26,10 @@
     "migration:generate": "npm run build && typeorm migration:generate -d dist/config/data-source.js",
     "test:watch": "node --experimental-vm-modules node_modules/jest/bin/jest.js --watch",
     "test:ci": "node --experimental-vm-modules node_modules/jest/bin/jest.js --ci --runInBand",
-    "test:typecheck": "tsc --project test/tsconfig-unit.json"
+    "test:typecheck": "tsc --project test/tsconfig-unit.json",
+    "lint:eslint": "eslint . --max-warnings=0",
+    "format:check": "prettier --check .",
+    "test:integration": "npm run test:help"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1158.0",
@@ -51,6 +54,7 @@
     "typeorm": "^1.1.2"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@nestjs/cli": "^12.0.0",
     "@nestjs/mau": "^0.2.6",
     "@nestjs/schematics": "^12.0.0",
@@ -60,9 +64,12 @@
     "@types/express": "^5.0.0",
     "@types/jest": "^30.0.0",
     "@types/multer": "^2.3.0",
-    "@types/node": "^24.0.0",
+    "@types/node": "^26.6.6",
     "@types/nodemailer": "^8.0.2",
     "@types/supertest": "^7.0.0",
+    "eslint": "^10.14.0",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^17.14.0",
     "jest": "^30.0.0",
     "oxlint": "^1.58.0",
     "oxlint-tsgolint": "^7.0.2001",
@@ -73,6 +80,10 @@
     "ts-loader": "^9.5.2",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
-    "typescript": "^6.0.2"
+    "typescript": "^6.0.2",
+    "typescript-eslint": "^8.72.2"
+  },
+  "engines": {
+    "node": "26.x"
   }
 }
