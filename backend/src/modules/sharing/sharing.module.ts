@@ -7,7 +7,10 @@ import { SharingController } from './sharing.controller';
 import { SharingService } from './sharing.service';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Announcement, AnnouncementShare]), AuthModule],
+  imports: [
+    TypeOrmModule.forFeature([Announcement, AnnouncementShare]),
+    AuthModule,
+  ],
   controllers: [SharingController],
   providers: [SharingService],
 })

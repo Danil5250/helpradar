@@ -1,12 +1,25 @@
 const { describe, it, before, after } = require('node:test');
 const assert = require('node:assert/strict');
 const { randomBytes } = require('node:crypto');
+const { mkdtemp, rm } = require('node:fs/promises');
+const { tmpdir } = require('node:os');
+const { join } = require('node:path');
 const { Client } = require('pg');
 const bcrypt = require('bcryptjs');
-const { NestFactory } = require('@nestjs/core');
+const { Test } = require('@nestjs/testing');
 const { DataSource } = require('typeorm');
 const { loadAppConfig, isLocalHost } = require('../dist/config/app.config');
 const { configureApp } = require('../dist/app.setup');
+const {
+  AlignHelpResponseStatuses1794100004000,
+} = require('../dist/migrations/1794100004000-AlignHelpResponseStatuses');
+const {
+  FileStorage,
+  LocalFileStorage,
+} = require('../dist/modules/storage/file-storage');
+const {
+  GeocodingProvider,
+} = require('../dist/modules/geocoding/geocoding.provider');
 const { User } = require('../dist/modules/users/entities/user.entity');
 const {
   Volunteer,
@@ -21,7 +34,7 @@ const {
 void describe('Help workflow with real HTTP, sessions, PostgreSQL and migrations', () => {
   const config = loadAppConfig();
   const database = `helpradar_help_test_${randomBytes(6).toString('hex')}`;
-  let app, admin, db, base;
+  let app, admin, db, base, storageDir;
   const actors = {};
 
   async function api(actor, path, method = 'GET', body) {
@@ -73,8 +86,15 @@ void describe('Help workflow with real HTTP, sessions, PostgreSQL and migrations
         AUTH_RATE_LIMIT_PER_MINUTE: '10000',
         RATE_LIMIT_PER_MINUTE: '10000',
       });
+      storageDir = await mkdtemp(join(tmpdir(), 'helpradar-integration-'));
       const { AppModule } = require('../dist/app.module');
-      app = await NestFactory.create(AppModule, { logger: false });
+      const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
+        .overrideProvider(FileStorage)
+        .useValue(new LocalFileStorage(storageDir))
+        .overrideProvider(GeocodingProvider)
+        .useValue({ search: async () => [], reverse: async () => null })
+        .compile();
+      app = moduleRef.createNestApplication({ logger: false });
       configureApp(app, loadAppConfig());
       await app.listen(0, '127.0.0.1');
       base = await app.getUrl();
@@ -116,10 +136,22 @@ void describe('Help workflow with real HTTP, sessions, PostgreSQL and migrations
   );
 
   after(async () => {
-    if (app) await app.close();
-    if (admin) {
-      await admin.query(`DROP DATABASE IF EXISTS "${database}" WITH (FORCE)`);
-      await admin.end();
+    try {
+      if (app) await app.close();
+    } finally {
+      try {
+        if (admin) {
+          try {
+            await admin.query(
+              `DROP DATABASE IF EXISTS "${database}" WITH (FORCE)`,
+            );
+          } finally {
+            await admin.end();
+          }
+        }
+      } finally {
+        if (storageDir) await rm(storageDir, { recursive: true, force: true });
+      }
     }
   });
 
@@ -306,7 +338,10 @@ void describe('Help workflow with real HTTP, sessions, PostgreSQL and migrations
         api(actors.requester, `/help/${row.body.id}/accept`, 'POST'),
       ),
     );
-    assert.deepEqual(results.map((result) => result.status).sort((a, b) => a - b), [200, 409]);
+    assert.deepEqual(
+      results.map((result) => result.status).sort((a, b) => a - b),
+      [200, 409],
+    );
     const overview = await api(
       actors.requester,
       `/announcements/${request.id}/help`,
@@ -317,7 +352,7 @@ void describe('Help workflow with real HTTP, sessions, PostgreSQL and migrations
       1,
     );
     assert.equal(
-      overview.body.connections.filter((row) => row.status === 'Declined')
+      overview.body.connections.filter((row) => row.status === 'Rejected')
         .length,
       1,
     );
@@ -333,7 +368,7 @@ void describe('Help workflow with real HTTP, sessions, PostgreSQL and migrations
     assert.equal(
       (await api(actors.volunteer, `/help/${sent.body.id}/withdraw`, 'POST'))
         .body.status,
-      'Withdrawn',
+      'Rejected',
     );
     sent = await api(
       actors.volunteer,
@@ -343,7 +378,7 @@ void describe('Help workflow with real HTTP, sessions, PostgreSQL and migrations
     assert.equal(
       (await api(actors.requester, `/help/${sent.body.id}/decline`, 'POST'))
         .body.status,
-      'Declined',
+      'Rejected',
     );
     sent = await api(
       actors.volunteer,
@@ -388,5 +423,38 @@ void describe('Help workflow with real HTTP, sessions, PostgreSQL and migrations
       ).status,
       409,
     );
+  });
+
+  void it('migrates legacy rejection states while preserving response rows', async () => {
+    const rows = await db.query(
+      `SELECT id FROM help_responses WHERE status = 'Rejected' ORDER BY id LIMIT 2`,
+    );
+    assert.equal(rows.length, 2);
+    const runner = db.createQueryRunner();
+    await runner.connect();
+    try {
+      await runner.startTransaction();
+      const migration = new AlignHelpResponseStatuses1794100004000();
+      await migration.down(runner);
+      await runner.query(
+        `UPDATE help_responses SET status = 'Withdrawn' WHERE id = $1`,
+        [rows[0].id],
+      );
+      await migration.up(runner);
+      const upgraded = await runner.query(
+        `SELECT id, status FROM help_responses WHERE id = ANY($1::int[]) ORDER BY id`,
+        [rows.map((row) => row.id)],
+      );
+      assert.deepEqual(
+        upgraded,
+        rows.map((row) => ({ id: row.id, status: 'Rejected' })),
+      );
+    } finally {
+      try {
+        if (runner.isTransactionActive) await runner.rollbackTransaction();
+      } finally {
+        await runner.release();
+      }
+    }
   });
 });
