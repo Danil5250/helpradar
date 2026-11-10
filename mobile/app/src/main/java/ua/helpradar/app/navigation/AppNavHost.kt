@@ -11,6 +11,7 @@ import ua.helpradar.app.presentation.auth.ForgotPasswordScreen
 import ua.helpradar.app.presentation.auth.LoginScreen
 import ua.helpradar.app.presentation.auth.RegisterScreen
 import ua.helpradar.app.presentation.feed.FeedScreen
+import ua.helpradar.app.presentation.map.MapScreen
 import ua.helpradar.app.presentation.profile.ProfileScreen
 import ua.helpradar.app.presentation.request.CreateRequestScreen
 import ua.helpradar.app.presentation.splash.SplashScreen
@@ -95,7 +96,8 @@ fun AppNavHost(
                     navController.navigate(Screen.Login.route) {
                         popUpTo(0) { inclusive = true }
                     }
-                }
+                },
+                onMapClick = { navController.navigate("map") }
             )
         }
 
@@ -116,6 +118,15 @@ fun AppNavHost(
             ProfileScreen(
                 onNavigateBack = {
                     navController.popBackStack()
+                }
+            )
+        }
+
+        composable("map") {
+            MapScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onAnnouncementClick = { announcementId ->
+                    // перехід до деталей оголошення
                 }
             )
         }

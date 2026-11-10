@@ -51,6 +51,7 @@ import ua.helpradar.app.util.ShareUtils.shareAnnouncement
 fun FeedScreen(
     onCreateRequestClick: () -> Unit,
     onProfileClick: () -> Unit,
+    onMapClick: () -> Unit = {},
     onSignOutClick: () -> Unit = {},
     onEditClick: (AnnouncementItem) -> Unit = {},
     viewModel: FeedViewModel = viewModel()
@@ -139,6 +140,7 @@ fun FeedScreen(
                         onClick = {
                             selectedDrawerItem = "Map"
                             coroutineScope.launch { drawerState.close() }
+                            onMapClick()
                         }
                     )
 

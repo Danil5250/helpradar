@@ -56,7 +56,9 @@ class AnnouncementRepository(
                         isUrgent = dto.isUrgent,
                         createdDateFormatted = formatIsoDate(dto.createdAt ?: dto.datePosted),
                         expiryDateFormatted = formatIsoDate(dto.expiresAt),
-                        status = dto.status ?: "Активно"
+                        status = dto.status ?: "Активно",
+                        latitude = dto.approxLocation?.latitude,
+                        longitude = dto.approxLocation?.longitude
                     )
                 }
                 Resource.Success(items)
