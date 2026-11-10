@@ -14,7 +14,9 @@ export class CategoriesService implements OnModuleInit {
   async onModuleInit(): Promise<void> {
     await this.categories.manager.transaction(async (manager) => {
       // prevent concurrent starts from seeding the same empty table.
-      await manager.query('LOCK TABLE "categories" IN SHARE ROW EXCLUSIVE MODE');
+      await manager.query(
+        'LOCK TABLE "categories" IN SHARE ROW EXCLUSIVE MODE',
+      );
       if (await manager.exists(Category)) return;
       await manager.insert(
         Category,

@@ -104,7 +104,7 @@ export class ProfileService {
       dto.email !== undefined ? normalizeEmail(dto.email) : undefined;
     const locale: MailLocale = dto.locale ?? 'uk';
 
-    let outboxId: string | null = null;
+    let outboxId: string | null;
     try {
       outboxId = await this.dataSource.transaction(async (manager) => {
         const user = await manager.findOne(User, {
