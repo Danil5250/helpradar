@@ -84,6 +84,10 @@ fun AppNavHost(
                 onCreateRequestClick = {
                     navController.navigate(Screen.CreateRequest.route)
                 },
+                onEditClick = { item ->
+                    ua.helpradar.app.presentation.request.CreateRequestViewModel.itemToEdit = item
+                    navController.navigate(Screen.CreateRequest.route)
+                },
                 onProfileClick = {
                     navController.navigate(Screen.Profile.route)
                 },

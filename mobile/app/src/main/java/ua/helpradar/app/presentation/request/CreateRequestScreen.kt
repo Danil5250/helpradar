@@ -77,10 +77,16 @@ fun CreateRequestScreen(
     Scaffold(
         containerColor = DesertSand,
         topBar = {
+            val isEdit = state.editingAnnouncementId != null
+
             TopAppBar(
                 title = {
                     Text(
-                        text = if (isVolunteer) "Створити пропозицію допомоги" else "Створити запит про допомогу",
+                        text = when {
+                            isEdit -> "Редагувати оголошення"
+                            isVolunteer -> "Створити пропозицію допомоги"
+                            else -> "Створити запит про допомогу"
+                        },
                         color = CharcoalDark,
                         fontWeight = FontWeight.Bold,
                         fontSize = 20.sp
@@ -442,8 +448,13 @@ fun CreateRequestScreen(
                 if (state.isLoading) {
                     CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
                 } else {
+                    val isEdit = state.editingAnnouncementId != null
                     Text(
-                        text = if (isVolunteer) "Опублікувати пропозицію" else "Опублікувати запит",
+                        text = when {
+                            isEdit -> "Зберегти зміни"
+                            isVolunteer -> "Опублікувати пропозицію"
+                            else -> "Опублікувати запит"
+                        },
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold
                     )

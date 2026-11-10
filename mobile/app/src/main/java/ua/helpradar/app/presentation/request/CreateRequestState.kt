@@ -4,6 +4,7 @@ import android.net.Uri
 import ua.helpradar.app.data.network.dto.CategoryDto
 
 data class CreateRequestFormState(
+        val editingAnnouncementId: Int? = null,
         val title: String = "",
         val description: String = "",
         val location: String = "",

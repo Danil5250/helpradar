@@ -20,9 +20,10 @@ data class AnnouncementItem(
     val authorId: Int?,
     val authorName: String,
     val authorRating: Double,
-    val isUrgent: Boolean,
-    val createdDateFormatted: String?,
-    val expiryDateFormatted: String?,
+    val isUrgent: Boolean = false,
+    val createdDateFormatted: String? = null,
+    val expiryDateFormatted: String? = null,
+    val status: String? = "Active", // FIXME[?]: винести у strings.xml захардкоджені стрінги
     val latitude: Double? = null,
     val longitude: Double? = null
 )

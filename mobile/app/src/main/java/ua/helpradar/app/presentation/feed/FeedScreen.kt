@@ -17,6 +17,7 @@ import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Menu
@@ -52,6 +53,7 @@ fun FeedScreen(
     onProfileClick: () -> Unit,
     onMapClick: () -> Unit = {},
     onSignOutClick: () -> Unit = {},
+    onEditClick: (AnnouncementItem) -> Unit = {},
     viewModel: FeedViewModel = viewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -99,7 +101,7 @@ fun FeedScreen(
                             .clip(RoundedCornerShape(10.dp))
                     )
 
-                    // Аватар у бічній шторці (при кліку переходить до профілю)
+                    // Аватар у бічній шторці (при клац переходить до профілю)
                     Box(
                         modifier = Modifier
                             .size(36.dp)
@@ -461,7 +463,12 @@ fun FeedScreen(
                             verticalArrangement = Arrangement.spacedBy(14.dp)
                         ) {
                             items(state.announcements, key = { it.id }) { item ->
-                                AnnouncementCard(item = item)
+                                AnnouncementCard(
+                                    item = item,
+                                    isMyAnnouncement = state.onlyMyAnnouncements || (item.authorId != null && item.authorId == SessionManager.currentUserId),
+                                    onCloseClick = { viewModel.onCloseAnnouncement(item.id) },
+                                    onEditClick = onEditClick
+                                )
                             }
                         }
                     }
@@ -506,12 +513,51 @@ private fun DrawerItem(
 }
 
 @Composable
-fun AnnouncementCard(item: AnnouncementItem) {
+fun AnnouncementCard(
+    item: AnnouncementItem,
+    isMyAnnouncement: Boolean = false,
+    onCloseClick: () -> Unit = {},
+    onEditClick: (AnnouncementItem) -> Unit = {}
+) {
     val isOffer = item.type == AnnouncementType.OFFER
     val context = LocalContext.current
 
     val cardBgColor = if (isOffer) SelectedRoleBg.copy(alpha = 0.9f) else Color.White.copy(alpha = 0.85f)
     val cardBorderColor = if (isOffer) OliveGreen.copy(alpha = 0.4f) else BorderSand
+
+    val isClosed = item.status?.equals("Closed", ignoreCase = true) == true
+    var showConfirmDialog by remember { mutableStateOf(false) }
+
+    // Діалог підтвердження зміни статусу (SRS 3.2.5.3)
+    if (showConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { showConfirmDialog = false },
+            title = {
+                Text("Закрити оголошення?", fontFamily = Montserrat, fontWeight = FontWeight.Bold)
+            },
+            text = {
+                Text("Оголошення отримає статус «Закрито» та зникне з активного пошуку.", fontFamily = Montserrat)
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showConfirmDialog = false
+                        onCloseClick()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Так, закрити", color = Color.White)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showConfirmDialog = false }) {
+                    Text("Скасувати", color = CharcoalDark)
+                }
+            },
+            containerColor = DesertSand,
+            shape = RoundedCornerShape(14.dp)
+        )
+    }
 
     Card(
         shape = RoundedCornerShape(14.dp),
@@ -720,24 +766,78 @@ fun AnnouncementCard(item: AnnouncementItem) {
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Головна кнопка
-                Button(
-                    onClick = { },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = if (isOffer) DeepSage else OliveGreen
-                    ),
-                    shape = RoundedCornerShape(10.dp),
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(44.dp)
-                ) {
-                    Text(
-                        text = if (isOffer) "Зв'язатися з волонтером" else "Допомогти",
-                        fontFamily = Montserrat,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp,
-                        color = Color.White
-                    )
+                // Головна кнопка дії з підтримкою статус менеджменту
+                if (isClosed) {
+                    // Якщо вже закрито
+                    OutlinedButton(
+                        onClick = { },
+                        enabled = false,
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(44.dp)
+                    ) {
+                        Text(
+                            text = "Оголошення завершено",
+                            fontFamily = Montserrat,
+                            fontSize = 13.sp,
+                            color = DeepSage
+                        )
+                    }
+                } else if (isMyAnnouncement) {
+                    // Кнопка редагування (SCRUM-24)
+                    OutlinedButton(
+                        onClick = { onEditClick(item) },
+                        shape = RoundedCornerShape(10.dp),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, OliveGreen),
+                        colors = ButtonDefaults.outlinedButtonColors(containerColor = Color.White.copy(alpha = 0.8f)),
+                        contentPadding = PaddingValues(0.dp),
+                        modifier = Modifier.size(44.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = "Редагувати",
+                            tint = OliveGreen,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+
+                    // Кнопка закриття (Status Management)
+                    OutlinedButton(
+                        onClick = { showConfirmDialog = true },
+                        shape = RoundedCornerShape(10.dp),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.error),
+                        colors = ButtonDefaults.outlinedButtonColors(containerColor = Color.White.copy(alpha = 0.8f)),
+                        modifier = Modifier.weight(1f).height(44.dp)
+                    ) {
+                        Text(
+                            text = "Позначити як виконане",
+                            fontFamily = Montserrat,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 13.sp,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                } else {
+                    // Звичайна кнопка для чужого оголошення
+                    Button(
+                        onClick = { },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (isOffer) DeepSage else OliveGreen
+                        ),
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(44.dp)
+                    ) {
+                        Text(
+                            text = if (isOffer) "Зв'язатися з волонтером" else "Допомогти",
+                            fontFamily = Montserrat,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp,
+                            color = Color.White
+                        )
+                    }
                 }
 
                 // Кнопка нативного поширення (SRS 3.2.24)

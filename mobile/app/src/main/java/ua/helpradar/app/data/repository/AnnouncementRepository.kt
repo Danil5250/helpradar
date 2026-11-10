@@ -56,6 +56,7 @@ class AnnouncementRepository(
                         isUrgent = dto.isUrgent,
                         createdDateFormatted = formatIsoDate(dto.createdAt ?: dto.datePosted),
                         expiryDateFormatted = formatIsoDate(dto.expiresAt),
+                        status = dto.status ?: "Активно",
                         latitude = dto.approxLocation?.latitude,
                         longitude = dto.approxLocation?.longitude
                     )
@@ -91,7 +92,8 @@ class AnnouncementRepository(
                         authorRating = dto.author?.rating ?: 5.0,
                         isUrgent = dto.isUrgent,
                         createdDateFormatted = formatIsoDate(dto.createdAt ?: dto.datePosted),
-                        expiryDateFormatted = formatIsoDate(dto.expiresAt)
+                        expiryDateFormatted = formatIsoDate(dto.expiresAt),
+                        status = dto.status ?: "Активно"
                     )
                 }
                 Resource.Success(items)
@@ -125,6 +127,56 @@ class AnnouncementRepository(
             }
         } catch (e: Exception) {
             Resource.Error(e.localizedMessage ?: "Помилка зв'язку із сервером")
+        }
+    }
+
+    suspend fun updateAnnouncement(
+        id: Int,
+        request: CreateAnnouncementRequest
+    ): Resource<CreateAnnouncementResponse> {
+        return try {
+            val response = api.updateAnnouncement(id, request)
+            if (response.isSuccessful && response.body() != null) {
+                Resource.Success(response.body()!!)
+            } else {
+                val serverMessage = try {
+                    val errorJson = response.errorBody()?.string()
+                    if (!errorJson.isNullOrBlank()) {
+                        val jsonObj = org.json.JSONObject(errorJson)
+                        jsonObj.optString("message").ifEmpty { null }
+                    } else null
+                } catch (_: Exception) {
+                    null
+                }
+                val finalErrorMessage = serverMessage ?: "Помилка редагування оголошення: ${response.code()}"
+                Resource.Error(finalErrorMessage, response.code())
+            }
+        } catch (e: Exception) {
+            Resource.Error(e.localizedMessage ?: "Помилка зв'язку із сервером")
+        }
+    }
+
+    suspend fun closeAnnouncement(id: Int): Resource<Unit> {
+        return try {
+            val response = api.closeAnnouncement(id)
+            if (response.isSuccessful) {
+                Resource.Success(Unit)
+            } else {
+                val serverMessage = try {
+                    val errorJson = response.errorBody()?.string()
+                    if (!errorJson.isNullOrBlank()) {
+                        val jsonObj = org.json.JSONObject(errorJson)
+                        jsonObj.optString("message").ifEmpty { null }
+                    } else null
+                } catch (_: Exception) {
+                    null
+                }
+
+                val finalErrorMessage = serverMessage ?: "Не вдалося закрити оголошення (${response.code()})"
+                Resource.Error(finalErrorMessage, response.code())
+            }
+        } catch (e: Exception) {
+            Resource.Error(e.localizedMessage ?: "Помилка зв'язку із сервером при закритті оголошення")
         }
     }
 

@@ -30,6 +30,7 @@ data class AnnouncementApiItem(
     @SerializedName("expiresAt") val expiresAt: String? = null,
     @SerializedName("distanceKm") val distanceKm: Double? = null,
     @SerializedName("author") val author: AuthorDto? = null,
+    @SerializedName("status") val status: String? = "Active",
     @SerializedName("approxLocation") val approxLocation: ApproxLocationDto? = null
 )
 
