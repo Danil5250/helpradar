@@ -47,11 +47,14 @@ export class S3FileStorage extends FileStorage {
           Key: key,
         }),
       );
-      
+
       const byteArray = await response.Body?.transformToByteArray();
       return byteArray ? Buffer.from(byteArray) : null;
     } catch (error: any) {
-      if (error.name === 'NoSuchKey' || error.$metadata?.httpStatusCode === 404) {
+      if (
+        error.name === 'NoSuchKey' ||
+        error.$metadata?.httpStatusCode === 404
+      ) {
         return null;
       }
       throw error;

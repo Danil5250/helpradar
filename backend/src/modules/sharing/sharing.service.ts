@@ -11,17 +11,24 @@ import { AnnouncementShare } from './entities/announcement-share.entity';
 @Injectable()
 export class SharingService {
   constructor(
-    @InjectRepository(Announcement) private readonly announcements: Repository<Announcement>,
-    @InjectRepository(AnnouncementShare) private readonly shares: Repository<AnnouncementShare>,
+    @InjectRepository(Announcement)
+    private readonly announcements: Repository<Announcement>,
+    @InjectRepository(AnnouncementShare)
+    private readonly shares: Repository<AnnouncementShare>,
   ) {}
 
   async record(id: number, channel: ShareChannel): Promise<void> {
     const announcement = await this.announcements.findOne({
-      where: { id }, relations: { user: true },
+      where: { id },
+      relations: { user: true },
     });
-    if (!announcement ||
-      [AnnouncementStatus.Hidden, AnnouncementStatus.Deleted].includes(announcement.status) ||
-      isBlocked(announcement.user)) {
+    if (
+      !announcement ||
+      [AnnouncementStatus.Hidden, AnnouncementStatus.Deleted].includes(
+        announcement.status,
+      ) ||
+      isBlocked(announcement.user)
+    ) {
       throw new AppException('ANNOUNCEMENT_UNAVAILABLE');
     }
     // count share intents; external services do not confirm delivery.
