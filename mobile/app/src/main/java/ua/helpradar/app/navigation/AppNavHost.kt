@@ -15,6 +15,9 @@ import ua.helpradar.app.presentation.map.MapScreen
 import ua.helpradar.app.presentation.profile.ProfileScreen
 import ua.helpradar.app.presentation.request.CreateRequestScreen
 import ua.helpradar.app.presentation.splash.SplashScreen
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
+import ua.helpradar.app.presentation.details.AnnouncementDetailsScreen
 
 @Composable
 fun AppNavHost(
@@ -97,7 +100,10 @@ fun AppNavHost(
                         popUpTo(0) { inclusive = true }
                     }
                 },
-                onMapClick = { navController.navigate("map") }
+                onMapClick = { navController.navigate("map") },
+                onAnnouncementClick = { id -> // <-- ОСЬ СЮДИ
+                    navController.navigate("announcement_details/$id")
+                }
             )
         }
 
@@ -126,8 +132,19 @@ fun AppNavHost(
             MapScreen(
                 onNavigateBack = { navController.popBackStack() },
                 onAnnouncementClick = { announcementId ->
-                    // перехід до деталей оголошення
+                    navController.navigate("announcement_details/$announcementId")
                 }
+            )
+        }
+
+        composable(
+            route = "announcement_details/{id}",
+            arguments = listOf(navArgument("id") { type = NavType.IntType })
+        ) { backStackEntry ->
+            val id = backStackEntry.arguments?.getInt("id") ?: 0
+            AnnouncementDetailsScreen(
+                announcementId = id,
+                onNavigateBack = { navController.popBackStack() }
             )
         }
     }

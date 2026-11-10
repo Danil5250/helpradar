@@ -8,10 +8,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import ua.helpradar.app.data.local.SessionManager
-import ua.helpradar.app.data.network.ApiClient
 import ua.helpradar.app.data.network.Resource
 import ua.helpradar.app.data.network.dto.CategoryDto
 import ua.helpradar.app.data.repository.AnnouncementRepository
+import ua.helpradar.app.data.repository.ProfileRepository
 
 data class FeedUiState(
     val searchQuery: String = "",
@@ -22,35 +22,53 @@ data class FeedUiState(
     val onlyMyAnnouncements: Boolean = false,
     val announcements: List<AnnouncementItem> = emptyList(),
     val isLoading: Boolean = false,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val userAvatarUrl: String? = SessionManager.currentUserAvatarUrl,
+    val userName: String = SessionManager.currentUserName
 )
 
 class FeedViewModel(
-    private val repository: AnnouncementRepository = AnnouncementRepository()
+    private val repository: AnnouncementRepository = AnnouncementRepository(),
+    private val profileRepository: ProfileRepository = ProfileRepository()
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(FeedUiState())
     val uiState: StateFlow<FeedUiState> = _uiState.asStateFlow()
 
-    // Зберігаємо сирі дані з бекенду для локальної фільтрації за категорією/пошуком
     private var rawBackendAnnouncements: List<AnnouncementItem> = emptyList()
 
     init {
         loadFeed()
         loadCategories()
+        syncUserProfile() // Фонове підтягування аватара та імені в SessionManager
+    }
+
+    private fun syncUserProfile() {
+        viewModelScope.launch {
+            when (val res = profileRepository.getProfile()) {
+                is Resource.Success -> {
+                    res.data?.let { profile ->
+                        _uiState.update {
+                            it.copy(
+                                userAvatarUrl = profile.avatarUrl,
+                                userName = "${profile.firstName} ${profile.lastName}".trim()
+                            )
+                        }
+                    }
+                }
+                else -> {}
+            }
+        }
     }
 
     fun loadFeed() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
-
-            // Якщо увімкнено "Мої оголошення" - звертаємося до getMyAnnouncements(), інакше до загального списку
             val result = if (_uiState.value.onlyMyAnnouncements) {
                 repository.getMyAnnouncements()
             } else {
                 repository.getAnnouncements()
             }
-
             when (result) {
                 is Resource.Success -> {
                     rawBackendAnnouncements = result.data
@@ -113,23 +131,20 @@ class FeedViewModel(
         val query = _uiState.value.searchQuery.trim().lowercase()
         val category = _uiState.value.selectedCategory
         val type = _uiState.value.selectedType
-
         val filtered = rawBackendAnnouncements.filter { item ->
             val matchesQuery = query.isEmpty() ||
                     item.title.lowercase().contains(query) ||
                     item.description.lowercase().contains(query)
             val matchesCategory = category == null || item.categoryName.equals(category, ignoreCase = true)
             val matchesType = type == null || item.type == type
-
             matchesQuery && matchesCategory && matchesType
         }
-
         _uiState.update { it.copy(announcements = filtered) }
     }
 
     fun onToggleOnlyMy(onlyMy: Boolean) {
         _uiState.update { it.copy(onlyMyAnnouncements = onlyMy) }
-        loadFeed() // Перезавантажуємо відповідне джерело
+        loadFeed()
     }
 
     fun onCloseAnnouncement(id: Int) {
@@ -137,7 +152,6 @@ class FeedViewModel(
             _uiState.update { it.copy(isLoading = true) }
             when (val result = repository.closeAnnouncement(id)) {
                 is Resource.Success -> {
-                    // Перезавантажуємо список після успішного закриття
                     loadFeed()
                 }
                 is Resource.Error -> {
@@ -146,5 +160,4 @@ class FeedViewModel(
             }
         }
     }
-
 }
