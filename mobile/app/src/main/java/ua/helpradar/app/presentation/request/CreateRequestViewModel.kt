@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import ua.helpradar.app.data.local.SessionManager
+import ua.helpradar.app.data.network.ApiClient
 import ua.helpradar.app.data.network.Resource
 import ua.helpradar.app.data.network.dto.CategoryDto
 import ua.helpradar.app.data.network.dto.CreateAnnouncementRequest
@@ -27,6 +28,7 @@ import java.util.Locale
 class CreateRequestViewModel(
     private val repository: AnnouncementRepository = AnnouncementRepository()
 ) : ViewModel() {
+
     companion object {
         var itemToEdit: ua.helpradar.app.presentation.feed.AnnouncementItem? = null
     }
@@ -52,8 +54,8 @@ class CreateRequestViewModel(
         categoryName: String,
         isUrgent: Boolean,
         location: String,
-        lat: Double? = 50.4501,
-        lon: Double? = 30.5234
+        lat: Double? = null,
+        lon: Double? = null
     ) {
         _uiState.update { current ->
             val matchingCategory = current.categories.find { it.name.equals(categoryName, ignoreCase = true) }
@@ -71,7 +73,7 @@ class CreateRequestViewModel(
         }
     }
 
-    fun loadCategories() {
+    fun loadCategories(context: Context? = null) {
         viewModelScope.launch {
             _uiState.update { it.copy(isCategoriesLoading = true) }
             when (val result = repository.getCategories()) {
@@ -88,15 +90,51 @@ class CreateRequestViewModel(
                             id = item.id,
                             title = item.title,
                             description = item.description,
-                            location = "Марганець", // FIXME: item.address
+                            location = "",
                             categoryName = item.categoryName,
-                            isUrgent = item.isUrgent
+                            isUrgent = item.isUrgent,
+                            lat = item.latitude,
+                            lon = item.longitude
                         )
-                        itemToEdit = null // очищаємо
+                        itemToEdit = null
+                        loadAnnouncementDetailsForEdit(item.id, context)
                     }
                 }
                 is Resource.Error -> {
                     _uiState.update { it.copy(isCategoriesLoading = false) }
+                }
+            }
+        }
+    }
+
+    fun loadAnnouncementDetailsForEdit(announcementId: Int, context: Context?) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLocating = true) }
+            when (val result = repository.getAnnouncementDetails(announcementId)) {
+                is Resource.Success -> {
+                    val details = result.data
+                    val lat = details.exactLocation?.latitude ?: details.approxLocation?.latitude ?: _uiState.value.latitude
+                    val lon = details.exactLocation?.longitude ?: details.approxLocation?.longitude ?: _uiState.value.longitude
+                    val savedAddress = details.exactLocation?.address
+
+                    _uiState.update {
+                        it.copy(
+                            latitude = lat,
+                            longitude = lon,
+                            location = savedAddress ?: it.location
+                        )
+                    }
+
+                    if (!savedAddress.isNullOrBlank()) {
+                        _uiState.update { it.copy(isLocating = false) }
+                    } else if (lat != null && lon != null && lat != 0.0 && lon != 0.0 && context != null) {
+                        resolveAddressFromCoordinates(context, lat, lon)
+                    } else {
+                        _uiState.update { it.copy(isLocating = false) }
+                    }
+                }
+                is Resource.Error -> {
+                    _uiState.update { it.copy(isLocating = false) }
                 }
             }
         }
@@ -109,6 +147,76 @@ class CreateRequestViewModel(
     fun onExpiryDaysChange(days: Int) = _uiState.update { it.copy(expiryDays = days) }
     fun onUrgentToggle(urgent: Boolean) = _uiState.update { it.copy(isUrgent = urgent) }
 
+    /**
+     * Викликається при натисканні на мапу: зберігає точні координати та визначає адресу
+     */
+    fun onMapLocationSelected(context: Context, lat: Double, lon: Double) {
+        _uiState.update {
+            it.copy(
+                latitude = lat,
+                longitude = lon,
+                isLocating = true,
+                locationError = null
+            )
+        }
+        resolveAddressFromCoordinates(context, lat, lon)
+    }
+
+    /**
+     * Пошук координат за введеною назвою міста/адреси, щоб перемістити маркер на мапі
+     */
+    fun searchAddressOnMap(context: Context) {
+        val query = _uiState.value.location.trim()
+        if (query.isEmpty()) {
+            _uiState.update { it.copy(locationError = "Введіть назву міста або вулицю для пошуку") }
+            return
+        }
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLocating = true, locationError = null) }
+            val coords = withContext(Dispatchers.IO) {
+                try {
+                    val response = ApiClient.geocodingService.searchAddress(query)
+                    val first = response.body()?.firstOrNull()
+                    val lat = first?.lat?.toDoubleOrNull()
+                    val lon = first?.lon?.toDoubleOrNull()
+                    if (response.isSuccessful && lat != null && lon != null) {
+                        Pair(lat, lon)
+                    } else null
+                } catch (_: Exception) {
+                    null
+                } ?: try {
+                    val geocoder = Geocoder(context, Locale.Builder().setLanguage("uk").setRegion("UA").build())
+                    @Suppress("DEPRECATION")
+                    val results = geocoder.getFromLocationName(query, 1)
+                    if (!results.isNullOrEmpty()) {
+                        Pair(results[0].latitude, results[0].longitude)
+                    } else null
+                } catch (_: Exception) {
+                    null
+                }
+            }
+
+            if (coords != null) {
+                _uiState.update {
+                    it.copy(
+                        latitude = coords.first,
+                        longitude = coords.second,
+                        isLocating = false,
+                        locationError = null
+                    )
+                }
+            } else {
+                _uiState.update {
+                    it.copy(
+                        isLocating = false,
+                        locationError = "Не вдалося знайти «$query» на мапі. Позначте точку вручну"
+                    )
+                }
+            }
+        }
+    }
+
     @SuppressLint("MissingPermission")
     fun fetchCurrentLocation(context: Context) {
         val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager
@@ -116,27 +224,23 @@ class CreateRequestViewModel(
             _uiState.update {
                 it.copy(
                     isLocating = false,
-                    locationError = "Служба геолокації недоступна. Введіть адресу вручну"
+                    locationError = "Служба геолокації недоступна. Позначте точку на мапі"
                 )
             }
             return
         }
-
         val isGpsEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)
         val isNetworkEnabled = locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
-
         if (!isGpsEnabled && !isNetworkEnabled) {
             _uiState.update {
                 it.copy(
                     isLocating = false,
-                    locationError = "GPS вимкнено на пристрої. Увімкніть його або введіть адресу вручну"
+                    locationError = "GPS вимкнено. Увімкніть його або позначте точку на мапі"
                 )
             }
             return
         }
-
         _uiState.update { it.copy(isLocating = true, locationError = null) }
-
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 val provider = if (isGpsEnabled) LocationManager.GPS_PROVIDER else LocationManager.NETWORK_PROVIDER
@@ -169,15 +273,13 @@ class CreateRequestViewModel(
                 bestLocation = loc
             }
         }
-
         if (bestLocation != null) {
             applyLocation(context, bestLocation.latitude, bestLocation.longitude)
         } else {
-            // Замість Києва виставляємо явну помилку користувачу
             _uiState.update {
                 it.copy(
                     isLocating = false,
-                    locationError = "Не вдалося визначити координати. Введіть адресу вручну"
+                    locationError = "Не вдалося визначити GPS. Позначте точку на мапі нижче"
                 )
             }
         }
@@ -195,15 +297,39 @@ class CreateRequestViewModel(
 
     private fun resolveAddressFromCoordinates(context: Context, lat: Double, lon: Double) {
         viewModelScope.launch {
-            var resolvedAddress: String? = null
-            try {
-                resolvedAddress = withContext(Dispatchers.IO) {
-                    val geocoder = Geocoder(context, Locale("uk", "UA"))
+            val resolvedAddress = withContext(Dispatchers.IO) {
+                // 1. Спочатку пробуємо бекенд-геокодер
+                val backendAddr = try {
+                    val response = ApiClient.geocodingService.reverseGeocode(lat, lon)
+                    val body = response.body()
+                    if (response.isSuccessful && body != null) {
+                        val addrMap = body.address
+                        if (addrMap != null) {
+                            val city = (addrMap["city"] ?: addrMap["town"] ?: addrMap["village"] ?: addrMap["state"])?.toString().orEmpty()
+                            val road = addrMap["road"]?.toString().orEmpty()
+                            val house = addrMap["house_number"]?.toString().orEmpty()
+                            listOf(city, road, house)
+                                .filter { it.isNotBlank() }
+                                .joinToString(", ")
+                                .ifEmpty { body.displayName }
+                        } else {
+                            body.displayName
+                        }
+                    } else null
+                } catch (_: Exception) {
+                    null
+                }
+
+                if (!backendAddr.isNullOrBlank()) return@withContext backendAddr
+
+                // 2. Резервний варіант через системний Android Geocoder
+                try {
+                    val geocoder = Geocoder(context, Locale.Builder().setLanguage("uk").setRegion("UA").build())
                     @Suppress("DEPRECATION")
                     val list = geocoder.getFromLocation(lat, lon, 1)
                     if (!list.isNullOrEmpty()) {
                         val addr = list[0]
-                        val city = addr.locality ?: addr.adminArea ?: ""
+                        val city = addr.locality ?: addr.subAdminArea ?: addr.adminArea ?: ""
                         val street = addr.thoroughfare ?: ""
                         val house = addr.subThoroughfare ?: ""
                         listOf(city, street, house)
@@ -211,12 +337,12 @@ class CreateRequestViewModel(
                             .joinToString(", ")
                             .ifEmpty { addr.getAddressLine(0) }
                     } else null
+                } catch (_: Exception) {
+                    null
                 }
-            } catch (_: Exception) {
-                resolvedAddress = null
             }
 
-            if (resolvedAddress != null) {
+            if (!resolvedAddress.isNullOrBlank()) {
                 _uiState.update {
                     it.copy(
                         location = resolvedAddress,
@@ -225,11 +351,13 @@ class CreateRequestViewModel(
                     )
                 }
             } else {
-                // Якщо координати є, але geocoder не знайшов текстову адресу
+                // Якщо точку на мапі вибрано, але інтернет-геокодер не повернув назву вулиці — підставляємо координати, щоб не блокувати користувача
+                val coordsFallback = String.format(Locale.US, "%.5f, %.5f", lat, lon)
                 _uiState.update {
                     it.copy(
+                        location = it.location.ifBlank { coordsFallback },
                         isLocating = false,
-                        locationError = "Адресу за координатами не знайдено. Введіть назву населеного пункту вручну"
+                        locationError = null
                     )
                 }
             }
@@ -300,7 +428,7 @@ class CreateRequestViewModel(
                     titleError = if (!isTitleValid) "Назва має містити від 5 до 100 символів" else null,
                     descriptionError = if (!isDescValid) "Опис має містити від 10 до 2000 символів" else null,
                     categoryError = if (!isCategoryValid) "Оберіть категорію допомоги" else null,
-                    locationError = if (!isLocationValid) "Вкажіть адресу або населений пункт вручну" else null,
+                    locationError = if (!isLocationValid) "Оберіть точку на мапі або вкажіть адресу" else null,
                     photoError = if (hasOversizedPhotos) "Розмір фото перевищує 10 МБ" else null
                 )
             }
@@ -319,19 +447,15 @@ class CreateRequestViewModel(
                 expiryDays = state.expiryDays,
                 isUrgent = if (state.isVolunteer) false else state.isUrgent
             )
-
             val editId = state.editingAnnouncementId
             val result = if (editId != null) {
-                // PATCH
                 repository.updateAnnouncement(editId, request)
             } else {
-                // POST
                 repository.createAnnouncement(request)
             }
 
             when (result) {
                 is Resource.Success -> {
-                    // Якщо це було редагування - успіх без вантаження фото
                     if (editId != null) {
                         _uiState.update { it.copy(isLoading = false, isSuccess = true) }
                     } else {
@@ -360,7 +484,6 @@ class CreateRequestViewModel(
                     _uiState.update { it.copy(isLoading = false, generalError = result.message) }
                 }
             }
-
         }
     }
 }

@@ -1,10 +1,17 @@
 package ua.helpradar.app.presentation.feed
 
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -42,11 +49,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
-import kotlinx.coroutines.launch
 import ua.helpradar.app.R
 import ua.helpradar.app.data.local.SessionManager
 import ua.helpradar.app.ui.theme.*
 import ua.helpradar.app.util.ShareUtils.shareAnnouncement
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.ui.unit.IntOffset
+import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -60,9 +71,18 @@ fun FeedScreen(
     viewModel: FeedViewModel = viewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
-    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
-    val coroutineScope = rememberCoroutineScope()
+    var isDrawerOpen by remember { mutableStateOf(false) }
+    val drawerProgress by animateFloatAsState(
+        targetValue = if (isDrawerOpen) 1f else 0f,
+        animationSpec = tween(durationMillis = 260, easing = FastOutSlowInEasing),
+        label = "drawer_progress"
+    )
     var selectedDrawerItem by remember { mutableStateOf("Announcements") }
+
+    // Закриваємо меню системною кнопкою "Назад", якщо воно відкрите
+    BackHandler(enabled = isDrawerOpen) {
+        isDrawerOpen = false
+    }
 
     val avatarLetter = remember(state.userName) {
         val name = state.userName.trim()
@@ -73,7 +93,6 @@ fun FeedScreen(
         }
     }
 
-    // Обчислюємо URL на основі стану ViewState, який автоматично оновить UI
     val fullAvatarUrl = remember(state.userAvatarUrl) {
         val raw = state.userAvatarUrl?.trim()
         if (!raw.isNullOrBlank() && !raw.contains("default")) {
@@ -81,129 +100,7 @@ fun FeedScreen(
         } else null
     }
 
-    ModalNavigationDrawer(
-        drawerState = drawerState,
-        drawerContent = {
-            ModalDrawerSheet(
-                drawerContainerColor = DesertSand,
-                modifier = Modifier.width(300.dp)
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .statusBarsPadding()
-                        .padding(horizontal = 16.dp, vertical = 14.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    IconButton(onClick = { coroutineScope.launch { drawerState.close() } }) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = "Закрити меню",
-                            tint = CharcoalDark
-                        )
-                    }
-
-                    Image(
-                        painter = painterResource(id = R.drawable.helpradar_logo),
-                        contentDescription = "HelpRadar Logo",
-                        modifier = Modifier
-                            .size(38.dp)
-                            .clip(RoundedCornerShape(10.dp))
-                    )
-
-                    // Аватар у бічній шторці
-                    UserAvatarBadge(
-                        avatarUrl = fullAvatarUrl,
-                        fallbackLetter = avatarLetter,
-                        onClick = {
-                            coroutineScope.launch { drawerState.close() }
-                            onProfileClick()
-                        }
-                    )
-                }
-
-                HorizontalDivider(color = BorderSand.copy(alpha = 0.5f), thickness = 1.dp)
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 12.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    DrawerItem(
-                        icon = Icons.Default.LocationOn,
-                        title = "Мапа",
-                        isSelected = selectedDrawerItem == "Map",
-                        onClick = {
-                            selectedDrawerItem = "Map"
-                            coroutineScope.launch { drawerState.close() }
-                            onMapClick()
-                        }
-                    )
-
-                    DrawerItem(
-                        icon = Icons.Default.Search,
-                        title = "Оголошення",
-                        isSelected = selectedDrawerItem == "Announcements",
-                        onClick = {
-                            selectedDrawerItem = "Announcements"
-                            coroutineScope.launch { drawerState.close() }
-                        }
-                    )
-
-                    DrawerItem(
-                        icon = Icons.AutoMirrored.Filled.Chat,
-                        title = "Чат",
-                        isSelected = selectedDrawerItem == "Chat",
-                        onClick = {
-                            selectedDrawerItem = "Chat"
-                            coroutineScope.launch { drawerState.close() }
-                        }
-                    )
-
-                    DrawerItem(
-                        icon = Icons.Default.Person,
-                        title = "Профіль",
-                        isSelected = selectedDrawerItem == "Profile",
-                        onClick = {
-                            selectedDrawerItem = "Profile"
-                            coroutineScope.launch { drawerState.close() }
-                            onProfileClick()
-                        }
-                    )
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    NavigationDrawerItem(
-                        icon = {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ExitToApp,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.error
-                            )
-                        },
-                        label = {
-                            Text(
-                                text = "Вийти з акаунта",
-                                fontFamily = Montserrat,
-                                color = MaterialTheme.colorScheme.error,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        },
-                        selected = false,
-                        onClick = {
-                            coroutineScope.launch { drawerState.close() }
-                            onSignOutClick()
-                        },
-                        colors = NavigationDrawerItemDefaults.colors(unselectedContainerColor = Color.Transparent)
-                    )
-                }
-            }
-        }
-    ) {
+    Box(modifier = Modifier.fillMaxSize()) {
         Scaffold(
             containerColor = DesertSand,
             topBar = {
@@ -224,7 +121,7 @@ fun FeedScreen(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
-                                IconButton(onClick = { coroutineScope.launch { drawerState.open() } }) {
+                                IconButton(onClick = { isDrawerOpen = true }) {
                                     Icon(
                                         imageVector = Icons.Default.Menu,
                                         contentDescription = "Меню",
@@ -241,7 +138,6 @@ fun FeedScreen(
                                 )
                             }
 
-                            // Аватар у правому верхньому кутку панелі
                             UserAvatarBadge(
                                 avatarUrl = fullAvatarUrl,
                                 fallbackLetter = avatarLetter,
@@ -461,6 +357,160 @@ fun FeedScreen(
                                 )
                             }
                         }
+                    }
+                }
+            }
+        }
+
+        // Плавна анімація шторки через offset без конфліктуючих graphicsLayer-шарів
+        if (drawerProgress > 0f) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.45f * drawerProgress))
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) {
+                        isDrawerOpen = false
+                    }
+            )
+
+            Box(
+                modifier = Modifier
+                    .width(300.dp)
+                    .fillMaxHeight()
+                    .offset {
+                        val drawerWidthPx = 300.dp.toPx()
+                        IntOffset(
+                            x = (-drawerWidthPx * (1f - drawerProgress)).roundToInt(),
+                            y = 0
+                        )
+                    }
+                    .clip(RoundedCornerShape(topEnd = 16.dp, bottomEnd = 16.dp))
+                    .background(DesertSand)
+                    .border(
+                        width = 1.dp,
+                        color = BorderSand,
+                        shape = RoundedCornerShape(topEnd = 16.dp, bottomEnd = 16.dp)
+                    )
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) { /* Блокуємо проклікування крізь меню */ }
+            ) {
+                Column(modifier = Modifier.fillMaxSize()) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .statusBarsPadding()
+                            .padding(horizontal = 16.dp, vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        IconButton(onClick = { isDrawerOpen = false }) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Закрити меню",
+                                tint = CharcoalDark
+                            )
+                        }
+
+                        Image(
+                            painter = painterResource(id = R.drawable.helpradar_logo),
+                            contentDescription = "HelpRadar Logo",
+                            modifier = Modifier
+                                .size(38.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                        )
+
+                        UserAvatarBadge(
+                            avatarUrl = fullAvatarUrl,
+                            fallbackLetter = avatarLetter,
+                            onClick = {
+                                isDrawerOpen = false
+                                onProfileClick()
+                            }
+                        )
+                    }
+
+                    HorizontalDivider(color = BorderSand.copy(alpha = 0.5f), thickness = 1.dp)
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        DrawerItem(
+                            icon = Icons.Default.LocationOn,
+                            title = "Мапа",
+                            isSelected = selectedDrawerItem == "Map",
+                            onClick = {
+                                selectedDrawerItem = "Map"
+                                isDrawerOpen = false
+                                onMapClick()
+                            }
+                        )
+
+                        DrawerItem(
+                            icon = Icons.Default.Search,
+                            title = "Оголошення",
+                            isSelected = selectedDrawerItem == "Announcements",
+                            onClick = {
+                                selectedDrawerItem = "Announcements"
+                                isDrawerOpen = false
+                            }
+                        )
+
+                        DrawerItem(
+                            icon = Icons.AutoMirrored.Filled.Chat,
+                            title = "Чат",
+                            isSelected = selectedDrawerItem == "Chat",
+                            onClick = {
+                                selectedDrawerItem = "Chat"
+                                isDrawerOpen = false
+                            }
+                        )
+
+                        DrawerItem(
+                            icon = Icons.Default.Person,
+                            title = "Профіль",
+                            isSelected = selectedDrawerItem == "Profile",
+                            onClick = {
+                                selectedDrawerItem = "Profile"
+                                isDrawerOpen = false
+                                onProfileClick()
+                            }
+                        )
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        NavigationDrawerItem(
+                            icon = {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ExitToApp,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.error
+                                )
+                            },
+                            label = {
+                                Text(
+                                    text = "Вийти з акаунта",
+                                    fontFamily = Montserrat,
+                                    color = MaterialTheme.colorScheme.error,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            },
+                            selected = false,
+                            onClick = {
+                                isDrawerOpen = false
+                                onSignOutClick()
+                            },
+                            colors = NavigationDrawerItemDefaults.colors(unselectedContainerColor = Color.Transparent)
+                        )
                     }
                 }
             }
