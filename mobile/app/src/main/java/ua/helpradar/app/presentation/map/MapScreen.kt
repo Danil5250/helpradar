@@ -119,6 +119,16 @@ fun MapScreen(
         }
     }
 
+    // Звільнення ресурсів osmdroid при закритті екрана мапи
+    DisposableEffect(Unit) {
+        onDispose {
+            userLocationOverlay?.disableMyLocation()
+            userLocationOverlay?.disableFollowLocation()
+            mapViewRef?.onPause()
+            mapViewRef?.onDetach()
+        }
+    }
+
     fun searchCity(cityName: String) {
         if (cityName.isBlank()) return
         isSearching = true

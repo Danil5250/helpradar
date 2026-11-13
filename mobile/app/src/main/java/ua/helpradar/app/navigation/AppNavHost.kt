@@ -27,6 +27,10 @@ fun AppNavHost(
     NavHost(
         navController = navController,
         startDestination = Screen.Splash.route,
+        enterTransition = { androidx.compose.animation.EnterTransition.None },
+        exitTransition = { androidx.compose.animation.ExitTransition.None },
+        popEnterTransition = { androidx.compose.animation.EnterTransition.None },
+        popExitTransition = { androidx.compose.animation.ExitTransition.None },
         modifier = modifier
     ) {
         // Стартовий екран із лелекою
