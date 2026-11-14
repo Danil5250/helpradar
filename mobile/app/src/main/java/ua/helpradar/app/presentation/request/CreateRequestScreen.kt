@@ -44,6 +44,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.SubcomposeAsyncImage
 import coil.compose.rememberAsyncImagePainter
 import org.osmdroid.config.Configuration
 import org.osmdroid.events.MapEventsReceiver
@@ -64,18 +65,15 @@ fun CreateRequestScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
     val context = LocalContext.current
-
-    LaunchedEffect(Unit) {
-        if (CreateRequestViewModel.itemToEdit != null || state.editingAnnouncementId != null) {
-            viewModel.loadCategories(context)
-        }
-    }
     var isCategoryDropdownExpanded by remember { mutableStateOf(false) }
     var isFullScreenMapOpen by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         Configuration.getInstance().load(context, context.getSharedPreferences("osmdroid", Context.MODE_PRIVATE))
         Configuration.getInstance().userAgentValue = context.packageName
+        if (CreateRequestViewModel.itemToEdit != null || state.editingAnnouncementId != null) {
+            viewModel.loadCategories(context)
+        }
     }
 
     val photoPickerLauncher = rememberLauncherForActivityResult(
@@ -295,26 +293,38 @@ fun CreateRequestScreen(
                 maxLines = 6
             )
 
-            // Блок вибору тривалості оголошення
+            // Блок вибору тривалості / подовження оголошення
+            val isEditMode = state.editingAnnouncementId != null
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
-                    text = "Термін актуальності оголошення *",
+                    text = if (isEditMode) "Подовжити термін актуальності" else "Термін актуальності оголошення *",
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Medium,
                     color = CharcoalDark
                 )
+
+                if (isEditMode && state.currentExpiresAtFormatted != null) {
+                    Text(
+                        text = "Поточний термін дії до: ${state.currentExpiresAtFormatted}",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = OliveGreen
+                    )
+                }
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     state.availableExpiryDays.forEach { days ->
-                        val isSelected = state.expiryDays == days
+                        val isSelected = if (isEditMode) state.extendDays == days else state.expiryDays == days
+                        val prefix = if (isEditMode) "+" else ""
                         FilterChip(
                             selected = isSelected,
                             onClick = { viewModel.onExpiryDaysChange(days) },
                             label = {
                                 Text(
-                                    text = "$days ${if (days == 3) "дні" else "днів"}",
+                                    text = "$prefix$days ${if (days == 3) "дні" else "днів"}",
                                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                                 )
                             },
@@ -327,17 +337,26 @@ fun CreateRequestScreen(
                         )
                     }
                 }
+
                 Text(
-                    text = "Після завершення строку ви зможете продовжити оголошення ще на 14 днів.",
+                    text = if (isEditMode) {
+                        if (state.extendDays != null)
+                            "Обрано подовження на +${state.extendDays} ${if (state.extendDays == 3) "дні" else "днів"} (натисніть ще раз, щоб скасувати)"
+                        else
+                            "Оберіть кількість днів, щоб подовжити оголошення, або залиште без змін"
+                    } else {
+                        "Після завершення строку ви зможете продовжити оголошення ще на 14 днів."
+                    },
                     fontSize = 12.sp,
                     color = Color.Gray
                 )
             }
 
-            // Блок додавання фотографій
+            // Блок додавання / редагування фотографій
+            val totalPhotosCount = state.existingPhotos.size + state.selectedPhotos.size
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
-                    text = "Фотографії (до 5 шт.)",
+                    text = "Фотографії ($totalPhotosCount/5)",
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Medium,
                     color = CharcoalDark
@@ -348,7 +367,7 @@ fun CreateRequestScreen(
                         .horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    if (state.selectedPhotos.size < 5) {
+                    if (totalPhotosCount < 5) {
                         OutlinedButton(
                             onClick = {
                                 photoPickerLauncher.launch(
@@ -368,6 +387,34 @@ fun CreateRequestScreen(
                             }
                         }
                     }
+
+                    // Наявні фотографії оголошення (із сервера)
+                    state.existingPhotos.forEach { photo ->
+                        val fullPhotoUrl = if (photo.url.startsWith("http")) photo.url else "http://10.0.2.2:3000${photo.url}"
+                        Box(
+                            modifier = Modifier
+                                .size(80.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                        ) {
+                            SubcomposeAsyncImage(
+                                model = fullPhotoUrl,
+                                contentDescription = "Наявне фото",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            )
+                            IconButton(
+                                onClick = { viewModel.onRemoveExistingPhoto(photo.id) },
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .size(24.dp)
+                                    .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+                            ) {
+                                Icon(Icons.Default.Close, contentDescription = "Видалити фото", tint = Color.White, modifier = Modifier.size(16.dp))
+                            }
+                        }
+                    }
+
+                    // Нові локальні фотографії (з галереї)
                     state.selectedPhotos.forEach { uri ->
                         Box(
                             modifier = Modifier
@@ -508,7 +555,7 @@ fun CreateRequestScreen(
                 )
             }
 
-            // Кнопка публікації
+            // Кнопка публікації / збереження змін
             Button(
                 onClick = { viewModel.submitRequest(context) },
                 enabled = !state.isLoading,
@@ -522,10 +569,9 @@ fun CreateRequestScreen(
                 if (state.isLoading) {
                     CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
                 } else {
-                    val isEdit = state.editingAnnouncementId != null
                     Text(
                         text = when {
-                            isEdit -> "Зберегти зміни"
+                            isEditMode -> "Зберегти зміни"
                             isVolunteer -> "Опублікувати пропозицію"
                             else -> "Опублікувати запит"
                         },
@@ -563,7 +609,6 @@ private fun InlineLocationPickerMap(
                     MapView(ctx).apply {
                         setTileSource(TileSourceFactory.MAPNIK)
                         setMultiTouchControls(true)
-                        // Дозволяємо перетягування мапи всередині verticalScroll
                         setOnTouchListener { v, event ->
                             when (event.action) {
                                 MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE -> {
@@ -580,7 +625,6 @@ private fun InlineLocationPickerMap(
                             controller.setZoom(15.0)
                             controller.setCenter(GeoPoint(latitude!!, longitude!!))
                         } else {
-                            // Центр України за замовчуванням
                             controller.setZoom(5.5)
                             controller.setCenter(GeoPoint(49.0, 31.5))
                         }
@@ -589,7 +633,6 @@ private fun InlineLocationPickerMap(
                 update = { mapView ->
                     mapView.overlays.clear()
 
-                    // Слухач натискань на мапу
                     val eventsOverlay = MapEventsOverlay(object : MapEventsReceiver {
                         override fun singleTapConfirmedHelper(p: GeoPoint?): Boolean {
                             if (p != null) {

@@ -222,4 +222,38 @@ class AnnouncementRepository(
             Resource.Error(e.localizedMessage ?: "Помилка при завантаженні фото")
         }
     }
+
+    suspend fun extendAnnouncement(id: Int, days: Int): Resource<Unit> {
+        return try {
+            val response = api.extendAnnouncement(id, ExtendAnnouncementRequest(days = days))
+            if (response.isSuccessful) {
+                Resource.Success(Unit)
+            } else {
+                val serverMessage = try {
+                    val errorJson = response.errorBody()?.string()
+                    if (!errorJson.isNullOrBlank()) {
+                        org.json.JSONObject(errorJson).optString("message").ifEmpty { null }
+                    } else null
+                } catch (_: Exception) {
+                    null
+                }
+                Resource.Error(serverMessage ?: "Не вдалося подовжити термін дії (${response.code()})", response.code())
+            }
+        } catch (e: Exception) {
+            Resource.Error(e.localizedMessage ?: "Помилка мережі при подовженні оголошення")
+        }
+    }
+
+    suspend fun deletePhoto(announcementId: Int, photoId: Int): Resource<Unit> {
+        return try {
+            val response = api.deletePhoto(announcementId, photoId)
+            if (response.isSuccessful) {
+                Resource.Success(Unit)
+            } else {
+                Resource.Error("Не вдалося видалити фото: ${response.code()}", response.code())
+            }
+        } catch (e: Exception) {
+            Resource.Error(e.localizedMessage ?: "Помилка мережі при видаленні фото")
+        }
+    }
 }
