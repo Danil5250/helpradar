@@ -86,14 +86,16 @@ class AnnouncementRepository(
                             AnnouncementType.REQUEST
                         },
                         distanceKm = dto.distanceKm ?: 0.0,
-                        postedTimeAgo = dto.datePosted ?: "нещодавно",
+                        postedTimeAgo = formatIsoDate(dto.datePosted) ?: "нещодавно",
                         authorId = dto.author?.id,
                         authorName = dto.author?.name ?: "Я",
                         authorRating = dto.author?.rating ?: 5.0,
                         isUrgent = dto.isUrgent,
                         createdDateFormatted = formatIsoDate(dto.createdAt ?: dto.datePosted),
                         expiryDateFormatted = formatIsoDate(dto.expiresAt),
-                        status = dto.status ?: "Активно"
+                        status = dto.status ?: "Активно",
+                        latitude = dto.approxLocation?.latitude,
+                        longitude = dto.approxLocation?.longitude
                     )
                 }
                 Resource.Success(items)
