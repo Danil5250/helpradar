@@ -58,6 +58,12 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.ui.unit.IntOffset
 import kotlin.math.roundToInt
+import android.location.Geocoder
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import ua.helpradar.app.data.network.ApiClient
+import java.util.Locale
+import java.util.concurrent.ConcurrentHashMap
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -591,6 +597,8 @@ private fun DrawerItem(
     )
 }
 
+private val cardLocationCache = ConcurrentHashMap<String, String>()
+
 @Composable
 fun AnnouncementCard(
     item: AnnouncementItem,
@@ -607,6 +615,59 @@ fun AnnouncementCard(
 
     val isClosed = item.status?.equals("Closed", ignoreCase = true) == true
     var showConfirmDialog by remember { mutableStateOf(false) }
+
+    val coordKey = remember(item.latitude, item.longitude) {
+        if (item.latitude != null && item.longitude != null && item.latitude != 0.0 && item.longitude != 0.0) {
+            String.format(Locale.US, "%.4f,%.4f", item.latitude, item.longitude)
+        } else null
+    }
+    var placeName by remember(coordKey) {
+        mutableStateOf(coordKey?.let { cardLocationCache[it] })
+    }
+
+    LaunchedEffect(coordKey) {
+        val lat = item.latitude
+        val lng = item.longitude
+        if (coordKey != null && placeName == null && lat != null && lng != null) {
+            val resolved = withContext(Dispatchers.IO) {
+                try {
+                    val geocoder = Geocoder(context, Locale.Builder().setLanguage("uk").setRegion("UA").build())
+                    @Suppress("DEPRECATION")
+                    val addresses = geocoder.getFromLocation(lat, lng, 1)
+                    if (!addresses.isNullOrEmpty()) {
+                        val addr = addresses[0]
+                        val locality = addr.locality ?: addr.subAdminArea ?: addr.adminArea
+                        val subLocality = addr.subLocality
+                        when {
+                            !locality.isNullOrBlank() && !subLocality.isNullOrBlank() -> "$locality, $subLocality"
+                            !locality.isNullOrBlank() -> locality
+                            else -> addr.getAddressLine(0)
+                        }
+                    } else null
+                } catch (_: Exception) {
+                    null
+                } ?: try {
+                    val response = ApiClient.geocodingService.reverseGeocode(lat, lng)
+                    val addrMap = response.body()?.address
+                    if (response.isSuccessful && addrMap != null) {
+                        val city = (addrMap["city"] ?: addrMap["town"] ?: addrMap["village"] ?: addrMap["state"])?.toString()
+                        val suburb = (addrMap["suburb"] ?: addrMap["district"])?.toString()
+                        listOfNotNull(city, suburb)
+                            .filter { it.isNotBlank() }
+                            .joinToString(", ")
+                            .ifEmpty { response.body()?.displayName }
+                    } else null
+                } catch (_: Exception) {
+                    null
+                }
+            }
+
+            if (!resolved.isNullOrBlank()) {
+                cardLocationCache[coordKey] = resolved
+                placeName = resolved
+            }
+        }
+    }
 
     if (showConfirmDialog) {
         AlertDialog(
@@ -795,7 +856,12 @@ fun AnnouncementCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(end = 8.dp)
+                ) {
                     Icon(
                         imageVector = Icons.Default.LocationOn,
                         contentDescription = null,
@@ -804,10 +870,12 @@ fun AnnouncementCard(
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = "${item.distanceKm} км • ${item.postedTimeAgo}",
+                        text = placeName ?: "Україна",
                         fontFamily = Montserrat,
                         fontSize = 12.sp,
-                        color = CharcoalDark
+                        color = CharcoalDark,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
 
