@@ -3,14 +3,17 @@ package ua.helpradar.app.data.repository
 import ua.helpradar.app.data.local.SessionManager
 import ua.helpradar.app.data.network.ApiClient
 import ua.helpradar.app.data.network.Resource
+import ua.helpradar.app.data.network.api.AuthApiService
 import ua.helpradar.app.data.network.dto.LoginRequest
 import ua.helpradar.app.data.network.dto.RegisterRequest
 import ua.helpradar.app.data.network.dto.ForgotPasswordRequest
 
-class AuthRepository {
+class AuthRepository(
+    private val api: AuthApiService = ApiClient.authService
+) {
     suspend fun login(email: String, password: String): Resource<String> {
         return try {
-            val response = ApiClient.authService.login(LoginRequest(email, password))
+            val response = api.login(LoginRequest(email, password))
             val body = response.body()
             if (response.isSuccessful && body != null) {
                 // Зберігаємо сесію та роль увійшовшого користувача
@@ -38,7 +41,7 @@ class AuthRepository {
 
     suspend fun register(request: RegisterRequest): Resource<String> {
         return try {
-            val response = ApiClient.authService.register(request)
+            val response = api.register(request)
             if (response.isSuccessful && response.body() != null) {
                 val message = response.body()?.message ?: "Реєстрація успішна!"
                 Resource.Success(message)
@@ -60,7 +63,7 @@ class AuthRepository {
 
     suspend fun forgotPassword(email: String): Resource<String> {
         return try {
-            val response = ApiClient.authService.forgotPassword(ForgotPasswordRequest(email = email))
+            val response = api.forgotPassword(ForgotPasswordRequest(email = email))
             val body = response.body()
 
             if (response.isSuccessful) {
