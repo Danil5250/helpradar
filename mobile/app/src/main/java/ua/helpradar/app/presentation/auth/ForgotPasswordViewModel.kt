@@ -2,6 +2,7 @@ package ua.helpradar.app.presentation.auth
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.core.util.PatternsCompat
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -30,7 +31,7 @@ class ForgotPasswordViewModel(
             return
         }
 
-        val isEmailFormatValid = android.util.Patterns.EMAIL_ADDRESS.matcher(emailTrimmed).matches()
+        val isEmailFormatValid = PatternsCompat.EMAIL_ADDRESS.matcher(emailTrimmed).matches()
         if (!isEmailFormatValid) {
             _uiState.update { it.copy(emailError = "Введіть дійсну адресу електронної пошти") }
             return

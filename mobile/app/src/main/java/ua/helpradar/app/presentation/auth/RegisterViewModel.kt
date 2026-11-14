@@ -2,6 +2,7 @@ package ua.helpradar.app.presentation.auth
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.core.util.PatternsCompat
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -57,7 +58,7 @@ class RegisterViewModel(
 
         val firstNameValid = trimmedFirstName.matches(nameRegex)
         val lastNameValid = trimmedLastName.matches(nameRegex)
-        val emailValid = android.util.Patterns.EMAIL_ADDRESS.matcher(trimmedEmail).matches()
+        val emailValid = PatternsCompat.EMAIL_ADDRESS.matcher(trimmedEmail).matches()
         val passwordValid = state.password.length in 8..64 &&
                 state.password.any { it.isDigit() } &&
                 state.password.any { it.isLetter() }

@@ -1,0 +1,104 @@
+name: Mobile PR checks
+
+on:
+  pull_request:
+    branches: [main, dev]
+    types: [opened, synchronize, reopened, ready_for_review, edited]
+  push:
+    branches: [main, dev]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+    working-directory: mobile
+
+jobs:
+  lint:
+    name: Mobile lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+
+      - name: Run Android Lint
+        run: ./gradlew lintDebug
+
+      - name: Upload lint report
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: mobile-lint-report
+          path: mobile/app/build/reports/lint-results-debug*
+          retention-days: 7
+
+  unit:
+    name: Mobile unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+
+      - name: Run unit tests
+        run: ./gradlew testDebugUnitTest
+
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: mobile-test-reports
+          path: mobile/app/build/reports/tests/testDebugUnitTest/
+          retention-days: 7
+
+  gate:
+    name: Mobile CI gate
+    needs: [lint, unit]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Require every stage to succeed
+        working-directory: .
+        env:
+          LINT_RESULT: ${{ needs.lint.result }}
+          UNIT_RESULT: ${{ needs.unit.result }}
+        run: |
+          printf 'lint=%s unit=%s\n' "$LINT_RESULT" "$UNIT_RESULT"
+          [[ "$LINT_RESULT" == success && "$UNIT_RESULT" == success ]]
