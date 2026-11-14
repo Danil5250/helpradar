@@ -46,4 +46,16 @@ interface AnnouncementApiService {
     suspend fun getAnnouncementDetails(
         @Path("id") id: Int
     ): Response<GetAnnouncementResponseDto>
+
+    @POST("api/announcements/{id}/extend")
+    suspend fun extendAnnouncement(
+        @Path("id") id: Int,
+        @Body request: ExtendAnnouncementRequest
+    ): Response<Unit>
+
+    @DELETE("api/announcements/{id}/photos/{photoId}")
+    suspend fun deletePhoto(
+        @Path("id") id: Int,
+        @Path("photoId") photoId: Int
+    ): Response<Unit>
 }

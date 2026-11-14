@@ -48,8 +48,12 @@ data class CreateAnnouncementRequest(
     @SerializedName("address") val address: String? = null,
     @SerializedName("latitude") val latitude: Double? = null,
     @SerializedName("longitude") val longitude: Double? = null,
-    @SerializedName("expiryDays") val expiryDays: Int = 14,
+    @SerializedName("expiryDays") val expiryDays: Int? = 14,
     @SerializedName("isUrgent") val isUrgent: Boolean = false
+)
+
+data class ExtendAnnouncementRequest(
+    @SerializedName("days") val days: Int
 )
 
 data class AnnouncementIdDto(
