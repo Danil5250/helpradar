@@ -20,6 +20,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -41,7 +42,6 @@ fun RegisterScreen(
     val state by viewModel.uiState.collectAsState()
     var isPasswordVisible by remember { mutableStateOf(false) }
     var isConfirmPasswordVisible by remember { mutableStateOf(false) }
-
     var isRegionDropdownExpanded by remember { mutableStateOf(false) }
     var isCityDropdownExpanded by remember { mutableStateOf(false) }
 
@@ -62,7 +62,6 @@ fun RegisterScreen(
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-
             Spacer(modifier = Modifier.height(12.dp))
 
             Image(
@@ -77,8 +76,9 @@ fun RegisterScreen(
 
             Text(
                 text = "Приєднуйтесь до HelpRadar",
+                fontFamily = KharkivTone,
                 fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.Normal,
                 color = CharcoalDark,
                 textAlign = TextAlign.Center
             )
@@ -87,6 +87,7 @@ fun RegisterScreen(
 
             Text(
                 text = "Створіть обліковий запис для надання або отримання допомоги",
+                fontFamily = Montserrat,
                 fontSize = 14.sp,
                 color = DeepSage,
                 textAlign = TextAlign.Center,
@@ -168,16 +169,24 @@ fun RegisterScreen(
                     value = state.region,
                     onValueChange = {},
                     readOnly = true,
+                    textStyle = TextStyle(
+                        fontFamily = Montserrat,
+                        fontSize = 15.sp,
+                        color = CharcoalDark
+                    ),
                     placeholder = {
                         Text(
                             text = "Оберіть область",
+                            fontFamily = Montserrat,
                             color = PlaceholderSage,
-                            fontSize = 16.sp
+                            fontSize = 15.sp
                         )
                     },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = isRegionDropdownExpanded) },
                     isError = state.regionError != null,
-                    supportingText = state.regionError?.let { { Text(it, color = MaterialTheme.colorScheme.error) } },
+                    supportingText = state.regionError?.let {
+                        { Text(it, fontFamily = Montserrat, color = MaterialTheme.colorScheme.error) }
+                    },
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedContainerColor = Color.White.copy(alpha = 0.8f),
@@ -191,14 +200,13 @@ fun RegisterScreen(
                         .fillMaxWidth()
                         .menuAnchor()
                 )
-
                 ExposedDropdownMenu(
                     expanded = isRegionDropdownExpanded,
                     onDismissRequest = { isRegionDropdownExpanded = false }
                 ) {
                     regionsWithCities.keys.forEach { regionName ->
                         DropdownMenuItem(
-                            text = { Text(regionName) },
+                            text = { Text(regionName, fontFamily = Montserrat) },
                             onClick = {
                                 viewModel.onRegionSelect(regionName)
                                 isRegionDropdownExpanded = false
@@ -225,11 +233,17 @@ fun RegisterScreen(
                     value = state.city,
                     onValueChange = {},
                     readOnly = true,
+                    textStyle = TextStyle(
+                        fontFamily = Montserrat,
+                        fontSize = 15.sp,
+                        color = CharcoalDark
+                    ),
                     placeholder = {
                         Text(
                             text = if (state.region.isEmpty()) "Спочатку оберіть область" else "Оберіть місто",
+                            fontFamily = Montserrat,
                             color = PlaceholderSage,
-                            fontSize = 16.sp
+                            fontSize = 15.sp
                         )
                     },
                     trailingIcon = {
@@ -239,7 +253,9 @@ fun RegisterScreen(
                     },
                     enabled = state.availableCities.isNotEmpty(),
                     isError = state.cityError != null,
-                    supportingText = state.cityError?.let { { Text(it, color = MaterialTheme.colorScheme.error) } },
+                    supportingText = state.cityError?.let {
+                        { Text(it, fontFamily = Montserrat, color = MaterialTheme.colorScheme.error) }
+                    },
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedContainerColor = Color.White.copy(alpha = 0.8f),
@@ -255,14 +271,13 @@ fun RegisterScreen(
                         .fillMaxWidth()
                         .menuAnchor()
                 )
-
                 ExposedDropdownMenu(
                     expanded = isCityDropdownExpanded && state.availableCities.isNotEmpty(),
                     onDismissRequest = { isCityDropdownExpanded = false }
                 ) {
                     state.availableCities.forEach { cityName ->
                         DropdownMenuItem(
-                            text = { Text(cityName) },
+                            text = { Text(cityName, fontFamily = Montserrat) },
                             onClick = {
                                 viewModel.onCitySelect(cityName)
                                 isCityDropdownExpanded = false
@@ -328,9 +343,11 @@ fun RegisterScreen(
                     onClick = { viewModel.onRoleSelect(UserRole.PERSON_IN_NEED) }
                 )
             }
+
             state.roleError?.let {
                 Text(
                     text = it,
+                    fontFamily = Montserrat,
                     color = MaterialTheme.colorScheme.error,
                     fontSize = 12.sp,
                     modifier = Modifier.padding(top = 4.dp)
@@ -351,6 +368,7 @@ fun RegisterScreen(
                 )
                 Text(
                     text = "Погоджуюся з Умовами та Політикою конфіденційності",
+                    fontFamily = Montserrat,
                     fontSize = 12.sp,
                     color = CharcoalDark
                 )
@@ -367,13 +385,16 @@ fun RegisterScreen(
                 )
                 Text(
                     text = "Мені виповнилося 18 років",
+                    fontFamily = Montserrat,
                     fontSize = 12.sp,
                     color = CharcoalDark
                 )
             }
+
             state.termsError?.let {
                 Text(
                     text = it,
+                    fontFamily = Montserrat,
                     color = MaterialTheme.colorScheme.error,
                     fontSize = 12.sp
                 )
@@ -382,6 +403,7 @@ fun RegisterScreen(
             state.generalError?.let {
                 Text(
                     text = it,
+                    fontFamily = Montserrat,
                     color = MaterialTheme.colorScheme.error,
                     fontSize = 13.sp,
                     modifier = Modifier.padding(vertical = 4.dp)
@@ -405,6 +427,7 @@ fun RegisterScreen(
                 } else {
                     Text(
                         text = "Створити акаунт",
+                        fontFamily = Montserrat,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.White
@@ -419,9 +442,15 @@ fun RegisterScreen(
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Вже маєте акаунт? ", color = CharcoalDark, fontSize = 14.sp)
+                Text(
+                    text = "Вже маєте акаунт? ",
+                    fontFamily = Montserrat,
+                    color = CharcoalDark,
+                    fontSize = 14.sp
+                )
                 Text(
                     text = "Увійти",
+                    fontFamily = Montserrat,
                     color = CharcoalDark,
                     fontWeight = FontWeight.Bold,
                     fontSize = 14.sp,
@@ -436,6 +465,7 @@ fun RegisterScreen(
 private fun CustomLabel(text: String) {
     Text(
         text = text,
+        fontFamily = Montserrat,
         fontSize = 14.sp,
         fontWeight = FontWeight.Medium,
         color = CharcoalDark,
@@ -460,11 +490,17 @@ private fun CustomInputField(
         OutlinedTextField(
             value = value,
             onValueChange = onValueChange,
+            textStyle = TextStyle(
+                fontFamily = Montserrat,
+                fontSize = 15.sp,
+                color = CharcoalDark
+            ),
             placeholder = {
                 Text(
                     text = placeholder,
+                    fontFamily = Montserrat,
                     color = PlaceholderSage,
-                    fontSize = 16.sp,
+                    fontSize = 15.sp,
                     fontWeight = FontWeight.Normal
                 )
             },
@@ -496,6 +532,7 @@ private fun CustomInputField(
         if (errorMessage != null) {
             Text(
                 text = errorMessage,
+                fontFamily = Montserrat,
                 color = MaterialTheme.colorScheme.error,
                 fontSize = 12.sp,
                 modifier = Modifier.padding(start = 6.dp, top = 2.dp)
@@ -536,6 +573,7 @@ private fun FigmaRoleCard(
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = title,
+                fontFamily = Montserrat,
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Bold,
                 color = CharcoalDark
@@ -543,6 +581,7 @@ private fun FigmaRoleCard(
             Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = subtitle,
+                fontFamily = Montserrat,
                 fontSize = 12.sp,
                 color = DeepSage
             )

@@ -8,7 +8,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
@@ -19,6 +18,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -73,8 +73,9 @@ fun LoginScreen(
             // Заголовок
             Text(
                 text = "Вхід у HelpRadar",
+                fontFamily = KharkivTone,
                 fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.Normal,
                 color = CharcoalDark,
                 textAlign = TextAlign.Center
             )
@@ -84,6 +85,7 @@ fun LoginScreen(
             // Підзаголовок
             Text(
                 text = "Увійдіть для взаємодопомоги та перегляду потреб",
+                fontFamily = Montserrat,
                 fontSize = 14.sp,
                 color = DeepSage,
                 textAlign = TextAlign.Center,
@@ -103,6 +105,7 @@ fun LoginScreen(
                 ) {
                     Text(
                         text = it,
+                        fontFamily = Montserrat,
                         color = MaterialTheme.colorScheme.onErrorContainer,
                         modifier = Modifier.padding(12.dp),
                         fontSize = 14.sp,
@@ -144,6 +147,7 @@ fun LoginScreen(
             ) {
                 Text(
                     text = "Забули пароль?",
+                    fontFamily = Montserrat,
                     color = OliveGreen,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Medium,
@@ -167,6 +171,7 @@ fun LoginScreen(
                 } else {
                     Text(
                         text = "Увійти",
+                        fontFamily = Montserrat,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.White
@@ -182,9 +187,15 @@ fun LoginScreen(
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Не маєте акаунта? ", color = CharcoalDark, fontSize = 14.sp)
+                Text(
+                    text = "Не маєте акаунта? ",
+                    fontFamily = Montserrat,
+                    color = CharcoalDark,
+                    fontSize = 14.sp
+                )
                 Text(
                     text = "Зареєструватися",
+                    fontFamily = Montserrat,
                     color = CharcoalDark,
                     fontWeight = FontWeight.Bold,
                     fontSize = 14.sp,
@@ -199,6 +210,7 @@ fun LoginScreen(
 private fun LoginLabel(text: String) {
     Text(
         text = text,
+        fontFamily = Montserrat,
         fontSize = 14.sp,
         fontWeight = FontWeight.Medium,
         color = CharcoalDark,
@@ -223,11 +235,17 @@ private fun LoginInputField(
         OutlinedTextField(
             value = value,
             onValueChange = onValueChange,
+            textStyle = TextStyle(
+                fontFamily = Montserrat,
+                fontSize = 15.sp,
+                color = CharcoalDark
+            ),
             placeholder = {
                 Text(
                     text = placeholder,
+                    fontFamily = Montserrat,
                     color = PlaceholderSage,
-                    fontSize = 16.sp,
+                    fontSize = 15.sp,
                     fontWeight = FontWeight.Normal
                 )
             },
@@ -259,6 +277,7 @@ private fun LoginInputField(
         if (errorMessage != null) {
             Text(
                 text = errorMessage,
+                fontFamily = Montserrat,
                 color = MaterialTheme.colorScheme.error,
                 fontSize = 12.sp,
                 modifier = Modifier.padding(start = 6.dp, top = 2.dp)
