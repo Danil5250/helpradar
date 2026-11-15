@@ -46,7 +46,6 @@ fun AnnouncementDetailsScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
     val context = LocalContext.current
-
     var fullScreenPhotoUrl by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(announcementId) {
@@ -71,7 +70,6 @@ fun AnnouncementDetailsScreen(
                         .fillMaxSize()
                         .padding(16.dp)
                 )
-
                 IconButton(
                     onClick = { fullScreenPhotoUrl = null },
                     modifier = Modifier
@@ -174,7 +172,6 @@ fun AnnouncementDetailsScreen(
                         if (resolvedAddress.isNullOrBlank()) {
                             val targetLat = item.exactLocation?.latitude ?: item.approxLocation?.latitude
                             val targetLng = item.exactLocation?.longitude ?: item.approxLocation?.longitude
-
                             if (targetLat != null && targetLng != null && targetLat != 0.0 && targetLng != 0.0) {
                                 withContext(Dispatchers.IO) {
                                     try {
@@ -224,7 +221,6 @@ fun AnnouncementDetailsScreen(
                                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                                 )
                             }
-
                             Surface(
                                 shape = RoundedCornerShape(6.dp),
                                 color = DeepSage.copy(alpha = 0.12f)
@@ -238,7 +234,6 @@ fun AnnouncementDetailsScreen(
                                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                                 )
                             }
-
                             if (item.isUrgent) {
                                 Surface(
                                     shape = RoundedCornerShape(6.dp),
@@ -263,7 +258,6 @@ fun AnnouncementDetailsScreen(
                             fontSize = 20.sp,
                             color = CharcoalDark
                         )
-
                         Text(
                             text = item.description,
                             fontFamily = Montserrat,
@@ -318,7 +312,6 @@ fun AnnouncementDetailsScreen(
                                 val authorInitial = item.author.name.trim().take(1).uppercase().ifEmpty { "U" }
                                 val rawAvatarUrl = item.author.avatarUrl?.trim()
                                 val hasCustomAvatar = !rawAvatarUrl.isNullOrBlank() && !rawAvatarUrl.contains("default")
-
                                 val fullAvatarUrl = if (hasCustomAvatar) {
                                     if (rawAvatarUrl!!.startsWith("http")) rawAvatarUrl else "http://10.0.2.2:3000$rawAvatarUrl"
                                 } else null
@@ -367,7 +360,6 @@ fun AnnouncementDetailsScreen(
                                 }
 
                                 Spacer(modifier = Modifier.width(12.dp))
-
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
                                         text = item.author.name,
@@ -398,7 +390,8 @@ fun AnnouncementDetailsScreen(
                             }
                         }
 
-                        // 5. Блок місцезнаходження (реальне місто чи адреса)
+                        // 5. Блок місцезнаходження (точна адреса для власника або приблизна зона для інших)
+                        val isExactLocation = item.exactLocation != null
                         Card(
                             shape = RoundedCornerShape(12.dp),
                             colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -418,7 +411,7 @@ fun AnnouncementDetailsScreen(
                                 Spacer(modifier = Modifier.width(10.dp))
                                 Column {
                                     Text(
-                                        text = "Місцезнаходження",
+                                        text = if (isExactLocation) "Місцезнаходження" else "Місцезнаходження (приблизна зона)",
                                         fontFamily = Montserrat,
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 13.sp,
@@ -428,8 +421,17 @@ fun AnnouncementDetailsScreen(
                                         text = resolvedAddress ?: "Україна",
                                         fontFamily = Montserrat,
                                         fontSize = 13.sp,
-                                        color = CharcoalDark.copy(alpha = 0.8f)
+                                        color = CharcoalDark.copy(alpha = 0.85f)
                                     )
+                                    if (!isExactLocation) {
+                                        Spacer(modifier = Modifier.height(2.dp))
+                                        Text(
+                                            text = "З міркувань безпеки точну адресу автор повідомляє в чаті",
+                                            fontFamily = Montserrat,
+                                            fontSize = 11.sp,
+                                            color = DeepSage
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -441,7 +443,6 @@ fun AnnouncementDetailsScreen(
                         ) {
                             val targetLat = item.exactLocation?.latitude ?: item.approxLocation?.latitude
                             val targetLng = item.exactLocation?.longitude ?: item.approxLocation?.longitude
-
                             OutlinedButton(
                                 onClick = {
                                     if (targetLat != null && targetLng != null) {
@@ -457,7 +458,6 @@ fun AnnouncementDetailsScreen(
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text("Маршрут", fontFamily = Montserrat, fontSize = 13.sp, color = CharcoalDark)
                             }
-
                             OutlinedButton(
                                 onClick = {
                                     val sendIntent = Intent().apply {
@@ -478,10 +478,8 @@ fun AnnouncementDetailsScreen(
 
                         // 7. Головна кнопка взаємодії (SRS 3.2.7.3, 3.2.10, 3.2.16)
                         val isCurrentAuthor = item.isOwner || (SessionManager.currentUserId != null && SessionManager.currentUserId == item.author.id)
-
                         if (!isCurrentAuthor) {
                             if (isOffer) {
-                                // Якщо це пропозиція допомоги — будь-хто, крім автора, може зв'язатися з волонтером
                                 Button(
                                     onClick = {
                                         // TODO: відкриття чату з волонтером (SRS 3.2.16)
@@ -508,7 +506,6 @@ fun AnnouncementDetailsScreen(
                                     )
                                 }
                             } else {
-                                // Якщо це потреба — показуємо кнопку «Допомогти»
                                 Button(
                                     onClick = {
                                         // TODO: відгукнутися на допомогу / відкрити чат (SRS 3.2.10)
@@ -536,7 +533,6 @@ fun AnnouncementDetailsScreen(
                                 }
                             }
                         }
-
                         Spacer(modifier = Modifier.height(20.dp))
                     }
                 }
