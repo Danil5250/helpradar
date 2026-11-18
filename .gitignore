@@ -59,6 +59,7 @@ coverage/
 # =========================
 # Testing / Logs
 # =========================
+/.scannerwork/
 logs/
 *.log
 npm-debug.log*

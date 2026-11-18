@@ -1,4 +1,4 @@
-name: Backend PR checks
+name: HelpRadar CI
 
 on:
   pull_request:
@@ -19,27 +19,20 @@ concurrency:
 defaults:
   run:
     shell: bash
-    working-directory: backend
 
 env:
   NODE_ENV: test
   CI: 'true'
   TZ: UTC
-  APP_URL: http://localhost:5173
-  CORS_ORIGINS: http://localhost:5173
-  MAIL_DRIVER: memory
-  DISABLE_SCHEDULER: 'true'
-  BCRYPT_ROUNDS: '4'
-  FILE_URL_SECRET: ci-only-file-signing-secret
-  # Integration tests override storage and geocoding providers; no cloud keys needed.
-  AWS_EC2_METADATA_DISABLED: 'true'
-  GEOCODER_BASE_URL: http://127.0.0.1:9
 
 jobs:
-  lint:
+  backend-lint:
     name: Backend lint and formatting
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: backend
     steps:
       - uses: actions/checkout@v7
         with:
@@ -58,10 +51,13 @@ jobs:
       - name: Prettier (check only)
         run: npm run format:check
 
-  unit:
+  backend-unit:
     name: Backend unit tests
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: backend
     steps:
       - uses: actions/checkout@v7
         with:
@@ -85,10 +81,13 @@ jobs:
           retention-days: 7
           if-no-files-found: error
 
-  integration:
+  backend-integration:
     name: Backend integration tests
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: backend
     services:
       postgres:
         image: postgres:16-alpine
@@ -104,6 +103,15 @@ jobs:
           --health-timeout 5s
           --health-retries 12
     env:
+      APP_URL: http://localhost:5173
+      CORS_ORIGINS: http://localhost:5173
+      MAIL_DRIVER: memory
+      DISABLE_SCHEDULER: 'true'
+      BCRYPT_ROUNDS: '4'
+      FILE_URL_SECRET: ci-only-file-signing-secret
+      # Integration tests use local storage and geocoding fixtures.
+      AWS_EC2_METADATA_DISABLED: 'true'
+      GEOCODER_BASE_URL: http://127.0.0.1:9
       DB_HOST: 127.0.0.1
       DB_PORT: '5432'
       DB_USERNAME: postgres
@@ -131,9 +139,131 @@ jobs:
           POSTGRES_CONTAINER_ID: ${{ job.services.postgres.id }}
         run: docker logs "$POSTGRES_CONTAINER_ID"
 
+  frontend-lint:
+    name: Frontend lint and formatting
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - name: Run ESLint
+        run: npm run lint -- --max-warnings=0
+      - name: Prettier (check only)
+        run: npm run format:check
+
+  frontend-unit:
+    name: Frontend unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - name: TypeScript checks
+        run: npm run typecheck
+      - name: Vitest with coverage
+        run: npm run test:ci -- --coverage
+      - name: Verify LCOV report
+        run: test -s coverage/lcov.info
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: frontend-unit-coverage
+          path: frontend/coverage/
+          retention-days: 7
+          if-no-files-found: error
+
+  mobile-lint:
+    name: Mobile lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+      - name: Run Android Lint
+        run: ./gradlew lintDebug
+      - name: Upload lint report
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: mobile-lint-report
+          path: mobile/app/build/reports/lint-results-debug*
+          retention-days: 7
+
+  mobile-unit:
+    name: Mobile unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+      - name: Run unit tests with coverage
+        run: ./gradlew :app:createDebugUnitTestCoverageReport
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: mobile-test-reports
+          path: mobile/app/build/reports/tests/testDebugUnitTest/
+          retention-days: 7
+      - name: Upload JaCoCo report
+        uses: actions/upload-artifact@v7
+        with:
+          name: mobile-unit-coverage
+          path: mobile/app/build/reports/coverage/test/debug/report.xml
+          retention-days: 7
+          if-no-files-found: error
+
   sonar:
-    name: Backend SonarQube quality gate
-    needs: unit
+    name: SonarQube quality gate
+    needs: [backend-unit, frontend-unit, mobile-unit]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -146,6 +276,23 @@ jobs:
         with:
           name: backend-unit-coverage
           path: backend/coverage
+      - uses: actions/download-artifact@v8
+        with:
+          name: frontend-unit-coverage
+          path: frontend/coverage
+      - uses: actions/download-artifact@v8
+        with:
+          name: mobile-unit-coverage
+          path: mobile/app/build/reports/coverage/test/debug
+      - name: Prepare coverage reports
+        run: |
+          # Jest and Vitest record paths relative to their component directories.
+          for component in backend frontend; do
+            report="$component/coverage/lcov.info"
+            test -s "$report"
+            sed -i "s|^SF:|SF:$component/|" "$report"
+          done
+          test -s mobile/app/build/reports/coverage/test/debug/report.xml
       - name: Verify SonarQube configuration
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -156,7 +303,6 @@ jobs:
             echo "::error::Configure SONAR_TOKEN, SONAR_HOST_URL and SONAR_PROJECT_KEY. Fork and bot PRs require a trusted analysis policy; scanning cannot be silently skipped."
             exit 1
           fi
-          test -s coverage/lcov.info
       # No npm installation or PR-provided lifecycle scripts in this secret-bearing job.
       - name: Analyze and wait for quality gate
         uses: SonarSource/sonarqube-scan-action@v8.4.1
@@ -164,28 +310,58 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }}
         with:
-          projectBaseDir: backend
           args: >-
             -Dsonar.projectKey=${{ vars.SONAR_PROJECT_KEY }}
             -Dsonar.qualitygate.wait=true
             -Dsonar.qualitygate.timeout=300
 
-  gate:
+  backend-gate:
     name: Backend CI gate
-    needs: [lint, unit, integration, sonar]
+    needs: [backend-lint, backend-unit, backend-integration, sonar]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
       - name: Require every stage to succeed
-        working-directory: .
         env:
-          LINT_RESULT: ${{ needs.lint.result }}
-          UNIT_RESULT: ${{ needs.unit.result }}
-          INTEGRATION_RESULT: ${{ needs.integration.result }}
+          LINT_RESULT: ${{ needs.backend-lint.result }}
+          UNIT_RESULT: ${{ needs.backend-unit.result }}
+          INTEGRATION_RESULT: ${{ needs.backend-integration.result }}
           SONAR_RESULT: ${{ needs.sonar.result }}
         run: |
           printf 'lint=%s unit=%s integration=%s sonar=%s\n' \
             "$LINT_RESULT" "$UNIT_RESULT" "$INTEGRATION_RESULT" "$SONAR_RESULT"
           [[ "$LINT_RESULT" == success && "$UNIT_RESULT" == success &&
              "$INTEGRATION_RESULT" == success && "$SONAR_RESULT" == success ]]
+
+  frontend-gate:
+    name: Frontend CI gate
+    needs: [frontend-lint, frontend-unit, sonar]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Require every stage to succeed
+        env:
+          LINT_RESULT: ${{ needs.frontend-lint.result }}
+          UNIT_RESULT: ${{ needs.frontend-unit.result }}
+          SONAR_RESULT: ${{ needs.sonar.result }}
+        run: |
+          printf 'lint=%s unit=%s sonar=%s\n' "$LINT_RESULT" "$UNIT_RESULT" "$SONAR_RESULT"
+          [[ "$LINT_RESULT" == success && "$UNIT_RESULT" == success && "$SONAR_RESULT" == success ]]
+
+  mobile-gate:
+    name: Mobile CI gate
+    needs: [mobile-lint, mobile-unit, sonar]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Require every stage to succeed
+        env:
+          LINT_RESULT: ${{ needs.mobile-lint.result }}
+          UNIT_RESULT: ${{ needs.mobile-unit.result }}
+          SONAR_RESULT: ${{ needs.sonar.result }}
+        run: |
+          printf 'lint=%s unit=%s sonar=%s\n' "$LINT_RESULT" "$UNIT_RESULT" "$SONAR_RESULT"
+          [[ "$LINT_RESULT" == success && "$UNIT_RESULT" == success && "$SONAR_RESULT" == success ]]
