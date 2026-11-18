@@ -193,7 +193,7 @@
     "REPUBLISH_EXPIRED": "The 30-day period for publishing this announcement again has ended.",
     "ANNOUNCEMENT_UNAVAILABLE": "This announcement is no longer available.",
     "DETAILS_UNAVAILABLE": "Unable to load the announcement. Try again.",
-    "LIST_UNAVAILABLE": "Unable to load announcements. Pull down to refresh.",
+    "LIST_UNAVAILABLE": "Unable to load announcements.",
     "UNAUTHORIZED": "Please log in to continue.",
     "FORBIDDEN": "You do not have permission to perform this action.",
     "RATE_LIMITED": "Too many requests. Please try again later.",

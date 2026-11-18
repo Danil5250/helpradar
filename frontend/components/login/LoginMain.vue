@@ -78,6 +78,7 @@
 
 <script setup lang="ts">
 // Imports
+import type { ApiError } from '~/composables/useApi';
 import { validateLogin, type LoginForm } from '~/utils/validation';
 
 // Composables
@@ -94,14 +95,24 @@ const fieldText = useFieldErrorText();
 const form = reactive<LoginForm>({ email: '', password: '' });
 const showPassword = ref(false);
 const errors = ref<Partial<Record<keyof LoginForm, string>>>({});
-const generalError = ref('');
+const loginError = ref<ApiError | null>(null);
 const loading = ref(false);
 const unverifiedEmail = ref('');
-const resendMessage = ref('');
+const resendResult = ref<'errors.EMAIL_QUEUED' | 'check_email' | ApiError | null>(null);
 const resendCooldown = ref(0);
 
 // Constants
 let cooldownTimer: ReturnType<typeof setInterval> | undefined;
+
+// Computed
+const generalError = computed(() => {
+  if (loginError.value?.code === 'VALIDATION_FAILED' || Object.keys(errors.value).length > 0) return t('errors.FIELDS_REQUIRED');
+  return loginError.value ? errorText(loginError.value, 'errors.LOGIN_UNAVAILABLE') : '';
+});
+const resendMessage = computed(() => {
+  if (typeof resendResult.value === 'string') return t(resendResult.value);
+  return resendResult.value ? errorText(resendResult.value, 'errors.EMAIL_SERVICE_ERROR') : '';
+});
 
 // Methods
 function redirectTarget(): string {
@@ -110,14 +121,11 @@ function redirectTarget(): string {
 }
 
 async function handleLogin() {
-  generalError.value = '';
-  resendMessage.value = '';
+  loginError.value = null;
+  resendResult.value = null;
   unverifiedEmail.value = '';
   errors.value = validateLogin(form);
-  if (Object.keys(errors.value).length > 0) {
-    generalError.value = t('errors.FIELDS_REQUIRED');
-    return;
-  }
+  if (Object.keys(errors.value).length > 0) return;
 
   loading.value = true;
   try {
@@ -126,12 +134,10 @@ async function handleLogin() {
     await navigateTo(redirectTarget());
   } catch (error) {
     const apiError = toApiError(error);
+    loginError.value = apiError;
     if (apiError.code === 'EMAIL_NOT_VERIFIED') unverifiedEmail.value = String(apiError.data.email ?? form.email.trim());
     if (apiError.code === 'VALIDATION_FAILED') {
       errors.value = { email: apiError.fields.email?.code, password: apiError.fields.password?.code };
-      generalError.value = t('errors.FIELDS_REQUIRED');
-    } else {
-      generalError.value = errorText(apiError, 'errors.LOGIN_UNAVAILABLE');
     }
   } finally {
     loading.value = false;
@@ -139,20 +145,20 @@ async function handleLogin() {
 }
 
 async function resendEmail() {
-  resendMessage.value = '';
+  resendResult.value = null;
   try {
     const result = await apiFetch<{ code: string }>('/auth/resend-verification', {
       method: 'POST',
       body: { email: unverifiedEmail.value, locale: locale.value },
     });
-    resendMessage.value = t(result.code === 'EMAIL_QUEUED' ? 'errors.EMAIL_QUEUED' : 'check_email');
+    resendResult.value = result.code === 'EMAIL_QUEUED' ? 'errors.EMAIL_QUEUED' : 'check_email';
     resendCooldown.value = 60;
     cooldownTimer = setInterval(() => {
       resendCooldown.value -= 1;
       if (resendCooldown.value <= 0 && cooldownTimer) clearInterval(cooldownTimer);
     }, 1000);
   } catch (error) {
-    resendMessage.value = errorText(toApiError(error), 'errors.EMAIL_SERVICE_ERROR');
+    resendResult.value = toApiError(error);
   }
 }
 
