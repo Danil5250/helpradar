@@ -5,7 +5,9 @@
     <div class="flex items-center p-4 mb-2 mt-4 ml-4">
       <img :src="a.author.avatarUrl" alt="" class="w-16 h-16 rounded-full object-cover mr-3" />
       <div>
-        <h4 class="text-relative-h5 xl:text-pl font-montserratMedium">{{ a.author.name }}</h4>
+        <h4 class="text-relative-h5 xl:text-pl font-montserratMedium">
+          <NuxtLink :to="`/users/${a.author.id}`" class="underline hover:text-forest">{{ a.author.name }}</NuxtLink>
+        </h4>
         <span class="text-sm font-montserratMedium flex items-center gap-2">
           <span>{{ timeAgo(a.datePosted, locale) }}</span>
           <span v-if="a.author.rating !== null" class="text-charcoal" :title="t('rating')">★ {{ a.author.rating.toFixed(1) }}</span>
