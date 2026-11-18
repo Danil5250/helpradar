@@ -6,4 +6,7 @@ export class MapAnnouncementsResponseDto {
   /** "N announcements within [radius] km" (SRS 3.2.19.4). */
   total: number;
   radiusKm: number;
+  page: number;
+  pageSize: number;
+  hasMore: boolean;
 }

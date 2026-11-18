@@ -142,14 +142,14 @@ export class AnnouncementController {
   @HttpCode(200)
   @UseGuards(SessionAuthGuard)
   @ApiCookieAuth()
-  @ApiOperation({ summary: 'Close an announcement' })
+  @ApiOperation({ summary: 'Mark an active announcement as resolved' })
   async close(
     @CurrentUser() user: AuthUser,
     @Param('id', ParseAnnouncementIdPipe) id: number,
   ): Promise<AnnouncementActionResultResponseDto> {
     return {
       code: 'ANNOUNCEMENT_CLOSED',
-      message: 'Announcement closed.',
+      message: 'Announcement resolved.',
       announcement: await this.announcements.close(user, id),
     };
   }

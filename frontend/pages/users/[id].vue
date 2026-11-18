@@ -17,6 +17,8 @@
         <img :src="user.avatarUrl" alt="" class="w-32 h-32 rounded-full object-cover border-4 border-sand" />
         <div class="flex flex-col gap-2 items-center md:items-start text-center md:text-left">
           <h1 class="font-kharkiv text-h4 xl:text-h3" data-test="public-name">{{ user.name }}</h1>
+          <a :href="`mailto:${user.email}`" class="text-forest underline break-all" data-test="public-email">{{ user.email }}</a>
+          <a v-if="user.phoneNumber" :href="`tel:${user.phoneNumber}`" class="text-forest underline" data-test="public-phone">{{ user.phoneNumber }}</a>
           <p class="text-sm">
             <span class="bg-sand rounded-full px-3 py-1">{{ t(user.role === 'volunteer' ? 'role_volunteer' : 'role_person_in_need') }}</span>
           </p>

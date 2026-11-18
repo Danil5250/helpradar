@@ -32,7 +32,7 @@
         <p v-if="item.status === 'Active' && hoursLeft(item.expiresAt) <= 24" class="px-2">
           <span class="bg-radar text-charcoal font-bold rounded-full px-3 py-1 text-sm" data-test="expires-soon">{{ t('expires_soon') }}</span>
         </p>
-        <p v-if="item.status === 'Closed' && item.republishUntil" class="px-2 text-sm text-sage">
+        <p v-if="['Closed', 'Resolved'].includes(item.status) && item.republishUntil" class="px-2 text-sm text-sage">
           {{ t('republish_until', { date: formatDate(item.republishUntil, locale) }) }}
         </p>
         <div class="px-2">

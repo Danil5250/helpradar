@@ -66,7 +66,7 @@ describe('ProfileService', () => {
       loadAppConfig({}),
     );
   });
-  it('returns private fields only in the own-profile representation', async () => {
+  it('exposes current identity and contact details without exposing credentials or pending changes', async () => {
     tokens.findOne.mockResolvedValue({ newEmail: 'pending@example.test' });
     expect(await service.getOwn(1)).toMatchObject({
       email: user.email,
@@ -78,16 +78,12 @@ describe('ProfileService', () => {
     const publicProfile = await service.getPublic(1);
     expect(publicProfile).toMatchObject({
       id: 1,
-      name: 'Anna T.',
+      name: 'Anna Test',
+      email: user.email,
+      phoneNumber: user.phoneNumber,
       city: 'Kyiv',
     });
-    for (const field of [
-      'email',
-      'phoneNumber',
-      'street',
-      'password',
-      'pendingEmail',
-    ])
+    for (const field of ['street', 'password', 'pendingEmail'])
       expect(publicProfile).not.toHaveProperty(field);
   });
   it('includes volunteer rating and review count', async () => {
@@ -220,6 +216,10 @@ describe('ProfileService', () => {
         }),
       );
       expect(mail.enqueue).not.toHaveBeenCalled();
+      expect(await service.getPublic(actor.id)).toMatchObject({
+        name: 'Alice Test',
+        phoneNumber: user.phoneNumber,
+      });
     });
     it('updates volunteer supports and description without clearing omitted city', async () => {
       current.volunteer = {

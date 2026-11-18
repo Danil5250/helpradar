@@ -5,5 +5,6 @@ export enum AnnouncementStatus {
   Completed = 'Completed',
   Hidden = 'Hidden',
   Closed = 'Closed',
+  Resolved = 'Resolved',
   Deleted = 'Deleted',
 }

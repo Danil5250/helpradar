@@ -209,19 +209,55 @@ export class AnnouncementService {
   // 3.2.18 Map / 3.2.19 Radius search
   // ---------------------------------------------------------------------------------------------
 
-  /** Everything inside the circle, nearest first; the same role filter as the list applies. */
+  /** All active announcements in the viewport (or radius), served in complete pages. */
   async findForMap(
     query: MapAnnouncementsRequestDto,
     viewer?: AuthUser,
   ): Promise<MapAnnouncementsResponseDto> {
-    const qb = this.activeQuery(viewer, query.type)
-      .addSelect(DISTANCE_SQL, 'distance_km')
-      .andWhere(`${DISTANCE_SQL} <= :radius`)
+    const bounds = [query.north, query.south, query.east, query.west];
+    const hasBounds = bounds.some((edge) => edge !== undefined);
+    if (
+      hasBounds &&
+      (!bounds.every(
+        (edge) => typeof edge === 'number' && Number.isFinite(edge),
+      ) ||
+        query.south! > query.north!)
+    ) {
+      throw validationFailed({
+        bounds: {
+          code: 'COORDINATES_INVALID',
+          message: 'Provide all four valid map bounds.',
+        },
+      });
+    }
+    // Unlike the discovery list, the map also includes the viewer's own requests.
+    const mapDistance = DISTANCE_SQL.replaceAll(
+      'approx_latitude',
+      'latitude',
+    ).replaceAll('approx_longitude', 'longitude');
+    const qb = this.activeQuery(viewer, query.type, true)
+      .addSelect(mapDistance, 'distance_km')
       .setParameters({ lat: query.lat, lng: query.lng, radius: query.radius });
+    if (hasBounds) {
+      qb.andWhere('a.latitude BETWEEN :south AND :north', {
+        south: query.south,
+        north: query.north,
+      });
+      qb.andWhere(
+        query.west! <= query.east!
+          ? 'a.longitude BETWEEN :west AND :east'
+          : '(a.longitude >= :west OR a.longitude <= :east)',
+        { west: query.west, east: query.east },
+      );
+    } else {
+      qb.andWhere(`${mapDistance} <= :radius`);
+    }
+    const page = query.page ?? 1;
     const total = await qb.clone().getCount();
     const { entities, raw } = await qb
       .orderBy('distance_km', 'ASC')
       .addOrderBy('a.id', 'DESC')
+      .offset((page - 1) * MAP_MARKERS_LIMIT)
       .limit(MAP_MARKERS_LIMIT)
       .getRawAndEntities();
 
@@ -233,6 +269,10 @@ export class AnnouncementService {
         id: entity.id,
         type: entity.type,
         title: entity.title ?? '',
+        description:
+          entity.description.length > 160
+            ? `${entity.description.slice(0, 157)}...`
+            : entity.description,
         category: { id: entity.category.id, name: entity.category.name },
         isUrgent: entity.isUrgent,
         datePosted: entity.datePosted.toISOString(),
@@ -241,9 +281,13 @@ export class AnnouncementService {
           latitude: entity.approxLatitude,
           longitude: entity.approxLongitude,
         },
+        location: { latitude: entity.latitude, longitude: entity.longitude },
       })),
       total,
       radiusKm: query.radius,
+      page,
+      pageSize: MAP_MARKERS_LIMIT,
+      hasMore: page * MAP_MARKERS_LIMIT < total,
     };
   }
 
@@ -254,6 +298,7 @@ export class AnnouncementService {
   private activeQuery(
     viewer: AuthUser | undefined,
     type: AnnouncementTypeFilter | undefined,
+    includeOwn = false,
   ) {
     const qb = this.announcements
       .createQueryBuilder('a')
@@ -262,7 +307,8 @@ export class AnnouncementService {
       .leftJoinAndSelect('user.volunteer', 'volunteer')
       .where('a.status = :status', { status: AnnouncementStatus.Active })
       .andWhere('a.expiresAt > now()');
-    if (viewer) qb.andWhere('a.userId != :viewerId', { viewerId: viewer.id });
+    if (viewer && !includeOwn)
+      qb.andWhere('a.userId != :viewerId', { viewerId: viewer.id });
     if (type)
       qb.andWhere('a.type = :type', {
         type: ANNOUNCEMENT_TYPE_BY_FILTER[type],
@@ -412,7 +458,7 @@ export class AnnouncementService {
     if (entity.status !== AnnouncementStatus.Active)
       throw new AppException('CLOSE_NOT_ALLOWED');
     const closed = await this.guardedUpdate(id, [AnnouncementStatus.Active], {
-      status: AnnouncementStatus.Closed,
+      status: AnnouncementStatus.Resolved,
       closedAt: new Date(),
     });
     if (!closed) throw new AppException('CLOSE_NOT_ALLOWED');
@@ -425,13 +471,18 @@ export class AnnouncementService {
       throw new AppException('DELETE_IN_PROGRESS');
     if (
       entity.status !== AnnouncementStatus.Active &&
-      entity.status !== AnnouncementStatus.Closed
+      entity.status !== AnnouncementStatus.Closed &&
+      entity.status !== AnnouncementStatus.Resolved
     ) {
       throw new AppException('DELETE_NOT_ALLOWED');
     }
     const deleted = await this.guardedUpdate(
       id,
-      [AnnouncementStatus.Active, AnnouncementStatus.Closed],
+      [
+        AnnouncementStatus.Active,
+        AnnouncementStatus.Closed,
+        AnnouncementStatus.Resolved,
+      ],
       {
         status: AnnouncementStatus.Deleted,
       },
@@ -464,7 +515,10 @@ export class AnnouncementService {
     expiryDays: number = DEFAULT_EXPIRY_DAYS,
   ): Promise<AnnouncementDetailsResponseDto> {
     const entity = await this.loadForAuthor(user, id);
-    if (entity.status !== AnnouncementStatus.Closed)
+    if (
+      entity.status !== AnnouncementStatus.Closed &&
+      entity.status !== AnnouncementStatus.Resolved
+    )
       throw new AppException('REPUBLISH_NOT_ALLOWED');
     const until = this.republishUntil(entity);
     if (!until || new Date(until).getTime() < Date.now())
@@ -481,7 +535,7 @@ export class AnnouncementService {
       const now = new Date();
       const result = await manager.update(
         Announcement,
-        { id, status: AnnouncementStatus.Closed },
+        { id, status: entity.status },
         {
           status: AnnouncementStatus.Active,
           datePosted: now,
@@ -578,14 +632,14 @@ export class AnnouncementService {
     return result.affected ?? 0;
   }
 
-  /** The 30-day republish period has expired: Closed -> Deleted. */
+  /** The 30-day republish period has expired: Closed/Resolved -> Deleted. */
   async deleteStaleClosed(): Promise<number> {
     const result = await this.announcements
       .createQueryBuilder()
       .update()
       .set({ status: AnnouncementStatus.Deleted })
-      .where('"status" = :status AND "closed_at" < :limit', {
-        status: AnnouncementStatus.Closed,
+      .where('"status" IN (:...statuses) AND "closed_at" < :limit', {
+        statuses: [AnnouncementStatus.Closed, AnnouncementStatus.Resolved],
         limit: new Date(Date.now() - REPUBLISH_WINDOW_DAYS * DAY_MS),
       })
       .execute();
@@ -786,6 +840,7 @@ export class AnnouncementService {
       case AnnouncementStatus.Active:
         return ['edit', 'close', 'delete', 'extend'];
       case AnnouncementStatus.Closed:
+      case AnnouncementStatus.Resolved:
         return this.republishUntil(entity) &&
           new Date(this.republishUntil(entity) as string).getTime() > Date.now()
           ? ['republish', 'delete']
@@ -796,7 +851,12 @@ export class AnnouncementService {
   }
 
   private republishUntil(entity: Announcement): string | null {
-    if (entity.status !== AnnouncementStatus.Closed || !entity.closedAt)
+    if (
+      ![AnnouncementStatus.Closed, AnnouncementStatus.Resolved].includes(
+        entity.status,
+      ) ||
+      !entity.closedAt
+    )
       return null;
     return new Date(
       entity.closedAt.getTime() + REPUBLISH_WINDOW_DAYS * DAY_MS,

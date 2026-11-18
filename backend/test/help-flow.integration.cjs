@@ -457,4 +457,166 @@ void describe('Help workflow with real HTTP, sessions, PostgreSQL and migrations
       }
     }
   });
+
+  void it('edits and resolves an owned request, removes its map marker, and keeps its shared link readable', async () => {
+    const request = await announcement(
+      actors.stranger,
+      'Sprint acceptance request',
+    );
+    const path = `/announcements/${request.id}`;
+    assert.equal(
+      (await api(actors.volunteer, path, 'PATCH', { title: 'Foreign change' }))
+        .status,
+      403,
+    );
+    assert.equal(
+      (await api(actors.stranger, path, 'PATCH', { title: '' })).status,
+      400,
+    );
+    const edited = await api(actors.stranger, path, 'PATCH', {
+      title: 'Updated request title',
+      description: 'Updated details for the map popup and public link.',
+    });
+    assert.equal(edited.status, 200, JSON.stringify(edited.body));
+    assert.equal(
+      (await api(null, path)).body.announcement.title,
+      'Updated request title',
+    );
+    const query =
+      '/announcements/map?lat=50.45&lng=30.52&radius=1&north=50.46&south=50.44&east=30.54&west=30.50';
+    const visible = await api(actors.stranger, query);
+    assert.equal(visible.status, 200, JSON.stringify(visible.body));
+    const marker = visible.body.items.find((item) => item.id === request.id);
+    assert(marker, 'The author must also see their request on the map.');
+    assert.deepEqual(marker.location, {
+      latitude: 50.4501,
+      longitude: 30.5234,
+    });
+    assert.equal(
+      marker.description,
+      'Updated details for the map popup and public link.',
+    );
+    const resolved = await api(actors.stranger, `${path}/close`, 'POST');
+    assert.equal(resolved.status, 200, JSON.stringify(resolved.body));
+    assert.equal(resolved.body.announcement.status, 'Resolved');
+    assert(
+      !(await api(null, query)).body.items.some(
+        (item) => item.id === request.id,
+      ),
+    );
+    assert(
+      !(await api(actors.volunteer, '/announcements')).body.items.some(
+        (item) => item.id === request.id,
+      ),
+    );
+    assert.equal((await api(null, path)).body.announcement.status, 'Resolved');
+    assert.equal(
+      (await api(actors.stranger, '/announcements/mine')).body.items.find(
+        (item) => item.id === request.id,
+      ).status,
+      'Resolved',
+    );
+    const republished = await api(
+      actors.stranger,
+      `${path}/republish`,
+      'POST',
+      {},
+    );
+    assert.equal(republished.status, 200, JSON.stringify(republished.body));
+    assert.equal(republished.body.announcement.status, 'Active');
+    assert.equal((await api(actors.stranger, path, 'DELETE')).status, 200);
+    assert.equal((await api(null, path)).body.code, 'ANNOUNCEMENT_UNAVAILABLE');
+  });
+
+  void it('returns every viewport marker in pages, including points outside the initial radius', async () => {
+    const title = 'Viewport pagination fixture';
+    try {
+      await db.manager.insert(
+        Announcement,
+        Array.from({ length: 501 }, () => ({
+          type: 'HelpRequest',
+          title,
+          description: 'A request visible in the new map viewport.',
+          categoryId: 1,
+          userId: actors.stranger.id,
+          latitude: 51.5,
+          longitude: 31.5,
+          approxLatitude: 51.501,
+          approxLongitude: 31.501,
+          status: 'Active',
+          datePosted: new Date(),
+          expiresAt: new Date(Date.now() + 86400000),
+        })),
+      );
+      const query =
+        '/announcements/map?lat=50.45&lng=30.52&radius=1&north=51.51&south=51.49&east=31.51&west=31.49';
+      const first = await api(actors.stranger, query);
+      assert.equal(first.status, 200, JSON.stringify(first.body));
+      assert.equal(first.body.total, 501);
+      assert.equal(first.body.items.length, 500);
+      assert.equal(first.body.hasMore, true);
+      const second = await api(actors.stranger, `${query}&page=2`);
+      assert.equal(second.body.items.length, 1);
+      assert.equal(second.body.hasMore, false);
+      assert.equal(
+        new Set(
+          [...first.body.items, ...second.body.items].map((item) => item.id),
+        ).size,
+        501,
+      );
+      assert.equal(
+        (await api(null, '/announcements/map?lat=50&lng=30&radius=1&north=51'))
+          .status,
+        400,
+      );
+      assert.equal(
+        (
+          await api(
+            null,
+            '/announcements/map?lat=50&lng=30&radius=1&north=49&south=51&east=31&west=29',
+          )
+        ).status,
+        400,
+      );
+    } finally {
+      await db.manager.delete(Announcement, { title });
+    }
+  });
+
+  void it('persists profile edits and exposes updated identity and contacts to other users', async () => {
+    assert.equal(
+      (await api(null, '/profile', 'PATCH', { firstName: 'Guest' })).status,
+      401,
+    );
+    const changed = await api(actors.stranger, '/profile', 'PATCH', {
+      firstName: 'Olena',
+      lastName: 'Shevchenko',
+      phoneNumber: '+380671234567',
+    });
+    assert.equal(changed.status, 200, JSON.stringify(changed.body));
+    assert.equal(
+      (await api(actors.stranger, '/profile')).body.firstName,
+      'Olena',
+    );
+    const publicProfile = await api(
+      actors.volunteer,
+      `/users/${actors.stranger.id}`,
+    );
+    assert.equal(publicProfile.body.name, 'Olena Shevchenko');
+    assert.equal(publicProfile.body.phoneNumber, '+380671234567');
+    assert.equal(publicProfile.body.email, 'stranger@example.test');
+    assert.equal(
+      (
+        await api(actors.stranger, '/profile', 'PATCH', {
+          firstName: '',
+          phoneNumber: 'invalid',
+        })
+      ).status,
+      400,
+    );
+    assert.equal(
+      (await api(null, `/users/${actors.stranger.id}`)).body.name,
+      'Olena Shevchenko',
+    );
+  });
 });

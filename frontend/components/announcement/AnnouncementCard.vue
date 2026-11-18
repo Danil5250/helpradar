@@ -63,6 +63,7 @@ const statusLook: Record<AnnouncementStatus, string> = {
   Completed: 'bg-olive text-charcoal',
   Hidden: 'bg-sage text-almost-white',
   Closed: 'bg-sand-dark text-charcoal',
+  Resolved: 'bg-olive text-charcoal',
   Deleted: 'bg-sand-dark text-charcoal',
 };
 

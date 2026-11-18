@@ -14,7 +14,7 @@ export default defineNitroPlugin((nitroApp) => {
       if (announcement.status === 'Hidden' || announcement.status === 'Deleted') return;
       const preview = announcementSharing(announcement, requestUrl.origin);
       html.head = html.head.map((tag) => tag.replace(/<title\b[^>]*>[\s\S]*?<\/title>/gi, ''));
-      html.head.push(...shareHeadTags({ ...preview, description: preview.category.name }));
+      html.head.push(...shareHeadTags(preview));
     } catch {
       // keep the page available when the API is temporarily unreachable.
     }

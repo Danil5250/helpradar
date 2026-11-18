@@ -12,11 +12,37 @@ export function announcementSharing(announcement: ShareableAnnouncement, origin:
   return {
     id: announcement.id,
     title: announcement.title,
+    description: shortShareDescription(announcement.description),
     type: announcement.type,
     category: { id: announcement.category.id, name: announcement.category.name },
     url: announcementShareUrl(origin, announcement.id),
     imageUrl: new URL('/images/share-card.png', origin).href,
   };
+}
+
+export function shortShareDescription(description: string): string {
+  const text = description.replace(/\s+/g, ' ').trim();
+  const characters = Array.from(text);
+  return characters.length > 160 ? `${characters.slice(0, 157).join('')}...` : text;
+}
+
+/** Call the system dialog directly from the click, with a usable fallback on failure. */
+export async function shareWithFallback(
+  data: ShareData,
+  nativeShare: ((data: ShareData) => Promise<void>) | undefined,
+  fallback: () => void
+): Promise<boolean> {
+  if (!nativeShare) {
+    fallback();
+    return false;
+  }
+  try {
+    await nativeShare(data);
+    return true;
+  } catch (error) {
+    if ((error as { name?: string }).name !== 'AbortError') fallback();
+    return false;
+  }
 }
 
 export function socialShareUrl(channel: SocialChannel, url: string, title: string, text: string): string {

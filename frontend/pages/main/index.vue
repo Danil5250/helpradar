@@ -35,7 +35,7 @@
           {{ t(`view_${option}`) }}
         </button>
       </div>
-      <AppSelect v-model="radius" :options="radiusOptions" :prefix="t('radius')" data-test="radius" @change="chooseRadius" />
+      <AppSelect v-model="radius" :options="radiusOptions" :prefix="t(view === 'map' ? 'map_scale' : 'radius')" data-test="radius" @change="chooseRadius" />
       <p v-if="radiusCounter" class="font-montserratMedium text-forest" data-test="radius-counter">{{ radiusCounter }}</p>
     </div>
 
@@ -47,9 +47,16 @@
     </p>
 
     <div v-if="view === 'map'" class="mt-6">
-      <AnnouncementMap :center="mapCenter" :radius-km="mapRadius" :markers="mapData?.items ?? []" @center-change="changeCenter" @unavailable="mapUnavailable" />
+      <AnnouncementMap
+        :center="mapCenter"
+        :radius-km="mapRadius"
+        :markers="mapData?.items ?? []"
+        @center-change="changeCenter"
+        @viewport-change="changeViewport"
+        @unavailable="mapUnavailable"
+      />
       <p v-if="mapData && mapData.total === 0" class="mt-4 text-center font-montserratMedium" data-test="map-empty">
-        {{ t('radius_empty', { km: mapRadius }) }}
+        {{ t('map_empty') }}
       </p>
       <p v-if="mapError" class="mt-4 border-l-4 border-radar bg-almost-white rounded-r-lg px-3 py-2" role="alert">{{ mapError }}</p>
     </div>
@@ -90,8 +97,10 @@ import {
   type AnnouncementSort,
   type AnnouncementTypeFilter,
   type MapAnnouncements,
+  type MapBounds,
   type SearchRadiusKm,
 } from '~/types/announcement';
+import { loadMapPages, deviceMapPosition, resolveMapPosition } from '~/utils/map';
 
 // Composables
 const { user, isAuthenticated, role, canPublish } = useAuth();
@@ -117,11 +126,16 @@ const view = ref<'list' | 'map'>('list');
 const radius = ref<SearchRadiusKm | null>(null);
 const mapData = ref<MapAnnouncements | null>(null);
 const mapError = ref('');
+const mapBounds = ref<MapBounds | null>(null);
 
 // Constants
 let observer: IntersectionObserver | null = null;
 let resetQueued = false;
 let mapTimer: ReturnType<typeof setInterval> | undefined;
+let viewportTimer: ReturnType<typeof setTimeout> | undefined;
+let mapController: AbortController | undefined;
+let mapPositionRequested = false;
+let positionRequest = 0;
 const viewOptions = ['list', 'map'] as const;
 const KYIV = { lat: 50.4501, lng: 30.5234 };
 const MAP_DEFAULT_RADIUS: SearchRadiusKm = 10;
@@ -146,9 +160,7 @@ const radiusOptions = computed<{ value: SearchRadiusKm | null; label: string }[]
 ]);
 const mapCenter = computed(() => position.value ?? KYIV);
 const mapRadius = computed<SearchRadiusKm>(() => radius.value ?? MAP_DEFAULT_RADIUS);
-const radiusCounter = computed(() =>
-  view.value === 'map' && mapData.value ? t('radius_counter', { count: mapData.value.total, km: mapData.value.radiusKm }) : ''
-);
+const radiusCounter = computed(() => (view.value === 'map' && mapData.value ? t('map_area_count', { count: mapData.value.total }) : ''));
 
 // Methods
 function useProfileCity(): boolean {
@@ -225,25 +237,51 @@ async function chooseSort(next: AnnouncementSort) {
 }
 
 async function ensurePosition(): Promise<void> {
-  if (position.value) return;
-  const result = await requestDevicePosition();
-  if (result === 'ok') return;
-  const city = useProfileCity() ? user.value?.city : null;
-
-  locationNote.value = result === 'denied' ? t('map_location_denied') : t('map_location_unknown', { place: city || t('kyiv') });
+  if (mapPositionRequested) return;
+  mapPositionRequested = true;
+  const request = ++positionRequest;
+  const city = cityCoordinates(user.value?.city);
+  const result = await resolveMapPosition(() => deviceMapPosition(navigator.geolocation), city ?? KYIV);
+  if (request !== positionRequest) return;
+  position.value = result.position;
+  if (result.source === 'device') return;
+  locationNote.value = result.denied ? t('map_location_denied') : t('map_location_unknown', { place: city ? user.value?.city : t('kyiv') });
 }
 
 async function loadMap() {
+  if (view.value !== 'map' || !mapBounds.value) return;
+  mapController?.abort();
+  const controller = new AbortController();
+  mapController = controller;
   try {
-    mapData.value = await announcements.map({ lat: mapCenter.value.lat, lng: mapCenter.value.lng, radius: mapRadius.value, type: listType.value });
+    const result = await loadMapPages(
+      announcements.map,
+      { lat: mapCenter.value.lat, lng: mapCenter.value.lng, radius: mapRadius.value, ...mapBounds.value },
+      controller.signal
+    );
+    if (controller.signal.aborted) return;
+    mapData.value = result;
     mapError.value = '';
   } catch (error) {
+    if (controller.signal.aborted) return;
     mapError.value = errorText(toApiError(error), 'errors.LIST_UNAVAILABLE');
+  } finally {
+    if (mapController === controller) mapController = undefined;
   }
+}
+
+function changeViewport(bounds: MapBounds) {
+  mapBounds.value = bounds;
+  mapController?.abort();
+  clearTimeout(viewportTimer);
+  viewportTimer = setTimeout(() => void loadMap(), 200);
 }
 
 function stopMapRefresh() {
   clearInterval(mapTimer);
+  clearTimeout(viewportTimer);
+  mapController?.abort();
+  mapBounds.value = null;
   mapTimer = undefined;
 }
 
@@ -253,11 +291,14 @@ async function switchView(next: 'list' | 'map') {
   locationNote.value = '';
   stopMapRefresh();
   if (next === 'map') {
-    // the map always searches in a circle: "any distance" of the list becomes the default radius.
+    // Radius controls the initial map scale; requests follow the visible bounds.
     if (radius.value === null) radius.value = MAP_DEFAULT_RADIUS;
     await ensurePosition();
     await loadMap();
-    mapTimer = setInterval(loadMap, MAP_REFRESH_MS);
+    if (view.value === 'map')
+      mapTimer = setInterval(() => {
+        if (!mapController) void loadMap();
+      }, MAP_REFRESH_MS);
   } else {
     await load(true);
   }
@@ -279,6 +320,8 @@ async function chooseRadius(next: SearchRadiusKm | null) {
 
 /** A click on the map moves the center of the search there. */
 async function changeCenter(point: { lat: number; lng: number }) {
+  mapPositionRequested = true;
+  positionRequest += 1;
   position.value = point;
   locationNote.value = '';
   await loadMap();
@@ -290,7 +333,7 @@ async function mapUnavailable() {
 }
 
 // Watchers
-watch(listType, () => (view.value === 'map' ? void loadMap() : void load(true)));
+watch(listType, () => (view.value === 'list' ? void load(true) : undefined));
 
 // Lifecycle
 onMounted(async () => {

@@ -89,7 +89,7 @@
 
 <script setup lang="ts">
 // Imports
-import { announcementSharing, SOCIAL_CHANNELS, socialShareUrl } from '~/utils/sharing';
+import { announcementSharing, SOCIAL_CHANNELS, socialShareUrl, shareWithFallback } from '~/utils/sharing';
 import type { ShareableAnnouncement, ShareChannel, SocialChannel } from '~/types/sharing';
 
 // Props
@@ -131,9 +131,22 @@ const channels = computed(() =>
 );
 
 // Methods
-function open() {
-  isOpen.value = true;
+async function open() {
+  if (nativeBusy.value) return;
   status.value = '';
+  nativeBusy.value = true;
+  try {
+    const shared = await shareWithFallback(
+      { title: preview.value.title, text: preview.value.description, url: preview.value.url },
+      typeof navigator.share === 'function' ? navigator.share.bind(navigator) : undefined,
+      () => {
+        isOpen.value = true;
+      }
+    );
+    if (shared) record('native');
+  } finally {
+    nativeBusy.value = false;
+  }
 }
 function close() {
   isOpen.value = false;
