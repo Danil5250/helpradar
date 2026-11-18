@@ -15,7 +15,7 @@
     <LoadingSpinner v-if="loading" />
 
     <div v-else-if="loadError" class="my-10 text-center" role="alert">
-      <p class="inline-block mb-4 border-l-4 border-radar bg-almost-white rounded-r-lg px-3 py-2">{{ loadError }}</p>
+      <p class="inline-block mb-4 border-l-4 border-radar bg-almost-white rounded-r-lg px-3 py-2">{{ errorText(loadError, 'errors.LIST_UNAVAILABLE') }}</p>
       <div>
         <AppButton has-outline @click="load">{{ t('try_again') }}</AppButton>
       </div>
@@ -45,6 +45,7 @@
 
 <script setup lang="ts">
 // Imports
+import type { ApiError } from '~/composables/useApi';
 import type { AnnouncementDetails, OwnAnnouncementItem } from '~/types/announcement';
 
 // Composables
@@ -60,7 +61,7 @@ useHead({ title: computed(() => t('helmet_mine')) });
 // Data
 const items = ref<OwnAnnouncementItem[]>([]);
 const loading = ref(true);
-const loadError = ref('');
+const loadError = ref<ApiError | null>(null);
 
 // Computed
 const activeCount = computed(() => items.value.filter((item) => item.status === 'Active').length);
@@ -68,7 +69,7 @@ const activeCount = computed(() => items.value.filter((item) => item.status === 
 // Methods
 async function load() {
   loading.value = true;
-  loadError.value = '';
+  loadError.value = null;
   try {
     items.value = await announcements.mine();
   } catch (error) {
@@ -78,7 +79,7 @@ async function load() {
       await navigateTo('/login');
       return;
     }
-    loadError.value = errorText(apiError, 'errors.LIST_UNAVAILABLE');
+    loadError.value = apiError;
   } finally {
     loading.value = false;
   }

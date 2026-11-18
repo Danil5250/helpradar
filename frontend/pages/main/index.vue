@@ -58,7 +58,9 @@
       <p v-if="mapData && mapData.total === 0" class="mt-4 text-center font-montserratMedium" data-test="map-empty">
         {{ t('map_empty') }}
       </p>
-      <p v-if="mapError" class="mt-4 border-l-4 border-radar bg-almost-white rounded-r-lg px-3 py-2" role="alert">{{ mapError }}</p>
+      <p v-if="mapError" class="mt-4 border-l-4 border-radar bg-almost-white rounded-r-lg px-3 py-2" role="alert">
+        {{ errorText(mapError, 'errors.LIST_UNAVAILABLE') }}
+      </p>
     </div>
 
     <LoadingSpinner v-else-if="!loadedOnce" />
@@ -76,7 +78,9 @@
       </div>
 
       <div v-if="loadError" class="my-10 text-center" role="alert">
-        <p class="mb-4 border-l-4 border-radar bg-almost-white rounded-r-lg px-3 py-2 inline-block" data-test="list-error">{{ loadError }}</p>
+        <p class="mb-4 border-l-4 border-radar bg-almost-white rounded-r-lg px-3 py-2 inline-block" data-test="list-error">
+          {{ errorText(loadError, 'errors.LIST_UNAVAILABLE') }}
+        </p>
         <div>
           <AppButton has-outline @click="load(items.length === 0)">{{ t('try_again') }}</AppButton>
         </div>
@@ -91,6 +95,7 @@
 
 <script setup lang="ts">
 // Imports
+import type { ApiError } from '~/composables/useApi';
 import {
   SEARCH_RADII_KM,
   type AnnouncementListItem,
@@ -117,7 +122,7 @@ const page = ref(1);
 const hasMore = ref(true);
 const loading = ref(false);
 const loadedOnce = ref(false);
-const loadError = ref('');
+const loadError = ref<ApiError | null>(null);
 const sort = ref<AnnouncementSort>('newest');
 const position = ref<{ lat: number; lng: number } | null>(null);
 const locationNote = ref('');
@@ -125,7 +130,7 @@ const sentinel = ref<HTMLElement | null>(null);
 const view = ref<'list' | 'map'>('list');
 const radius = ref<SearchRadiusKm | null>(null);
 const mapData = ref<MapAnnouncements | null>(null);
-const mapError = ref('');
+const mapError = ref<ApiError | null>(null);
 const mapBounds = ref<MapBounds | null>(null);
 
 // Constants
@@ -194,7 +199,7 @@ async function load(reset: boolean) {
     return;
   }
   loading.value = true;
-  loadError.value = '';
+  loadError.value = null;
   if (reset) {
     page.value = 1;
     hasMore.value = true;
@@ -212,7 +217,7 @@ async function load(reset: boolean) {
     hasMore.value = result.hasMore;
     page.value += 1;
   } catch (error) {
-    loadError.value = errorText(toApiError(error), 'errors.LIST_UNAVAILABLE');
+    loadError.value = toApiError(error);
   } finally {
     loading.value = false;
     loadedOnce.value = true;
@@ -261,10 +266,10 @@ async function loadMap() {
     );
     if (controller.signal.aborted) return;
     mapData.value = result;
-    mapError.value = '';
+    mapError.value = null;
   } catch (error) {
     if (controller.signal.aborted) return;
-    mapError.value = errorText(toApiError(error), 'errors.LIST_UNAVAILABLE');
+    mapError.value = toApiError(error);
   } finally {
     if (mapController === controller) mapController = undefined;
   }
