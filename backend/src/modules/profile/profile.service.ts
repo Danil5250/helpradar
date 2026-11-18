@@ -227,7 +227,9 @@ export class ProfileService {
     const { volunteer, personInNeed } = user;
     return {
       id: user.id,
-      name: `${user.firstName} ${user.lastName.charAt(0)}.`,
+      name: `${user.firstName} ${user.lastName}`,
+      email: user.email,
+      phoneNumber: user.phoneNumber,
       avatarUrl: this.signer.resolve(user.avatarUrl),
       city: volunteer?.city ?? personInNeed?.city ?? null,
       role: user.role,

@@ -45,6 +45,8 @@ export interface ProfileUpdated {
 export interface PublicProfile {
   id: number;
   name: string;
+  email: string;
+  phoneNumber: string | null;
   avatarUrl: string;
   city: string | null;
   role: UserRole;

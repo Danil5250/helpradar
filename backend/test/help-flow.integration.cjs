@@ -582,4 +582,41 @@ void describe('Help workflow with real HTTP, sessions, PostgreSQL and migrations
       await db.manager.delete(Announcement, { title });
     }
   });
+
+  void it('persists profile edits and exposes updated identity and contacts to other users', async () => {
+    assert.equal(
+      (await api(null, '/profile', 'PATCH', { firstName: 'Guest' })).status,
+      401,
+    );
+    const changed = await api(actors.stranger, '/profile', 'PATCH', {
+      firstName: 'Olena',
+      lastName: 'Shevchenko',
+      phoneNumber: '+380671234567',
+    });
+    assert.equal(changed.status, 200, JSON.stringify(changed.body));
+    assert.equal(
+      (await api(actors.stranger, '/profile')).body.firstName,
+      'Olena',
+    );
+    const publicProfile = await api(
+      actors.volunteer,
+      `/users/${actors.stranger.id}`,
+    );
+    assert.equal(publicProfile.body.name, 'Olena Shevchenko');
+    assert.equal(publicProfile.body.phoneNumber, '+380671234567');
+    assert.equal(publicProfile.body.email, 'stranger@example.test');
+    assert.equal(
+      (
+        await api(actors.stranger, '/profile', 'PATCH', {
+          firstName: '',
+          phoneNumber: 'invalid',
+        })
+      ).status,
+      400,
+    );
+    assert.equal(
+      (await api(null, `/users/${actors.stranger.id}`)).body.name,
+      'Olena Shevchenko',
+    );
+  });
 });
