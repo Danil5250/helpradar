@@ -23,6 +23,9 @@
 </template>
 
 <script setup lang="ts">
+// Imports
+import type { ApiError } from '~/composables/useApi';
+
 // Props
 const props = defineProps<{ email: string; queued: boolean }>();
 
@@ -31,12 +34,18 @@ const { t, locale } = useI18n();
 const errorText = useApiErrorText();
 
 // Data
-const message = ref(props.queued ? t('errors.EMAIL_QUEUED') : t('check_email'));
-const info = ref('');
+const resendResult = ref<'errors.EMAIL_QUEUED' | 'check_email' | ApiError | null>(null);
 const cooldown = ref(0);
 
 // Constants
 let timer: ReturnType<typeof setInterval> | undefined;
+
+// Computed
+const message = computed(() => t(props.queued ? 'errors.EMAIL_QUEUED' : 'check_email'));
+const info = computed(() => {
+  if (typeof resendResult.value === 'string') return t(resendResult.value);
+  return resendResult.value ? errorText(resendResult.value, 'errors.EMAIL_SERVICE_ERROR') : '';
+});
 
 // Methods
 function startCooldown() {
@@ -48,16 +57,16 @@ function startCooldown() {
 }
 
 async function handleResend() {
-  info.value = '';
+  resendResult.value = null;
   try {
     const result = await apiFetch<{ code: string }>('/auth/resend-verification', {
       method: 'POST',
       body: { email: props.email, locale: locale.value },
     });
-    info.value = t(result.code === 'EMAIL_QUEUED' ? 'errors.EMAIL_QUEUED' : 'check_email');
+    resendResult.value = result.code === 'EMAIL_QUEUED' ? 'errors.EMAIL_QUEUED' : 'check_email';
     startCooldown();
   } catch (error) {
-    info.value = errorText(toApiError(error), 'errors.EMAIL_SERVICE_ERROR');
+    resendResult.value = toApiError(error);
   }
 }
 

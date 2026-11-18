@@ -1,6 +1,6 @@
 <template>
   <div class="radar-grid min-h-screen h-screen flex">
-    <div class="w-2/6 p-8 xl:flex md:hidden sm:hidden items-left flex flex-col justify-center mt-10">
+    <div class="hidden w-2/6 p-8 xl:flex flex-col justify-center mt-10">
       <NuxtLink to="/main" :aria-label="t('main')">
         <HelpRadarLogo variant="light" class="!h-10" />
       </NuxtLink>
@@ -8,20 +8,19 @@
       <div v-else class="mb-[150%]" />
     </div>
 
-    <div
-      class="xl:w-5/6 md:w-full sm:w-full bg-sand xl:rounded-l-3xl h-full xl:px-relative-md flex flex-col xl:items-start xl:justify-start sm:items-center sm:justify-center overflow-y-auto"
-    >
+    <div class="w-full xl:w-5/6 bg-sand xl:rounded-l-3xl h-full xl:px-relative-md flex flex-col items-center xl:items-start overflow-y-auto">
+      <LanguageSelector class="self-end shrink-0 mx-4 mt-4 xl:mx-0" />
       <div class="flex w-11/12 mt-[2.5vh] xl:hidden">
         <div class="xl:mt-[20%]">
           <BackArrow @click="navigateTo('/main')" />
         </div>
         <div class="flex w-full justify-center">
-          <NuxtLink to="/main" :aria-label="t('main')"><HelpRadarLogo class="xl:hidden md:flex sm:flex !h-10" /></NuxtLink>
+          <NuxtLink to="/main" :aria-label="t('main')"><HelpRadarLogo class="!h-10" /></NuxtLink>
         </div>
       </div>
 
       <div class="flex h-full w-11/12">
-        <div class="xl:flex sm:hidden">
+        <div class="hidden xl:flex">
           <BackArrow v-if="currentStep > 1 && currentStep < 4" @click="currentStep -= 1" />
           <BackArrow v-if="currentStep === 4" @click="navigateTo('/main')" />
         </div>
@@ -59,6 +58,7 @@ import firstShag from '~/assets/images/FirstShag.svg';
 import personInNeedSecond from '~/assets/images/VictimSecond.svg';
 import volunteerSecond from '~/assets/images/VolunteerSecond.svg';
 import emailAccept from '~/assets/images/EmailAccept.svg';
+import type { ApiError } from '~/composables/useApi';
 import { REGISTRATION_STEP2, REGISTRATION_STEP3, type RegistrationField, type RegistrationForm, type Role } from '~/utils/validation';
 
 // Utils
@@ -84,10 +84,11 @@ const form = reactive<RegistrationForm>({
 });
 const serverErrors = ref<Partial<Record<RegistrationField, string>>>({});
 const submitting = ref(false);
-const submitError = ref('');
+const submitFailure = ref<ApiError | null>(null);
 const result = ref<{ code: string; emailQueued: boolean } | null>(null);
 
 // Computed
+const submitError = computed(() => (submitFailure.value ? errorText(submitFailure.value, 'errors.REGISTRATION_UNAVAILABLE') : ''));
 const stepImage = computed(() => {
   if (currentStep.value === 2) return firstShag;
   if (currentStep.value === 3) return form.role === 'volunteer' ? volunteerSecond : personInNeedSecond;
@@ -108,7 +109,7 @@ function toStep3() {
 
 async function submitRegistration() {
   submitting.value = true;
-  submitError.value = '';
+  submitFailure.value = null;
   serverErrors.value = {};
   try {
     result.value = await apiFetch<{ code: string; emailQueued: boolean }>('/auth/register', {
@@ -143,7 +144,7 @@ async function submitRegistration() {
       else if (REGISTRATION_STEP2.some((field) => fields[field])) currentStep.value = 2;
       else if (REGISTRATION_STEP3.some((field) => fields[field])) currentStep.value = 3;
     } else {
-      submitError.value = errorText(apiError, 'errors.REGISTRATION_UNAVAILABLE');
+      submitFailure.value = apiError;
     }
   } finally {
     submitting.value = false;
