@@ -1,5 +1,5 @@
 export type AnnouncementType = 'HelpRequest' | 'HelpOffer';
-export type AnnouncementStatus = 'Active' | 'InProgress' | 'Completed' | 'Hidden' | 'Closed' | 'Deleted';
+export type AnnouncementStatus = 'Active' | 'InProgress' | 'Completed' | 'Hidden' | 'Closed' | 'Resolved' | 'Deleted';
 export type AnnouncementAction = 'edit' | 'close' | 'delete' | 'extend' | 'republish';
 
 export interface Category {

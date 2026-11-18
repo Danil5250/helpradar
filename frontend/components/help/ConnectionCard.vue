@@ -77,7 +77,7 @@ const error = ref('');
 const isRequester = computed(() => user.value?.id === props.connection.requester.id);
 const partner = computed(() => (isRequester.value ? props.connection.volunteer : props.connection.requester));
 const state = computed(() =>
-  ['InProgress', 'Completed', 'Closed', 'Deleted', 'Hidden'].includes(props.connection.request.status) && props.connection.status !== 'Rejected'
+  ['InProgress', 'Completed', 'Closed', 'Resolved', 'Deleted', 'Hidden'].includes(props.connection.request.status) && props.connection.status !== 'Rejected'
     ? props.connection.request.status
     : props.connection.status
 );

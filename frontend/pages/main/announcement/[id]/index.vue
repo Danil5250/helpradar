@@ -12,6 +12,9 @@
     </div>
 
     <template v-else-if="details">
+      <p v-if="details.status === 'Resolved'" class="mb-6 border-l-4 border-forest bg-sand rounded-r-lg px-4 py-3" role="status" data-test="resolved-message">
+        {{ t('resolved_announcement_message') }}
+      </p>
       <h1 class="xl:text-h3 sm:text-h4 font-kharkiv uppercase text-center break-words" data-test="title">{{ details.title }}</h1>
 
       <div class="flex sm:flex-col xl:flex-row h-auto gap-8 mt-8">
@@ -133,7 +136,7 @@
           <div v-if="details.isOwner && details.allowedActions.length > 0" class="pl-[2vw] mt-4">
             <AnnouncementOwnerActions :id="details.id" :actions="details.allowedActions" @updated="updated" @deleted="deleted" />
           </div>
-          <p v-if="details.isOwner && details.status === 'Closed' && details.republishUntil" class="pl-[2vw] mt-3 text-sm text-sage">
+          <p v-if="details.isOwner && ['Closed', 'Resolved'].includes(details.status) && details.republishUntil" class="pl-[2vw] mt-3 text-sm text-sage">
             {{ t('republish_until', { date: formatDate(details.republishUntil, locale) }) }}
           </p>
           <p v-if="details.isOwner && details.status === 'InProgress'" class="pl-[2vw] mt-3 text-sm border-l-4 border-sage ml-[2vw] pl-2">

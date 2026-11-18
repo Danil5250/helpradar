@@ -317,7 +317,7 @@ describe('AnnouncementService', () => {
   it('applies guarded closing, extension and soft deletion', async () => {
     await service.close(actor, 7);
     expect(query.set).toHaveBeenCalledWith({
-      status: AnnouncementStatus.Closed,
+      status: AnnouncementStatus.Resolved,
       closedAt: expect.any(Date),
     });
     await service.extend(actor, 7, 3);
@@ -530,6 +530,27 @@ describe('AnnouncementService', () => {
         ).rejects.toMatchObject({ code: 'VALIDATION_FAILED' });
       },
     );
+    it('keeps resolved requests removable and republishable', async () => {
+      repo.findOneBy.mockResolvedValue(
+        entity({
+          status: AnnouncementStatus.Resolved,
+          closedAt: new Date('2026-11-01'),
+        }),
+      );
+      await service.remove(actor, 7);
+      expect(query.where).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          allowed: expect.arrayContaining([AnnouncementStatus.Resolved]),
+        }),
+      );
+      await service.republish(actor, 7);
+      expect(manager.update).toHaveBeenCalledWith(
+        expect.anything(),
+        { id: 7, status: AnnouncementStatus.Resolved },
+        expect.objectContaining({ status: AnnouncementStatus.Active }),
+      );
+    });
     it('lists owned entries and closes expired items before calculating actions', async () => {
       query.getMany
         .mockResolvedValueOnce([entity({ expiresAt: new Date('2026-11-08') })])
@@ -616,7 +637,7 @@ describe('AnnouncementService', () => {
       expect(query.where).toHaveBeenCalledWith(
         expect.stringContaining('"closed_at" < :limit'),
         {
-          status: AnnouncementStatus.Closed,
+          statuses: [AnnouncementStatus.Closed, AnnouncementStatus.Resolved],
           limit: new Date(Date.now() - 30 * 86400000),
         },
       );

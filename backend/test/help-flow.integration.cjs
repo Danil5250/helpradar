@@ -458,6 +458,76 @@ void describe('Help workflow with real HTTP, sessions, PostgreSQL and migrations
     }
   });
 
+  void it('edits and resolves an owned request, removes its map marker, and keeps its shared link readable', async () => {
+    const request = await announcement(
+      actors.stranger,
+      'Sprint acceptance request',
+    );
+    const path = `/announcements/${request.id}`;
+    assert.equal(
+      (await api(actors.volunteer, path, 'PATCH', { title: 'Foreign change' }))
+        .status,
+      403,
+    );
+    assert.equal(
+      (await api(actors.stranger, path, 'PATCH', { title: '' })).status,
+      400,
+    );
+    const edited = await api(actors.stranger, path, 'PATCH', {
+      title: 'Updated request title',
+      description: 'Updated details for the map popup and public link.',
+    });
+    assert.equal(edited.status, 200, JSON.stringify(edited.body));
+    assert.equal(
+      (await api(null, path)).body.announcement.title,
+      'Updated request title',
+    );
+    const query =
+      '/announcements/map?lat=50.45&lng=30.52&radius=1&north=50.46&south=50.44&east=30.54&west=30.50';
+    const visible = await api(actors.stranger, query);
+    assert.equal(visible.status, 200, JSON.stringify(visible.body));
+    const marker = visible.body.items.find((item) => item.id === request.id);
+    assert(marker, 'The author must also see their request on the map.');
+    assert.deepEqual(marker.location, {
+      latitude: 50.4501,
+      longitude: 30.5234,
+    });
+    assert.equal(
+      marker.description,
+      'Updated details for the map popup and public link.',
+    );
+    const resolved = await api(actors.stranger, `${path}/close`, 'POST');
+    assert.equal(resolved.status, 200, JSON.stringify(resolved.body));
+    assert.equal(resolved.body.announcement.status, 'Resolved');
+    assert(
+      !(await api(null, query)).body.items.some(
+        (item) => item.id === request.id,
+      ),
+    );
+    assert(
+      !(await api(actors.volunteer, '/announcements')).body.items.some(
+        (item) => item.id === request.id,
+      ),
+    );
+    assert.equal((await api(null, path)).body.announcement.status, 'Resolved');
+    assert.equal(
+      (await api(actors.stranger, '/announcements/mine')).body.items.find(
+        (item) => item.id === request.id,
+      ).status,
+      'Resolved',
+    );
+    const republished = await api(
+      actors.stranger,
+      `${path}/republish`,
+      'POST',
+      {},
+    );
+    assert.equal(republished.status, 200, JSON.stringify(republished.body));
+    assert.equal(republished.body.announcement.status, 'Active');
+    assert.equal((await api(actors.stranger, path, 'DELETE')).status, 200);
+    assert.equal((await api(null, path)).body.code, 'ANNOUNCEMENT_UNAVAILABLE');
+  });
+
   void it('returns every viewport marker in pages, including points outside the initial radius', async () => {
     const title = 'Viewport pagination fixture';
     try {
