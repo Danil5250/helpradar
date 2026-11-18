@@ -13,13 +13,14 @@
 
 <script setup lang="ts">
 // Imports
-import type { MapMarker } from '~/types/announcement';
+import type { MapBounds, MapMarker } from '~/types/announcement';
+import { normalizeMapBounds, groupMapMarkers, expandedMarkerPoints } from '~/utils/map';
 
 // Props
 const props = defineProps<{ center: { lat: number; lng: number }; radiusKm: number; markers: MapMarker[] }>();
 
 // Emits
-const emit = defineEmits<{ centerChange: [point: { lat: number; lng: number }]; unavailable: [] }>();
+const emit = defineEmits<{ centerChange: [point: { lat: number; lng: number }]; viewportChange: [bounds: MapBounds]; unavailable: [] }>();
 
 // Utils
 const { t, locale } = useI18n();
@@ -29,13 +30,13 @@ const config = useRuntimeConfig();
 const element = ref<HTMLElement | null>(null);
 
 // Constants
-const CLUSTER_CELL_PX = 60;
 const TILE_ERRORS_BEFORE_FALLBACK = 6;
 let L: typeof import('leaflet') | null = null;
 let map: import('leaflet').Map | null = null;
 let circle: import('leaflet').Circle | null = null;
 let centerMarker: import('leaflet').CircleMarker | null = null;
 let markerLayer: import('leaflet').LayerGroup | null = null;
+let selectedMarkerId: number | null = null;
 
 // Methods
 const escapeHtml = (value: string) => value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
@@ -46,6 +47,7 @@ function cardHtml(marker: MapMarker): string {
     <p class="text-xs text-sage">${escapeHtml(type)}${marker.isUrgent ? ` · <b class="text-radar">${escapeHtml(t('urgent'))}</b>` : ''}</p>
     <p class="font-montserratMedium text-base my-1 break-words">${escapeHtml(marker.title)}</p>
     <p class="text-sm text-sage">${escapeHtml(t(`category.${marker.category.id}`, marker.category.name))}</p>
+    <p class="text-sm mt-1 break-words">${escapeHtml(marker.description)}</p>
     <p class="text-sm mt-1">${escapeHtml(formatDistance(marker.distanceKm))} · ${escapeHtml(timeAgo(marker.datePosted, locale.value))}</p>
     <button type="button" data-announcement="${marker.id}" class="mt-2 bg-radar text-charcoal font-bold rounded-full px-4 py-1 uppercase text-sm">${escapeHtml(t('more_details'))}</button>
   </div>`;
@@ -53,29 +55,40 @@ function cardHtml(marker: MapMarker): string {
 
 function drawMarkers() {
   if (!L || !map || !markerLayer) return;
+  const selected = selectedMarkerId;
   markerLayer.clearLayers();
-  const cells = new Map<string, MapMarker[]>();
-  for (const marker of props.markers) {
-    const point = map.latLngToContainerPoint([marker.approxLocation.latitude, marker.approxLocation.longitude]);
-    const key = `${Math.floor(point.x / CLUSTER_CELL_PX)}:${Math.floor(point.y / CLUSTER_CELL_PX)}`;
-    cells.set(key, [...(cells.get(key) ?? []), marker]);
-  }
-  for (const group of cells.values()) {
-    if (group.length === 1) {
-      const [marker] = group;
-      L.circleMarker([marker.approxLocation.latitude, marker.approxLocation.longitude], {
-        radius: 10,
-        color: '#1A2421',
-        weight: 2,
-        fillColor: marker.type === 'HelpRequest' ? (marker.isUrgent ? '#FF8C00' : '#4A5D23') : '#5B7065',
-        fillOpacity: 1,
-      })
-        .bindPopup(cardHtml(marker))
-        .addTo(markerLayer);
+  const groups = groupMapMarkers(props.markers, (point) => map!.latLngToContainerPoint([point.latitude, point.longitude]));
+  for (const group of groups) {
+    if (group.length === 1 || map.getZoom() >= map.getMaxZoom()) {
+      const center = map.latLngToContainerPoint([
+        group.reduce((sum, item) => sum + item.location.latitude, 0) / group.length,
+        group.reduce((sum, item) => sum + item.location.longitude, 0) / group.length,
+      ]);
+      const expanded = expandedMarkerPoints(center, group.length);
+      for (const [index, marker] of group.entries()) {
+        const exact: [number, number] = [marker.location.latitude, marker.location.longitude];
+        let point = L.latLng(exact);
+        if (group.length > 1) {
+          // At maximum zoom, spread overlapping symbols while retaining their exact anchors.
+          point = map.containerPointToLatLng([expanded[index].x, expanded[index].y]);
+          L.polyline([exact, point], { color: '#5B7065', weight: 1, interactive: false }).addTo(markerLayer);
+          L.circleMarker(exact, { radius: 3, color: '#1A2421', interactive: false }).addTo(markerLayer);
+        }
+        const layer = L.circleMarker(point, {
+          radius: 10,
+          color: '#1A2421',
+          weight: 2,
+          fillColor: marker.type === 'HelpRequest' ? (marker.isUrgent ? '#FF8C00' : '#4A5D23') : '#5B7065',
+          fillOpacity: 1,
+        })
+          .bindPopup(cardHtml(marker), { autoPan: marker.id !== selected })
+          .addTo(markerLayer);
+        if (marker.id === selected) layer.openPopup();
+      }
       continue;
     }
-    const lat = group.reduce((sum, item) => sum + item.approxLocation.latitude, 0) / group.length;
-    const lng = group.reduce((sum, item) => sum + item.approxLocation.longitude, 0) / group.length;
+    const lat = group.reduce((sum, item) => sum + item.location.latitude, 0) / group.length;
+    const lng = group.reduce((sum, item) => sum + item.location.longitude, 0) / group.length;
     const size = group.length < 10 ? 36 : group.length < 100 ? 44 : 52;
     L.marker([lat, lng], {
       icon: L.divIcon({
@@ -86,9 +99,21 @@ function drawMarkers() {
       }),
       title: t('map_cluster', { count: group.length }),
     })
-      .on('click', () => map?.setView([lat, lng], Math.min((map?.getZoom() ?? 10) + 2, 18)))
+      .on('click', () => {
+        if (!L || !map) return;
+        map.fitBounds(L.latLngBounds(group.map((item) => [item.location.latitude, item.location.longitude] as [number, number])), {
+          maxZoom: map.getMaxZoom(),
+          padding: [35, 35],
+        });
+      })
       .addTo(markerLayer);
   }
+}
+
+function emitViewport() {
+  if (!map) return;
+  const bounds = map.getBounds();
+  emit('viewportChange', normalizeMapBounds({ north: bounds.getNorth(), south: bounds.getSouth(), east: bounds.getEast(), west: bounds.getWest() }));
 }
 
 function drawCircle(fit: boolean) {
@@ -107,6 +132,7 @@ function drawCircle(fit: boolean) {
 
 // Watchers
 watch(() => props.markers, drawMarkers);
+watch(locale, drawMarkers);
 watch(
   () => [props.center.lat, props.center.lng, props.radiusKm],
   () => drawCircle(true)
@@ -122,7 +148,7 @@ onMounted(async () => {
     return;
   }
   if (!element.value || !L) return;
-  map = L.map(element.value).setView([props.center.lat, props.center.lng], 11);
+  map = L.map(element.value, { worldCopyJump: true, minZoom: 3, maxZoom: 19 }).setView([props.center.lat, props.center.lng], 11);
   let tileErrors = 0;
   let tilesLoaded = false;
   L.tileLayer(config.public.mapTileUrl, { attribution: config.public.mapAttribution, maxZoom: 19 })
@@ -134,13 +160,19 @@ onMounted(async () => {
     .addTo(map);
   markerLayer = L.layerGroup().addTo(map);
   map.on('zoomend', drawMarkers);
+  map.on('moveend', emitViewport);
   map.on('click', (event: import('leaflet').LeafletMouseEvent) => emit('centerChange', { lat: event.latlng.lat, lng: event.latlng.lng }));
   map.on('popupopen', (event: import('leaflet').PopupEvent) => {
     const button = event.popup.getElement()?.querySelector<HTMLButtonElement>('[data-announcement]');
+    selectedMarkerId = button ? Number(button.dataset.announcement) : null;
     button?.addEventListener('click', () => navigateTo(`/main/announcement/${button.dataset.announcement}`));
+  });
+  map.on('popupclose', () => {
+    selectedMarkerId = null;
   });
   drawCircle(true);
   drawMarkers();
+  emitViewport();
 });
 onBeforeUnmount(() => {
   map?.remove();

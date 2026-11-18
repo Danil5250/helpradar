@@ -457,4 +457,59 @@ void describe('Help workflow with real HTTP, sessions, PostgreSQL and migrations
       }
     }
   });
+
+  void it('returns every viewport marker in pages, including points outside the initial radius', async () => {
+    const title = 'Viewport pagination fixture';
+    try {
+      await db.manager.insert(
+        Announcement,
+        Array.from({ length: 501 }, () => ({
+          type: 'HelpRequest',
+          title,
+          description: 'A request visible in the new map viewport.',
+          categoryId: 1,
+          userId: actors.stranger.id,
+          latitude: 51.5,
+          longitude: 31.5,
+          approxLatitude: 51.501,
+          approxLongitude: 31.501,
+          status: 'Active',
+          datePosted: new Date(),
+          expiresAt: new Date(Date.now() + 86400000),
+        })),
+      );
+      const query =
+        '/announcements/map?lat=50.45&lng=30.52&radius=1&north=51.51&south=51.49&east=31.51&west=31.49';
+      const first = await api(actors.stranger, query);
+      assert.equal(first.status, 200, JSON.stringify(first.body));
+      assert.equal(first.body.total, 501);
+      assert.equal(first.body.items.length, 500);
+      assert.equal(first.body.hasMore, true);
+      const second = await api(actors.stranger, `${query}&page=2`);
+      assert.equal(second.body.items.length, 1);
+      assert.equal(second.body.hasMore, false);
+      assert.equal(
+        new Set(
+          [...first.body.items, ...second.body.items].map((item) => item.id),
+        ).size,
+        501,
+      );
+      assert.equal(
+        (await api(null, '/announcements/map?lat=50&lng=30&radius=1&north=51'))
+          .status,
+        400,
+      );
+      assert.equal(
+        (
+          await api(
+            null,
+            '/announcements/map?lat=50&lng=30&radius=1&north=49&south=51&east=31&west=29',
+          )
+        ).status,
+        400,
+      );
+    } finally {
+      await db.manager.delete(Announcement, { title });
+    }
+  });
 });

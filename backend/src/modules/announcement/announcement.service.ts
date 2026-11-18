@@ -209,19 +209,55 @@ export class AnnouncementService {
   // 3.2.18 Map / 3.2.19 Radius search
   // ---------------------------------------------------------------------------------------------
 
-  /** Everything inside the circle, nearest first; the same role filter as the list applies. */
+  /** All active announcements in the viewport (or radius), served in complete pages. */
   async findForMap(
     query: MapAnnouncementsRequestDto,
     viewer?: AuthUser,
   ): Promise<MapAnnouncementsResponseDto> {
-    const qb = this.activeQuery(viewer, query.type)
-      .addSelect(DISTANCE_SQL, 'distance_km')
-      .andWhere(`${DISTANCE_SQL} <= :radius`)
+    const bounds = [query.north, query.south, query.east, query.west];
+    const hasBounds = bounds.some((edge) => edge !== undefined);
+    if (
+      hasBounds &&
+      (!bounds.every(
+        (edge) => typeof edge === 'number' && Number.isFinite(edge),
+      ) ||
+        query.south! > query.north!)
+    ) {
+      throw validationFailed({
+        bounds: {
+          code: 'COORDINATES_INVALID',
+          message: 'Provide all four valid map bounds.',
+        },
+      });
+    }
+    // Unlike the discovery list, the map also includes the viewer's own requests.
+    const mapDistance = DISTANCE_SQL.replaceAll(
+      'approx_latitude',
+      'latitude',
+    ).replaceAll('approx_longitude', 'longitude');
+    const qb = this.activeQuery(viewer, query.type, true)
+      .addSelect(mapDistance, 'distance_km')
       .setParameters({ lat: query.lat, lng: query.lng, radius: query.radius });
+    if (hasBounds) {
+      qb.andWhere('a.latitude BETWEEN :south AND :north', {
+        south: query.south,
+        north: query.north,
+      });
+      qb.andWhere(
+        query.west! <= query.east!
+          ? 'a.longitude BETWEEN :west AND :east'
+          : '(a.longitude >= :west OR a.longitude <= :east)',
+        { west: query.west, east: query.east },
+      );
+    } else {
+      qb.andWhere(`${mapDistance} <= :radius`);
+    }
+    const page = query.page ?? 1;
     const total = await qb.clone().getCount();
     const { entities, raw } = await qb
       .orderBy('distance_km', 'ASC')
       .addOrderBy('a.id', 'DESC')
+      .offset((page - 1) * MAP_MARKERS_LIMIT)
       .limit(MAP_MARKERS_LIMIT)
       .getRawAndEntities();
 
@@ -233,6 +269,10 @@ export class AnnouncementService {
         id: entity.id,
         type: entity.type,
         title: entity.title ?? '',
+        description:
+          entity.description.length > 160
+            ? `${entity.description.slice(0, 157)}...`
+            : entity.description,
         category: { id: entity.category.id, name: entity.category.name },
         isUrgent: entity.isUrgent,
         datePosted: entity.datePosted.toISOString(),
@@ -241,9 +281,13 @@ export class AnnouncementService {
           latitude: entity.approxLatitude,
           longitude: entity.approxLongitude,
         },
+        location: { latitude: entity.latitude, longitude: entity.longitude },
       })),
       total,
       radiusKm: query.radius,
+      page,
+      pageSize: MAP_MARKERS_LIMIT,
+      hasMore: page * MAP_MARKERS_LIMIT < total,
     };
   }
 
@@ -254,6 +298,7 @@ export class AnnouncementService {
   private activeQuery(
     viewer: AuthUser | undefined,
     type: AnnouncementTypeFilter | undefined,
+    includeOwn = false,
   ) {
     const qb = this.announcements
       .createQueryBuilder('a')
@@ -262,7 +307,8 @@ export class AnnouncementService {
       .leftJoinAndSelect('user.volunteer', 'volunteer')
       .where('a.status = :status', { status: AnnouncementStatus.Active })
       .andWhere('a.expiresAt > now()');
-    if (viewer) qb.andWhere('a.userId != :viewerId', { viewerId: viewer.id });
+    if (viewer && !includeOwn)
+      qb.andWhere('a.userId != :viewerId', { viewerId: viewer.id });
     if (type)
       qb.andWhere('a.type = :type', {
         type: ANNOUNCEMENT_TYPE_BY_FILTER[type],

@@ -69,7 +69,7 @@ export class Announcement {
   @Column({ type: 'varchar', length: 255, nullable: true })
   currentLocation: string | null;
 
-  /** Exact coordinates (never returned to other users). */
+  /** Exact coordinates, also used for public interactive-map markers. */
   @Column(coordinate)
   latitude: number;
 

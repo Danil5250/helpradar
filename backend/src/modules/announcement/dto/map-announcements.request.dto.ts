@@ -6,6 +6,8 @@ import {
   IsLatitude,
   IsLongitude,
   IsOptional,
+  IsInt,
+  Min,
 } from 'class-validator';
 import { v } from '../../../common/validation';
 import {
@@ -17,7 +19,7 @@ import {
 
 const COORDINATES = v('COORDINATES_INVALID', 'Invalid coordinates.');
 
-/** SRS 3.2.18 / 3.2.19: announcements around a center point, for the map. */
+/** Bounds select the visible map area; omitting them retains radius search. */
 export class MapAnnouncementsRequestDto {
   @ApiProperty({ example: 50.4501, description: 'Latitude of the center' })
   @Type(() => Number)
@@ -33,6 +35,37 @@ export class MapAnnouncementsRequestDto {
   @Type(() => Number)
   @IsIn(SEARCH_RADII_KM, RADIUS_INVALID)
   radius: SearchRadiusKm;
+
+  @ApiPropertyOptional({ description: 'Northern edge of the visible area' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsLatitude(COORDINATES)
+  north?: number;
+
+  @ApiPropertyOptional({ description: 'Southern edge of the visible area' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsLatitude(COORDINATES)
+  south?: number;
+
+  @ApiPropertyOptional({ description: 'Eastern edge; may cross the date line' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsLongitude(COORDINATES)
+  east?: number;
+
+  @ApiPropertyOptional({ description: 'Western edge of the visible area' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsLongitude(COORDINATES)
+  west?: number;
+
+  @ApiPropertyOptional({ default: 1, minimum: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt(v('PAGE_INVALID', 'Invalid page number.'))
+  @Min(1, v('PAGE_INVALID', 'Invalid page number.'))
+  page?: number;
 
   @ApiPropertyOptional({
     enum: AnnouncementTypeFilter,

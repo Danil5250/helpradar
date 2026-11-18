@@ -451,7 +451,7 @@ describe('AnnouncementService', () => {
         expect(query.addSelect).not.toHaveBeenCalled();
       },
     );
-    it('maps bounded public markers while retaining the uncapped total', async () => {
+    it('paginates map markers and includes the exact position and short description', async () => {
       query.getRawAndEntities.mockResolvedValue({
         entities: [entity()],
         raw: [{ a_id: 7, distance_km: '2.56' }],
@@ -461,11 +461,15 @@ describe('AnnouncementService', () => {
       ).toMatchObject({
         total: 501,
         radiusKm: 10,
+        page: 1,
+        hasMore: true,
         items: [
           {
             id: 7,
             distanceKm: 2.6,
             approxLocation: { latitude: 50.451, longitude: 30.521 },
+            location: { latitude: 50.45, longitude: 30.52 },
+            description: input.description,
           },
         ],
       });
@@ -475,7 +479,57 @@ describe('AnnouncementService', () => {
         lng: 30,
         radius: 10,
       });
+      await service.findForMap({ lat: 50, lng: 30, radius: 10, page: 2 });
+      expect(query.offset).toHaveBeenLastCalledWith(500);
     });
+    it('selects the viewport instead of the initial radius and includes owned requests', async () => {
+      const bounds = { north: 51, south: 49, east: 31, west: 29 };
+      await service.findForMap(
+        { lat: 50, lng: 30, radius: 1, ...bounds },
+        actor,
+      );
+      expect(query.andWhere).toHaveBeenCalledWith(
+        'a.latitude BETWEEN :south AND :north',
+        { north: 51, south: 49 },
+      );
+      expect(query.andWhere).toHaveBeenCalledWith(
+        'a.longitude BETWEEN :west AND :east',
+        { west: 29, east: 31 },
+      );
+      expect(query.andWhere).not.toHaveBeenCalledWith(
+        expect.stringContaining('<= :radius'),
+      );
+      expect(query.andWhere).not.toHaveBeenCalledWith(
+        'a.userId != :viewerId',
+        expect.anything(),
+      );
+      expect(query.where).toHaveBeenCalledWith('a.status = :status', {
+        status: AnnouncementStatus.Active,
+      });
+    });
+    it('supports visible areas that cross the date line', async () => {
+      await service.findForMap({
+        lat: 0,
+        lng: 180,
+        radius: 50,
+        north: 1,
+        south: -1,
+        west: 179,
+        east: -179,
+      });
+      expect(query.andWhere).toHaveBeenCalledWith(
+        '(a.longitude >= :west OR a.longitude <= :east)',
+        { west: 179, east: -179 },
+      );
+    });
+    it.each([{ north: 51 }, { north: 49, south: 51, east: 31, west: 29 }])(
+      'rejects incomplete or inverted viewport bounds (%j)',
+      async (bounds) => {
+        await expect(
+          service.findForMap({ lat: 50, lng: 30, radius: 10, ...bounds }),
+        ).rejects.toMatchObject({ code: 'VALIDATION_FAILED' });
+      },
+    );
     it('lists owned entries and closes expired items before calculating actions', async () => {
       query.getMany
         .mockResolvedValueOnce([entity({ expiresAt: new Date('2026-11-08') })])

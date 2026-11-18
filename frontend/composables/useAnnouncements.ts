@@ -6,6 +6,7 @@ import type {
   AnnouncementTypeFilter,
   Category,
   MapAnnouncements,
+  MapQuery,
   OwnAnnouncementItem,
   Photo,
   PlaceSuggestion,
@@ -29,8 +30,7 @@ export const useAnnouncements = () => ({
     radius?: number;
   }): Promise<AnnouncementPage> => apiFetch<AnnouncementPage>('/announcements', { query }),
 
-  map: (query: { lat: number; lng: number; radius: number; type?: AnnouncementTypeFilter }): Promise<MapAnnouncements> =>
-    apiFetch<MapAnnouncements>('/announcements/map', { query }),
+  map: (query: MapQuery, signal?: AbortSignal): Promise<MapAnnouncements> => apiFetch<MapAnnouncements>('/announcements/map', { query, signal }),
 
   mine: async (): Promise<OwnAnnouncementItem[]> => (await apiFetch<{ items: OwnAnnouncementItem[] }>('/announcements/mine')).items,
 

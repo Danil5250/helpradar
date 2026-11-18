@@ -113,15 +113,35 @@ export interface MapMarker {
   id: number;
   type: AnnouncementType;
   title: string;
+  description: string;
   category: Category;
   isUrgent: boolean;
   datePosted: string;
   distanceKm: number;
   approxLocation: GeoPoint;
+  location: GeoPoint;
+}
+
+export interface MapBounds {
+  north: number;
+  south: number;
+  east: number;
+  west: number;
+}
+
+export interface MapQuery extends Partial<MapBounds> {
+  lat: number;
+  lng: number;
+  radius: number;
+  type?: AnnouncementTypeFilter;
+  page?: number;
 }
 
 export interface MapAnnouncements {
   items: MapMarker[];
   total: number;
   radiusKm: number;
+  page: number;
+  pageSize: number;
+  hasMore: boolean;
 }
