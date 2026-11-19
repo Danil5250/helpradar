@@ -15,6 +15,7 @@ describe('AnnouncementService', () => {
   let photos: any;
   let query: any;
   let manager: any;
+  let lockedAnnouncements: any;
   let categories: any;
   let geocoding: any;
   let moderation: any;
@@ -71,11 +72,24 @@ describe('AnnouncementService', () => {
       findOneBy: jest.fn().mockResolvedValue(null),
       delete: jest.fn(),
     };
+    lockedAnnouncements = {
+      findOne: jest.fn().mockResolvedValue(entity()),
+      update: jest.fn(),
+    };
+    const ongoingHelpQuery = {
+      where: jest.fn().mockReturnThis(),
+      select: jest.fn().mockReturnThis(),
+      andWhere: jest.fn().mockReturnThis(),
+      getQuery: jest.fn().mockReturnValue('SELECT 1 FROM help_responses'),
+      getParameters: jest.fn().mockReturnValue({}),
+    };
     manager = {
       query: jest.fn(),
       count: jest.fn().mockResolvedValue(0),
       create: jest.fn((_type, value) => value),
       save: jest.fn(async (value) => ({ id: 7, ...value })),
+      getRepository: jest.fn(() => lockedAnnouncements),
+      createQueryBuilder: jest.fn(() => ongoingHelpQuery),
     };
     categories = {
       findById: jest.fn().mockResolvedValue({ id: 1, name: 'Food' }),
@@ -101,6 +115,7 @@ describe('AnnouncementService', () => {
       repo,
       photos,
       {
+        manager,
         transaction: async (work: (manager: any) => Promise<any>) =>
           work(manager),
       } as never,
@@ -326,7 +341,7 @@ describe('AnnouncementService', () => {
       expiryReminderSentAt: null,
     });
     await service.remove(actor, 7);
-    expect(query.set).toHaveBeenCalledWith({
+    expect(lockedAnnouncements.update).toHaveBeenCalledWith(7, {
       status: AnnouncementStatus.Deleted,
     });
     query.execute.mockResolvedValue({ affected: 0 });
@@ -531,19 +546,16 @@ describe('AnnouncementService', () => {
       },
     );
     it('keeps resolved requests removable and republishable', async () => {
-      repo.findOneBy.mockResolvedValue(
-        entity({
-          status: AnnouncementStatus.Resolved,
-          closedAt: new Date('2026-11-01'),
-        }),
-      );
+      const resolved = entity({
+        status: AnnouncementStatus.Resolved,
+        closedAt: new Date('2026-11-01'),
+      });
+      lockedAnnouncements.findOne.mockResolvedValue(resolved);
+      repo.findOneBy.mockResolvedValue(resolved);
       await service.remove(actor, 7);
-      expect(query.where).toHaveBeenCalledWith(
-        expect.any(String),
-        expect.objectContaining({
-          allowed: expect.arrayContaining([AnnouncementStatus.Resolved]),
-        }),
-      );
+      expect(lockedAnnouncements.update).toHaveBeenCalledWith(7, {
+        status: AnnouncementStatus.Deleted,
+      });
       await service.republish(actor, 7);
       expect(manager.update).toHaveBeenCalledWith(
         expect.anything(),

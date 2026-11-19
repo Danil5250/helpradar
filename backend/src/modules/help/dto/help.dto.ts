@@ -32,7 +32,12 @@ export class HelpConnectionDto {
   initiatedBy: HelpInitiator;
   isDirect: boolean;
   dateCreated: string;
-  request: { id: number; title: string; status: AnnouncementStatus };
+  request: {
+    id: number;
+    title: string;
+    status: AnnouncementStatus;
+    announcementDeleted: boolean;
+  };
   requester: HelpPersonDto;
   volunteer: HelpPersonDto;
   actions: HelpAction[];

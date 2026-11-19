@@ -4,9 +4,14 @@
       <span class="rounded-full px-3 py-1 text-xs font-montserratMedium" :class="badgeClass">{{ t(`help.state.${state}`) }}</span>
       <span class="text-xs text-sage">{{ formatDate(connection.dateCreated, locale) }}</span>
     </div>
-    <NuxtLink :to="`/main/announcement/${connection.request.id}#help`" class="font-kharkiv text-xl leading-snug break-words hover:text-forest">{{
-      connection.request.title
-    }}</NuxtLink>
+    <NuxtLink
+      v-if="!connection.request.announcementDeleted"
+      :to="`/main/announcement/${connection.request.id}#help`"
+      class="font-kharkiv text-xl leading-snug break-words hover:text-forest"
+    >
+      {{ connection.request.title }}
+    </NuxtLink>
+    <p v-else class="font-kharkiv text-xl leading-snug break-words">{{ connection.request.title }}</p>
     <NuxtLink :to="`/users/${partner.id}`" class="flex items-center gap-3 my-5 self-start hover:text-forest">
       <img :src="partner.avatarUrl" alt="" class="w-11 h-11 rounded-full object-cover bg-sand" />
       <div>

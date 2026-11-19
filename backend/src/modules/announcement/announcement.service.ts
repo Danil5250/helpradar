@@ -2,7 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import type { ConfigType } from '@nestjs/config';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import { randomUUID } from 'crypto';
-import { DataSource, IsNull, Repository } from 'typeorm';
+import { DataSource, EntityManager, IsNull, Repository } from 'typeorm';
 import { QueryDeepPartialEntity } from 'typeorm/query-builder/QueryPartialEntity';
 import { AppException, validationFailed } from '../../common/errors';
 import { distanceMeters, GeoPoint, randomShift } from '../../common/utils/geo';
@@ -13,6 +13,7 @@ import { CommentsService } from '../comments/comments.service';
 import { MailService } from '../email/mail.service';
 import { expiryReminderEmail } from '../email/mail.templates';
 import { GeocodingService } from '../geocoding/geocoding.service';
+import { HelpResponse } from '../help/entities/help-response.entity';
 import { Role } from '../users/enums/role.enum';
 import { FileStorage } from '../storage/file-storage';
 import { ImageSanitizerService } from '../storage/image-sanitizer.service';
@@ -333,17 +334,33 @@ export class AnnouncementService {
     const thumbnails = await this.firstPhotos(
       entities.map((entity) => entity.id),
     );
-    return entities.map((entity) =>
-      Object.assign(
+    const offerIds = entities
+      .filter((entity) => entity.type === AnnouncementType.HelpOffer)
+      .map((entity) => entity.id);
+    const ongoingHelp = offerIds.length
+      ? await this.ongoingDirectHelp()
+          .select('response.offerId', 'offerId')
+          .distinct()
+          .andWhere('response.offerId IN (:...offerIds)', { offerIds })
+          .getRawMany<{ offerId: number }>()
+      : [];
+    const blockedOfferIds = new Set(ongoingHelp.map(({ offerId }) => offerId));
+    return entities.map((entity) => {
+      const deleteBlockedByOngoingHelp = blockedOfferIds.has(entity.id);
+      return Object.assign(
         this.toListItem(entity, thumbnails.get(entity.id) ?? null, null),
         {
           viewsCount: entity.viewsCount,
           responsesCount: entity.responsesCount,
-          allowedActions: this.allowedActions(entity),
+          allowedActions: this.allowedActions(
+            entity,
+            deleteBlockedByOngoingHelp,
+          ),
+          deleteBlockedByOngoingHelp,
           republishUntil: this.republishUntil(entity),
         },
-      ),
-    );
+      );
+    });
   }
 
   // ---------------------------------------------------------------------------------------------
@@ -374,10 +391,17 @@ export class AnnouncementService {
       await this.announcements.increment({ id }, 'viewsCount', 1);
       entity.viewsCount += 1;
     }
+    const deleteBlockedByOngoingHelp =
+      isOwner &&
+      entity.type === AnnouncementType.HelpOffer &&
+      (await this.ongoingDirectHelp()
+        .andWhere('response.offerId = :id', { id })
+        .getExists());
     return this.toDetails(
       entity,
       isOwner,
       await this.comments.canReview(entity, viewer),
+      deleteBlockedByOngoingHelp,
     );
   }
 
@@ -466,28 +490,36 @@ export class AnnouncementService {
   }
 
   async remove(user: AuthUser, id: number): Promise<void> {
-    const entity = await this.loadForAuthor(user, id);
-    if (entity.status === AnnouncementStatus.InProgress)
-      throw new AppException('DELETE_IN_PROGRESS');
-    if (
-      entity.status !== AnnouncementStatus.Active &&
-      entity.status !== AnnouncementStatus.Closed &&
-      entity.status !== AnnouncementStatus.Resolved
-    ) {
-      throw new AppException('DELETE_NOT_ALLOWED');
-    }
-    const deleted = await this.guardedUpdate(
-      id,
-      [
-        AnnouncementStatus.Active,
-        AnnouncementStatus.Closed,
-        AnnouncementStatus.Resolved,
-      ],
-      {
+    await this.dataSource.transaction(async (manager) => {
+      const announcements = manager.getRepository(Announcement);
+      // Accepting a response also locks the announcement before updating the response.
+      const entity = await announcements.findOne({
+        where: { id },
+        lock: { mode: 'pessimistic_write' },
+      });
+      this.assertAuthor(user, entity);
+      if (entity.status === AnnouncementStatus.InProgress)
+        throw new AppException('DELETE_IN_PROGRESS');
+      if (
+        entity.status !== AnnouncementStatus.Active &&
+        entity.status !== AnnouncementStatus.Closed &&
+        entity.status !== AnnouncementStatus.Resolved
+      ) {
+        throw new AppException('DELETE_NOT_ALLOWED');
+      }
+      if (
+        entity.type === AnnouncementType.HelpOffer &&
+        (await this.ongoingDirectHelp(manager)
+          .andWhere('response.offerId = :id', { id })
+          .getExists())
+      ) {
+        throw new AppException('DELETE_IN_PROGRESS');
+      }
+      await this.ensureCurrent(entity, announcements);
+      await announcements.update(id, {
         status: AnnouncementStatus.Deleted,
-      },
-    );
-    if (!deleted) throw new AppException('DELETE_NOT_ALLOWED');
+      });
+    });
   }
 
   /** "Extend" adds up to 14 days to the expiry date (SRS 3.2.5.3 step 5). */
@@ -632,8 +664,11 @@ export class AnnouncementService {
     return result.affected ?? 0;
   }
 
-  /** The 30-day republish period has expired: Closed/Resolved -> Deleted. */
+  /** Delete closed entries past the republish period once any direct help has ended. */
   async deleteStaleClosed(): Promise<number> {
+    const ongoingHelp = this.ongoingDirectHelp()
+      .select('1')
+      .andWhere('response.offerId = "announcements"."id"');
     const result = await this.announcements
       .createQueryBuilder()
       .update()
@@ -642,6 +677,10 @@ export class AnnouncementService {
         statuses: [AnnouncementStatus.Closed, AnnouncementStatus.Resolved],
         limit: new Date(Date.now() - REPUBLISH_WINDOW_DAYS * DAY_MS),
       })
+      .andWhere(
+        `NOT EXISTS (${ongoingHelp.getQuery()})`,
+        ongoingHelp.getParameters(),
+      )
       .execute();
     return result.affected ?? 0;
   }
@@ -782,20 +821,38 @@ export class AnnouncementService {
     id: number,
   ): Promise<Announcement> {
     const entity = await this.announcements.findOneBy({ id });
-    if (!entity || entity.status === AnnouncementStatus.Deleted)
-      throw new AppException('ANNOUNCEMENT_UNAVAILABLE');
-    if (entity.userId !== user.id) throw new AppException('NOT_AUTHOR');
+    this.assertAuthor(user, entity);
     await this.ensureCurrent(entity);
     return entity;
   }
 
+  private assertAuthor(
+    user: AuthUser,
+    entity: Announcement | null,
+  ): asserts entity is Announcement {
+    if (!entity || entity.status === AnnouncementStatus.Deleted)
+      throw new AppException('ANNOUNCEMENT_UNAVAILABLE');
+    if (entity.userId !== user.id) throw new AppException('NOT_AUTHOR');
+  }
+
+  private ongoingDirectHelp(manager: EntityManager = this.dataSource.manager) {
+    return manager.createQueryBuilder(HelpResponse, 'response').where({
+      announcementId: IsNull(),
+      status: 'Accepted',
+      helpStatus: AnnouncementStatus.InProgress,
+    });
+  }
+
   /** An active announcement whose expiry date has passed is closed immediately, not only by the scheduled job. */
-  private async ensureCurrent(entity: Announcement): Promise<void> {
+  private async ensureCurrent(
+    entity: Announcement,
+    announcements = this.announcements,
+  ): Promise<void> {
     if (
       entity.status === AnnouncementStatus.Active &&
       entity.expiresAt.getTime() <= Date.now()
     ) {
-      await this.announcements.update(
+      await announcements.update(
         { id: entity.id, status: AnnouncementStatus.Active },
         { status: AnnouncementStatus.Closed, closedAt: entity.expiresAt },
       );
@@ -835,16 +892,22 @@ export class AnnouncementService {
     return first;
   }
 
-  private allowedActions(entity: Announcement): AnnouncementAction[] {
+  private allowedActions(
+    entity: Announcement,
+    deleteBlockedByOngoingHelp: boolean,
+  ): AnnouncementAction[] {
+    const deleteAction: AnnouncementAction[] = deleteBlockedByOngoingHelp
+      ? []
+      : ['delete'];
     switch (entity.status) {
       case AnnouncementStatus.Active:
-        return ['edit', 'close', 'delete', 'extend'];
+        return ['edit', 'close', ...deleteAction, 'extend'];
       case AnnouncementStatus.Closed:
       case AnnouncementStatus.Resolved:
         return this.republishUntil(entity) &&
           new Date(this.republishUntil(entity) as string).getTime() > Date.now()
-          ? ['republish', 'delete']
-          : ['delete'];
+          ? ['republish', ...deleteAction]
+          : deleteAction;
       default:
         return [];
     }
@@ -902,6 +965,7 @@ export class AnnouncementService {
     entity: Announcement,
     isOwner: boolean,
     canReview: boolean,
+    deleteBlockedByOngoingHelp: boolean,
   ): AnnouncementDetailsResponseDto {
     return {
       id: entity.id,
@@ -938,7 +1002,10 @@ export class AnnouncementService {
             address: entity.currentLocation,
           }
         : null,
-      allowedActions: isOwner ? this.allowedActions(entity) : [],
+      allowedActions: isOwner
+        ? this.allowedActions(entity, deleteBlockedByOngoingHelp)
+        : [],
+      deleteBlockedByOngoingHelp,
       republishUntil: isOwner ? this.republishUntil(entity) : null,
       canReview,
     };
