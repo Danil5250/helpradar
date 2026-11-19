@@ -39,12 +39,23 @@ export class HelpService {
 
   async mine(user: AuthUser): Promise<{ items: HelpConnectionDto[] }> {
     const rows = await this.query()
-      .where('response.requesterId = :userId OR volunteer.userId = :userId', {
+      .where('(response.requesterId = :userId OR volunteer.userId = :userId)', {
         userId: user.id,
       })
-      .andWhere('COALESCE(request.status, offer.status) != :deleted', {
-        deleted: AnnouncementStatus.Deleted,
-      })
+      .andWhere(
+        `(COALESCE(request.status, offer.status) != :deleted OR (
+          response.announcementId IS NULL AND response.status = :accepted
+          AND response.helpStatus IN (:...directProgress)
+        ))`,
+        {
+          deleted: AnnouncementStatus.Deleted,
+          accepted: 'Accepted',
+          directProgress: [
+            AnnouncementStatus.InProgress,
+            AnnouncementStatus.Completed,
+          ],
+        },
+      )
       .take(100)
       .getMany();
     return {
@@ -404,11 +415,8 @@ export class HelpService {
       where: { id },
       lock: { mode: 'pessimistic_write' },
     });
-    if (
-      !offer ||
-      offer.type !== AnnouncementType.HelpOffer ||
-      offer.status === AnnouncementStatus.Deleted
-    )
+    // Participants can still finish a direct agreement on a soft-deleted offer.
+    if (!offer || offer.type !== AnnouncementType.HelpOffer)
       throw new AppException('HELP_REQUEST_UNAVAILABLE');
     return offer;
   }
@@ -484,6 +492,7 @@ export class HelpService {
         id: request.id,
         title: request.title ?? '',
         status: progress,
+        announcementDeleted: request.status === AnnouncementStatus.Deleted,
       },
       requester: person(requester),
       volunteer: person(volunteer),

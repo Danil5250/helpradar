@@ -6,6 +6,7 @@ export class OwnAnnouncementItemResponseDto extends AnnouncementListItemResponse
   viewsCount: number;
   responsesCount: number;
   allowedActions: AnnouncementAction[];
+  deleteBlockedByOngoingHelp: boolean;
   /** For closed announcements: the end of the 30-day republish period. */
   republishUntil: string | null;
 }

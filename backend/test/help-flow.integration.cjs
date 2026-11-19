@@ -30,6 +30,9 @@ const {
 const {
   Announcement,
 } = require('../dist/modules/announcement/entities/announcement.entity');
+const {
+  AnnouncementService,
+} = require('../dist/modules/announcement/announcement.service');
 
 void describe('Help workflow with real HTTP, sessions, PostgreSQL and migrations', () => {
   const config = loadAppConfig();
@@ -60,6 +63,16 @@ void describe('Help workflow with real HTTP, sessions, PostgreSQL and migrations
     });
     assert.equal(result.status, 201, JSON.stringify(result.body));
     return result.body.announcement;
+  }
+
+  async function requestDirectHelp(offerId) {
+    const result = await api(
+      actors.requester,
+      `/announcements/${offerId}/receive-help`,
+      'POST',
+    );
+    assert.equal(result.status, 201, JSON.stringify(result.body));
+    return result.body.id;
   }
 
   before(
@@ -276,6 +289,166 @@ void describe('Help workflow with real HTTP, sessions, PostgreSQL and migrations
       (await api(actors.stranger, `/help/${invited.body.id}/complete`, 'POST'))
         .status,
       404,
+    );
+  });
+
+  void it('blocks deletion of ongoing direct help and lets the recipient finish after the offer is closed', async () => {
+    const offer = await announcement(actors.volunteer, 'Direct help offer');
+    const path = `/announcements/${offer.id}`;
+    const id = await requestDirectHelp(offer.id);
+    const pending = await api(actors.volunteer, path);
+    assert.equal(pending.body.announcement.deleteBlockedByOngoingHelp, false);
+    assert(pending.body.announcement.allowedActions.includes('delete'));
+
+    const accepted = await api(actors.volunteer, `/help/${id}/accept`, 'POST');
+    assert.equal(accepted.status, 200, JSON.stringify(accepted.body));
+    const blocked = await api(actors.volunteer, path, 'DELETE');
+    assert.equal(blocked.status, 409);
+    assert.equal(blocked.body.code, 'DELETE_IN_PROGRESS');
+
+    const details = (await api(actors.volunteer, path)).body.announcement;
+    const owned = (
+      await api(actors.volunteer, '/announcements/mine')
+    ).body.items.find((item) => item.id === offer.id);
+    for (const item of [details, owned]) {
+      assert.equal(item.deleteBlockedByOngoingHelp, true);
+      assert(!item.allowedActions.includes('delete'));
+      assert(item.allowedActions.includes('close'));
+    }
+    assert.equal(
+      (await api(null, path)).body.announcement.deleteBlockedByOngoingHelp,
+      false,
+    );
+
+    const closed = await api(actors.volunteer, `${path}/close`, 'POST');
+    assert.equal(closed.status, 200, JSON.stringify(closed.body));
+    assert.equal(closed.body.announcement.status, 'Resolved');
+    assert.equal(
+      (await api(actors.volunteer, path, 'DELETE')).body.code,
+      'DELETE_IN_PROGRESS',
+    );
+
+    const completed = await api(
+      actors.requester,
+      `/help/${id}/complete`,
+      'POST',
+    );
+    assert.equal(completed.status, 200, JSON.stringify(completed.body));
+    assert.equal(completed.body.request.status, 'Completed');
+    assert.equal(completed.body.canReview, true);
+    const readyToDelete = (await api(actors.volunteer, path)).body.announcement;
+    assert.equal(readyToDelete.deleteBlockedByOngoingHelp, false);
+    assert(readyToDelete.allowedActions.includes('delete'));
+    assert.equal((await api(actors.volunteer, path, 'DELETE')).status, 200);
+    assert.equal((await api(null, path)).status, 404);
+  });
+
+  void it('serializes accepting a direct response with deleting its offer', async () => {
+    const offer = await announcement(
+      actors.volunteer,
+      'Concurrent direct offer',
+    );
+    const path = `/announcements/${offer.id}`;
+    const id = await requestDirectHelp(offer.id);
+    const [accepted, deleted] = await Promise.all([
+      api(actors.volunteer, `/help/${id}/accept`, 'POST'),
+      api(actors.volunteer, path, 'DELETE'),
+    ]);
+    assert.deepEqual(
+      [accepted.status, deleted.status].sort((a, b) => a - b),
+      [200, 409],
+    );
+    if (accepted.status === 200) {
+      assert.equal(deleted.body.code, 'DELETE_IN_PROGRESS');
+      assert.equal(
+        (await api(actors.volunteer, `/help/${id}/cancel`, 'POST')).status,
+        200,
+      );
+      assert.equal((await api(actors.volunteer, path, 'DELETE')).status, 200);
+    }
+    assert.equal((await api(null, path)).status, 404);
+  });
+
+  void it('skips stale offers with ongoing direct help during scheduled deletion', async () => {
+    const offer = await announcement(actors.volunteer, 'Stale direct offer');
+    const id = await requestDirectHelp(offer.id);
+    assert.equal(
+      (await api(actors.volunteer, `/help/${id}/accept`, 'POST')).status,
+      200,
+    );
+    await db.manager.update(Announcement, offer.id, {
+      status: 'Closed',
+      closedAt: new Date(Date.now() - 31 * 86_400_000),
+    });
+
+    const announcements = app.get(AnnouncementService);
+    await announcements.deleteStaleClosed();
+    const path = `/announcements/${offer.id}`;
+    assert.equal(
+      (await api(actors.volunteer, path)).body.announcement.status,
+      'Closed',
+    );
+    assert.equal(
+      (await api(actors.volunteer, `/help/${id}/cancel`, 'POST')).status,
+      200,
+    );
+    await announcements.deleteStaleClosed();
+    assert.equal((await api(null, path)).status, 404);
+  });
+
+  void it('lets both participants recover ongoing help on an already deleted offer', async () => {
+    const offer = await announcement(
+      actors.volunteer,
+      'Already deleted direct offer',
+    );
+    const id = await requestDirectHelp(offer.id);
+    assert.equal(
+      (await api(actors.volunteer, `/help/${id}/accept`, 'POST')).status,
+      200,
+    );
+    await db.manager.update(Announcement, offer.id, { status: 'Deleted' });
+
+    for (const [actor, actions] of [
+      [actors.requester, ['complete', 'cancel']],
+      [actors.volunteer, ['cancel']],
+    ]) {
+      const inbox = await api(actor, '/help');
+      const connection = inbox.body.items.find((item) => item.id === id);
+      assert.equal(connection.request.status, 'InProgress');
+      assert.equal(connection.request.announcementDeleted, true);
+      assert.deepEqual(connection.actions, actions);
+    }
+    assert(
+      !(await api(actors.stranger, '/help')).body.items.some(
+        (item) => item.id === id,
+      ),
+    );
+    assert.equal(
+      (await api(actors.stranger, `/help/${id}/cancel`, 'POST')).status,
+      404,
+    );
+    assert.equal((await api(null, `/announcements/${offer.id}`)).status, 404);
+    assert.equal(
+      (
+        await api(
+          actors.stranger,
+          `/announcements/${offer.id}/receive-help`,
+          'POST',
+        )
+      ).status,
+      409,
+    );
+    const completed = await api(
+      actors.requester,
+      `/help/${id}/complete`,
+      'POST',
+    );
+    assert.equal(completed.status, 200, JSON.stringify(completed.body));
+    assert.equal(completed.body.request.status, 'Completed');
+    assert(
+      (await api(actors.volunteer, '/help')).body.items.some(
+        (item) => item.id === id,
+      ),
     );
   });
 
