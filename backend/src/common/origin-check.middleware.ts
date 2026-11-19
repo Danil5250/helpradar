@@ -6,9 +6,8 @@ const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
 /**
  * CSRF protection (OWASP, SRS 3.5.4): a state changing request that is authenticated by the
- * session cookie must come from one of the allowed web client origins. Requests that use an
- * explicit `Authorization` header (API / mobile clients) are not affected because browsers do
- * not attach that header cross-site on their own.
+ * session cookie must come from one of the allowed web client origins. Requests using an
+ * explicit Bearer session token are exempt because browsers do not attach it automatically.
  */
 export function createOriginCheck(allowedOrigins: string[]) {
   const allowed = new Set(
@@ -18,7 +17,7 @@ export function createOriginCheck(allowedOrigins: string[]) {
   return (req: Request, res: Response, next: NextFunction): void => {
     if (
       SAFE_METHODS.has(req.method) ||
-      req.headers.authorization ||
+      req.headers.authorization?.toLowerCase().startsWith('bearer ') ||
       !req.cookies?.[SESSION_COOKIE]
     ) {
       next();

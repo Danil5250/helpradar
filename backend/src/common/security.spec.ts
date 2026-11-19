@@ -86,9 +86,17 @@ describe('Origin middleware', () => {
       {
         method: 'POST',
         headers: { authorization: 'Bearer token' },
-        cookies: {},
+        cookies: { hr_session: 'token' },
       },
       true,
+    ],
+    [
+      {
+        method: 'POST',
+        headers: { authorization: 'Basic dXNlcjpwYXNz' },
+        cookies: { hr_session: 'token' },
+      },
+      false,
     ],
     [{ method: 'POST', headers: {}, cookies: {} }, true],
     [

@@ -10,6 +10,7 @@ export interface AppConfig {
   port: number;
   appUrl: string;
   corsOrigins: string[];
+  swagger: { username: string; password: string } | null;
   trustProxy: boolean | number | string;
   bcryptRounds: number;
   rateLimit: { accountPerMinute: number; authIpPerMinute: number };
@@ -85,6 +86,12 @@ export function loadAppConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   const nodeEnv = env.NODE_ENV ?? 'development';
   const isProduction = nodeEnv === 'production';
   const appUrl = (env.APP_URL ?? 'http://localhost:5173').replace(/\/+$/, '');
+  const swaggerUsername = env.SWAGGER_USERNAME?.trim();
+  const swaggerPassword = env.SWAGGER_PASSWORD;
+  const swagger =
+    swaggerUsername && !swaggerUsername.includes(':') && swaggerPassword?.trim()
+      ? { username: swaggerUsername, password: swaggerPassword }
+      : null;
 
   const fileUrlSecret = env.FILE_URL_SECRET?.trim();
   if (isProduction && (!fileUrlSecret || fileUrlSecret.length < 16)) {
@@ -112,6 +119,7 @@ export function loadAppConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     port: int(env.PORT, 8080),
     appUrl,
     corsOrigins: list(env.CORS_ORIGINS, [appUrl]),
+    swagger,
     trustProxy: trustProxy(env.TRUST_PROXY),
     bcryptRounds: int(env.BCRYPT_ROUNDS, 12),
     rateLimit: {
