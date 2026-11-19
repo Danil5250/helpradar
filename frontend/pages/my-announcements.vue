@@ -36,7 +36,14 @@
           {{ t('republish_until', { date: formatDate(item.republishUntil, locale) }) }}
         </p>
         <div class="px-2">
-          <AnnouncementOwnerActions :id="item.id" :actions="item.allowedActions" @updated="updated" @deleted="load" />
+          <AnnouncementOwnerActions
+            :id="item.id"
+            :actions="item.allowedActions"
+            :delete-blocked-by-ongoing-help="item.deleteBlockedByOngoingHelp"
+            @updated="updated"
+            @deleted="load"
+            @refresh="load"
+          />
         </div>
       </div>
     </div>

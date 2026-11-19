@@ -44,6 +44,7 @@ export interface OwnAnnouncementItem extends AnnouncementListItem {
   viewsCount: number;
   responsesCount: number;
   allowedActions: AnnouncementAction[];
+  deleteBlockedByOngoingHelp: boolean;
   republishUntil: string | null;
 }
 
@@ -66,6 +67,7 @@ export interface AnnouncementDetails {
   isOwner: boolean;
   exactLocation: (GeoPoint & { address: string | null }) | null;
   allowedActions: AnnouncementAction[];
+  deleteBlockedByOngoingHelp: boolean;
   republishUntil: string | null;
   canReview: boolean;
 }

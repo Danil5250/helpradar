@@ -12,7 +12,7 @@ export interface HelpConnection {
   initiatedBy: 'volunteer' | 'requester';
   isDirect: boolean;
   dateCreated: string;
-  request: { id: number; title: string; status: AnnouncementStatus };
+  request: { id: number; title: string; status: AnnouncementStatus; announcementDeleted: boolean };
   requester: HelpPerson;
   volunteer: HelpPerson;
   actions: HelpAction[];

@@ -34,6 +34,9 @@
     >
       <AppIcon name="trash" class="inline mr-1 h-4 w-4" />{{ t('delete') }}
     </AppButton>
+    <p v-if="deleteBlockedByOngoingHelp" class="basis-full text-sm text-sage" role="status">
+      {{ t('errors.DELETE_IN_PROGRESS') }}
+    </p>
 
     <ModalAsk
       :is-open="confirming !== null"
@@ -50,10 +53,10 @@
 import type { AnnouncementAction, AnnouncementDetails } from '~/types/announcement';
 
 // Props
-const props = defineProps<{ id: number; actions: AnnouncementAction[] }>();
+const props = defineProps<{ id: number; actions: AnnouncementAction[]; deleteBlockedByOngoingHelp: boolean }>();
 
 // Emits
-const emit = defineEmits<{ updated: [announcement: AnnouncementDetails]; deleted: [] }>();
+const emit = defineEmits<{ updated: [announcement: AnnouncementDetails]; deleted: []; refresh: [] }>();
 
 // Composables
 const { sessionEnded } = useAuth();
@@ -71,6 +74,7 @@ const confirming = ref<'close' | 'delete' | null>(null);
 
 // Methods
 async function run(action: AnnouncementAction) {
+  if (busy.value || !props.actions.includes(action)) return;
   busy.value = action;
   try {
     if (action === 'extend') {
@@ -98,6 +102,7 @@ async function run(action: AnnouncementAction) {
       return;
     }
     show(errorText(apiError, 'errors.SAVE_FAILED'), 'alert');
+    if (action === 'delete' && apiError.code === 'DELETE_IN_PROGRESS') emit('refresh');
   } finally {
     busy.value = null;
   }
