@@ -29,8 +29,15 @@ export function formatDateTime(iso: string, locale: string): string {
   });
 }
 
-export function formatDistance(km: number): string {
-  return km < 1 ? `${Math.round(km * 1000)} m` : `${km.toFixed(km < 10 ? 1 : 0)} km`;
+/** "400 m" / "3.3 km" in English, "400 м" / "3,3 км" in Ukrainian. */
+export function formatDistance(km: number, locale = 'en'): string {
+  const meters = km < 1;
+  return new Intl.NumberFormat(locale, {
+    style: 'unit',
+    unit: meters ? 'meter' : 'kilometer',
+    unitDisplay: 'short',
+    maximumFractionDigits: meters || km >= 10 ? 0 : 1,
+  }).format(meters ? Math.round(km * 1000) : km);
 }
 
 export function hoursLeft(iso: string, now = Date.now()): number {

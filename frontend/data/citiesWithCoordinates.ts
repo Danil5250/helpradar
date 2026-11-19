@@ -55,7 +55,7 @@ export const citiesWithCoordinates: City[] = [
   { id: 503, name: 'Першотравенськ', position: { lat: 48.6758, lng: 35.9508 } },
   { id: 504, name: "П'ятихатки", position: { lat: 48.5114, lng: 34.6456 } },
   { id: 505, name: 'Синельникове', position: { lat: 48.62, lng: 35.5431 } },
-  { id: 506, name: 'Тернівка', position: { lat: 48.5825, lng: 34.9206 } },
+  { id: 506, name: 'Тернівка', position: { lat: 48.5221, lng: 36.0714 } },
   { id: 507, name: 'Васильківка', position: { lat: 48.58, lng: 34.8625 } },
 
   { id: 508, name: 'Донецьк', position: { lat: 48.0159, lng: 37.8028 } },

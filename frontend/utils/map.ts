@@ -1,6 +1,6 @@
-import type { MapAnnouncements, MapBounds, MapMarker, MapQuery } from '~/types/announcement';
+import type { MapAnnouncements, MapMarker, MapQuery } from '~/types/announcement';
 
-/** Load the entire visible area rather than silently truncating it to one API page. */
+/** Load the entire search area rather than silently truncating it to one API page. */
 export async function loadMapPages(
   fetchPage: (query: MapQuery, signal?: AbortSignal) => Promise<MapAnnouncements>,
   query: MapQuery,
@@ -17,17 +17,6 @@ export async function loadMapPages(
     page += 1;
   } while (result.hasMore);
   return { ...result, items: [...markers.values()], hasMore: false };
-}
-
-export function normalizeMapBounds(bounds: MapBounds): MapBounds {
-  const wrap = (lng: number) => ((((lng + 180) % 360) + 360) % 360) - 180;
-  const wholeWorld = bounds.east - bounds.west >= 360;
-  return {
-    north: Math.min(90, bounds.north),
-    south: Math.max(-90, bounds.south),
-    east: wholeWorld ? 180 : wrap(bounds.east),
-    west: wholeWorld ? -180 : wrap(bounds.west),
-  };
 }
 
 export function groupMapMarkers(markers: MapMarker[], project: (point: MapMarker['location']) => { x: number; y: number }, cellSize = 60): MapMarker[][] {

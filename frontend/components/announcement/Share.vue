@@ -121,6 +121,8 @@ const labels = { telegram: 'Telegram', whatsapp: 'WhatsApp', viber: 'Viber', x: 
 // Computed
 const preview = computed(() => announcementSharing(props.announcement, origin));
 const categoryLabel = computed(() => t(`category.${preview.value.category.id}`, preview.value.category.name));
+// no "text": the system "Copy" would glue it to the link and break the URL; messengers take the preview from the OpenGraph tags
+const nativeShareData = computed<ShareData>(() => ({ title: preview.value.title, url: preview.value.url }));
 const shareText = computed(() => `${t(preview.value.type === 'HelpRequest' ? 'help_request' : 'help_offer')}: ${preview.value.title}\n${categoryLabel.value}`);
 const channels = computed(() =>
   SOCIAL_CHANNELS.map((id) => ({
@@ -136,13 +138,9 @@ async function open() {
   status.value = '';
   nativeBusy.value = true;
   try {
-    const shared = await shareWithFallback(
-      { title: preview.value.title, text: preview.value.description, url: preview.value.url },
-      typeof navigator.share === 'function' ? navigator.share.bind(navigator) : undefined,
-      () => {
-        isOpen.value = true;
-      }
-    );
+    const shared = await shareWithFallback(nativeShareData.value, typeof navigator.share === 'function' ? navigator.share.bind(navigator) : undefined, () => {
+      isOpen.value = true;
+    });
     if (shared) record('native');
   } finally {
     nativeBusy.value = false;
@@ -183,7 +181,7 @@ async function shareNative() {
   if (nativeBusy.value) return;
   nativeBusy.value = true;
   try {
-    await navigator.share({ title: preview.value.title, text: shareText.value, url: preview.value.url });
+    await navigator.share(nativeShareData.value);
     record('native');
   } catch (failure) {
     if ((failure as { name?: string }).name !== 'AbortError') status.value = 'native_failed';

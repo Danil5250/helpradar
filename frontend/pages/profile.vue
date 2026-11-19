@@ -19,7 +19,7 @@
           <span class="bg-sand rounded-full px-3 py-1">{{ t(profile.role === 'volunteer' ? 'role_volunteer' : 'role_person_in_need') }}</span>
         </p>
         <p v-if="profile.city" class="flex items-center gap-1 text-sm"><AppIcon name="pin" class="h-4 w-4 text-forest" />{{ profile.city }}</p>
-        <div v-if="profile.rating !== null" class="flex items-center gap-2" data-test="profile-rating">
+        <div v-if="profile.rating" class="flex items-center gap-2" data-test="profile-rating">
           <ProfileRatingStars :value="profile.rating" />
           <span class="text-sm text-sage">({{ t('reviews_count', { count: profile.reviewsCount }) }})</span>
         </div>

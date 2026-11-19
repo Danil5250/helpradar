@@ -16,6 +16,8 @@ describe('formatting', () => {
     expect(formatDistance(0.4)).toBe('400 m');
     expect(formatDistance(3.26)).toBe('3.3 km');
     expect(formatDistance(120.4)).toBe('120 km');
+    expect(formatDistance(3.26, 'uk')).toBe('3,3 км');
+    expect(formatDistance(0.4, 'uk')).toBe('400 м');
   });
 
   it('counts the hours until the expiry date', () => {

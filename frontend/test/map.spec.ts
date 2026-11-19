@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { expandedMarkerPoints, groupMapMarkers, loadMapPages, normalizeMapBounds, resolveMapPosition } from '~/utils/map';
+import { expandedMarkerPoints, groupMapMarkers, loadMapPages, resolveMapPosition } from '~/utils/map';
 import type { MapAnnouncements, MapMarker } from '~/types/announcement';
 
 const marker = (id: number): MapMarker => ({
@@ -45,11 +45,6 @@ describe('interactive map acceptance criteria', () => {
     });
     await expect(loadMapPages(fetchPage, { lat: 50, lng: 30, radius: 10 }, controller.signal)).rejects.toMatchObject({ name: 'AbortError' });
     expect(fetchPage).toHaveBeenCalledTimes(1);
-  });
-
-  it('preserves date-line crossing and supports a map wider than the world', () => {
-    expect(normalizeMapBounds({ north: 95, south: -95, west: 170, east: 190 })).toEqual({ north: 90, south: -90, west: 170, east: -170 });
-    expect(normalizeMapBounds({ north: 50, south: 40, west: -200, east: 200 })).toEqual({ north: 50, south: 40, west: -180, east: 180 });
   });
 
   it('clusters the actual marker locations and splits nearby markers as the scale increases', () => {
