@@ -19,7 +19,7 @@
           :class="index < currentStep ? 'bg-forest text-almost-white' : index === currentStep ? 'bg-radar text-charcoal' : 'bg-sand text-sage'"
         >
           <AppIcon v-if="index < currentStep" name="check" class="w-4 h-4" /><template v-else>{{ index + 1 }}</template> </span
-        ><span class="text-sm font-montserratMedium">{{ t(`help.step.${step}`) }}</span>
+        ><span class="text-sm font-montserratMedium">{{ stepLabel(step) }}</span>
       </li>
     </ol>
 
@@ -82,11 +82,12 @@
         {{ t(announcement.isOwner ? 'help.no_responses' : 'help.inactive_hint') }}
       </p>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- the review form for this announcement is below; a request sent to an offer is reviewed on its own page -->
         <HelpConnectionCard
           v-for="connection in overview.connections"
           :key="connection.id"
           :connection="connection"
-          :show-review-link="false"
+          :show-review-link="connection.request.id !== announcement.id"
           @updated="emit('updated')"
         />
       </div>
@@ -114,7 +115,7 @@ const help = useHelp();
 const { show } = useFlash();
 
 // Utils
-const { t } = useI18n();
+const { t, te } = useI18n();
 const route = useRoute();
 const errorText = useApiErrorText();
 
@@ -130,12 +131,18 @@ let timer: ReturnType<typeof setInterval> | undefined;
 const steps = ['connect', 'help', 'review'] as const;
 
 // Computed
-const directConnection = computed(() => overview.value?.connections.find((connection) => connection.isDirect && connection.requester.id === user.value?.id));
+// on an offer the steps follow the newest agreement of the person in need: a direct one or their own request sent to it
+// (connections come newest first)
+const myConnection = computed(() =>
+  props.announcement.type === 'HelpOffer'
+    ? overview.value?.connections.find((connection) => connection.requester.id === user.value?.id && connection.status !== 'Rejected')
+    : undefined
+);
 const currentStep = computed(() => {
-  const status = directConnection.value?.request.status ?? props.announcement.status;
+  const status = myConnection.value?.request.status ?? props.announcement.status;
   if (status === 'Completed') {
     const hasReview =
-      directConnection.value?.hasReview ??
+      myConnection.value?.hasReview ??
       overview.value?.connections.some((connection) => connection.request.id === props.announcement.id && connection.hasReview);
     return hasReview ? steps.length : 2;
   }
@@ -157,6 +164,11 @@ const requestOptions = computed(
 const selectRequestOptions = computed(() => requestOptions.value.map((request) => ({ value: request.id, label: request.title })));
 
 // Methods
+/** A volunteer gives help and gets the review; steps worded the same for both roles live only in help.step. */
+function stepLabel(step: (typeof steps)[number]): string {
+  const volunteerKey = `help.step_volunteer.${step}`;
+  return role.value === 'volunteer' && te(volunteerKey) ? t(volunteerKey) : t(`help.step.${step}`);
+}
 async function load() {
   if (!isAuthenticated.value || loading.value || busy.value) return;
   loading.value = true;

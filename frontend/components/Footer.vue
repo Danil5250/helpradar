@@ -24,7 +24,7 @@
 
       <LanguageSelector />
     </div>
-    <div class="px-8 md:px-12 xl:px-28 pb-6 text-xs text-charcoal">©{{ year }} HELPRADAR. All rights reserved</div>
+    <div class="px-8 md:px-12 xl:px-28 pb-6 text-xs text-charcoal">©{{ year }} HELPRADAR. {{ t('all_rights_reserved') }}</div>
   </footer>
 </template>
 

@@ -10,7 +10,7 @@
         </h4>
         <span class="text-sm font-montserratMedium flex items-center gap-2">
           <span>{{ timeAgo(a.datePosted, locale) }}</span>
-          <span v-if="a.author.rating !== null" class="text-charcoal" :title="t('rating')">★ {{ a.author.rating.toFixed(1) }}</span>
+          <span v-if="a.author.rating" class="text-charcoal" :title="t('rating')">★ {{ a.author.rating.toFixed(1) }}</span>
         </span>
       </div>
     </div>
@@ -32,7 +32,7 @@
       <p class="text-sm text-sage mb-2">{{ t(`category.${a.category.id}`, a.category.name) }}</p>
       <p class="mb-2 font-montserratMedium break-words">{{ a.excerpt }}</p>
       <p v-if="a.distanceKm !== null" class="text-sm flex items-center gap-1">
-        <AppIcon name="pin" class="h-4 w-4 text-forest" />{{ formatDistance(a.distanceKm) }}
+        <AppIcon name="pin" class="h-4 w-4 text-forest" />{{ formatDistance(a.distanceKm, locale) }}
       </p>
       <p v-if="showStatus" class="mt-2">
         <span class="text-sm px-3 py-1 rounded-full font-montserratMedium" :class="statusLook[a.status]">{{ t(`status.${a.status}`) }}</span>

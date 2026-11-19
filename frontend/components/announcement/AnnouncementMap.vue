@@ -13,14 +13,14 @@
 
 <script setup lang="ts">
 // Imports
-import type { MapBounds, MapMarker } from '~/types/announcement';
-import { normalizeMapBounds, groupMapMarkers, expandedMarkerPoints } from '~/utils/map';
+import type { MapMarker } from '~/types/announcement';
+import { groupMapMarkers, expandedMarkerPoints } from '~/utils/map';
 
 // Props
 const props = defineProps<{ center: { lat: number; lng: number }; radiusKm: number; markers: MapMarker[] }>();
 
 // Emits
-const emit = defineEmits<{ centerChange: [point: { lat: number; lng: number }]; viewportChange: [bounds: MapBounds]; unavailable: [] }>();
+const emit = defineEmits<{ centerChange: [point: { lat: number; lng: number }]; unavailable: [] }>();
 
 // Utils
 const { t, locale } = useI18n();
@@ -48,7 +48,7 @@ function cardHtml(marker: MapMarker): string {
     <p class="font-montserratMedium text-base my-1 break-words">${escapeHtml(marker.title)}</p>
     <p class="text-sm text-sage">${escapeHtml(t(`category.${marker.category.id}`, marker.category.name))}</p>
     <p class="text-sm mt-1 break-words">${escapeHtml(marker.description)}</p>
-    <p class="text-sm mt-1">${escapeHtml(formatDistance(marker.distanceKm))} · ${escapeHtml(timeAgo(marker.datePosted, locale.value))}</p>
+    <p class="text-sm mt-1">${escapeHtml(formatDistance(marker.distanceKm, locale.value))} · ${escapeHtml(timeAgo(marker.datePosted, locale.value))}</p>
     <button type="button" data-announcement="${marker.id}" class="mt-2 bg-radar text-charcoal font-bold rounded-full px-4 py-1 uppercase text-sm">${escapeHtml(t('more_details'))}</button>
   </div>`;
 }
@@ -110,12 +110,6 @@ function drawMarkers() {
   }
 }
 
-function emitViewport() {
-  if (!map) return;
-  const bounds = map.getBounds();
-  emit('viewportChange', normalizeMapBounds({ north: bounds.getNorth(), south: bounds.getSouth(), east: bounds.getEast(), west: bounds.getWest() }));
-}
-
 function drawCircle(fit: boolean) {
   if (!L || !map) return;
   const center: [number, number] = [props.center.lat, props.center.lng];
@@ -160,7 +154,6 @@ onMounted(async () => {
     .addTo(map);
   markerLayer = L.layerGroup().addTo(map);
   map.on('zoomend', drawMarkers);
-  map.on('moveend', emitViewport);
   map.on('click', (event: import('leaflet').LeafletMouseEvent) => emit('centerChange', { lat: event.latlng.lat, lng: event.latlng.lng }));
   map.on('popupopen', (event: import('leaflet').PopupEvent) => {
     const button = event.popup.getElement()?.querySelector<HTMLButtonElement>('[data-announcement]');
@@ -172,7 +165,6 @@ onMounted(async () => {
   });
   drawCircle(true);
   drawMarkers();
-  emitViewport();
 });
 onBeforeUnmount(() => {
   map?.remove();
