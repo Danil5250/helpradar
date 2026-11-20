@@ -1,11 +1,19 @@
 package ua.helpradar.app.data.repository
 
+import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.net.Uri
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
+import okhttp3.RequestBody.Companion.toRequestBody
 import ua.helpradar.app.data.local.SessionManager
 import ua.helpradar.app.data.network.ApiClient
 import ua.helpradar.app.data.network.Resource
 import ua.helpradar.app.data.network.api.ProfileApiService
 import ua.helpradar.app.data.network.dto.ProfileResponse
 import ua.helpradar.app.data.network.dto.UpdateProfileRequest
+import java.io.ByteArrayOutputStream
 
 class ProfileRepository(
     private val api: ProfileApiService = ApiClient.profileService
@@ -15,10 +23,10 @@ class ProfileRepository(
             val response = api.getProfile()
             val body = response.body()
             if (response.isSuccessful && body != null) {
-                // Синхронізуємо SessionManager з реальними даними
                 SessionManager.currentUserName = "${body.firstName} ${body.lastName}".trim()
                 SessionManager.currentUserRole = body.role
                 SessionManager.currentUserId = body.id
+                SessionManager.currentUserAvatarUrl = body.avatarUrl
                 Resource.Success(body)
             } else {
                 Resource.Error("Не вдалося завантажити профіль", response.code())
@@ -35,12 +43,53 @@ class ProfileRepository(
             if (response.isSuccessful && body != null) {
                 val updated = body.profile
                 SessionManager.currentUserName = "${updated.firstName} ${updated.lastName}".trim()
+                SessionManager.currentUserAvatarUrl = updated.avatarUrl
                 Resource.Success(updated)
             } else {
                 Resource.Error("Помилка збереження профілю", response.code())
             }
         } catch (e: Exception) {
             Resource.Error(e.localizedMessage ?: "Помилка мережі")
+        }
+    }
+
+    suspend fun uploadAvatar(context: Context, imageUri: Uri): Resource<String> {
+        return try {
+            val inputStream = context.contentResolver.openInputStream(imageUri)
+                ?: return Resource.Error("Не вдалося прочитати вибране зображення")
+
+            val originalBitmap = inputStream.use { BitmapFactory.decodeStream(it) }
+                ?: return Resource.Error("Непідтримуваний формат зображення")
+
+            val outputStream = ByteArrayOutputStream()
+            originalBitmap.compress(Bitmap.CompressFormat.JPEG, 85, outputStream)
+            val bytes = outputStream.toByteArray()
+
+            val requestBody = bytes.toRequestBody("image/jpeg".toMediaTypeOrNull())
+            val part = MultipartBody.Part.createFormData(
+                "avatar",
+                "avatar_${System.currentTimeMillis()}.jpg",
+                requestBody
+            )
+
+            val response = api.uploadAvatar(part)
+            val body = response.body()
+            if (response.isSuccessful && body != null) {
+                SessionManager.currentUserAvatarUrl = body.avatarUrl
+                Resource.Success(body.avatarUrl)
+            } else {
+                val serverMessage = try {
+                    val errorJson = response.errorBody()?.string()
+                    if (!errorJson.isNullOrBlank()) {
+                        org.json.JSONObject(errorJson).optString("message").ifEmpty { null }
+                    } else null
+                } catch (_: Exception) {
+                    null
+                }
+                Resource.Error(serverMessage ?: "Не вдалося оновити аватар (${response.code()})", response.code())
+            }
+        } catch (e: Exception) {
+            Resource.Error(e.localizedMessage ?: "Помилка завантаження аватара")
         }
     }
 }

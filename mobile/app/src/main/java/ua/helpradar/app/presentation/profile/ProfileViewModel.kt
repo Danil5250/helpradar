@@ -1,5 +1,7 @@
 package ua.helpradar.app.presentation.profile
 
+import android.content.Context
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -10,12 +12,17 @@ import kotlinx.coroutines.launch
 import ua.helpradar.app.data.network.Resource
 import ua.helpradar.app.data.network.dto.ProfileResponse
 import ua.helpradar.app.data.network.dto.UpdateProfileRequest
+import ua.helpradar.app.data.repository.AnnouncementRepository
 import ua.helpradar.app.data.repository.ProfileRepository
+import ua.helpradar.app.presentation.feed.AnnouncementItem
 
 data class ProfileUiState(
     val isLoading: Boolean = false,
     val isSaving: Boolean = false,
+    val isUploadingAvatar: Boolean = false,
     val profile: ProfileResponse? = null,
+    val myAnnouncements: List<AnnouncementItem> = emptyList(),
+    val isLoadingAnnouncements: Boolean = false,
     val isEditing: Boolean = false,
     val editFirstName: String = "",
     val editLastName: String = "",
@@ -27,7 +34,8 @@ data class ProfileUiState(
 )
 
 class ProfileViewModel(
-    private val repository: ProfileRepository = ProfileRepository()
+    private val repository: ProfileRepository = ProfileRepository(),
+    private val announcementRepository: AnnouncementRepository = AnnouncementRepository()
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ProfileUiState())
@@ -35,6 +43,7 @@ class ProfileViewModel(
 
     init {
         loadProfile()
+        loadMyAnnouncements()
     }
 
     fun loadProfile() {
@@ -57,6 +66,51 @@ class ProfileViewModel(
                 }
                 is Resource.Error -> {
                     _uiState.update { it.copy(isLoading = false, errorMessage = res.message) }
+                }
+            }
+        }
+    }
+
+    fun loadMyAnnouncements() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoadingAnnouncements = true) }
+            when (val res = announcementRepository.getMyAnnouncements()) {
+                is Resource.Success -> {
+                    _uiState.update {
+                        it.copy(
+                            isLoadingAnnouncements = false,
+                            myAnnouncements = res.data
+                        )
+                    }
+                }
+                is Resource.Error -> {
+                    _uiState.update { it.copy(isLoadingAnnouncements = false) }
+                }
+            }
+        }
+    }
+
+    fun uploadAvatar(context: Context, imageUri: Uri) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isUploadingAvatar = true, errorMessage = null, successMessage = null) }
+            when (val res = repository.uploadAvatar(context, imageUri)) {
+                is Resource.Success -> {
+                    val currentProfile = _uiState.value.profile
+                    _uiState.update {
+                        it.copy(
+                            isUploadingAvatar = false,
+                            profile = currentProfile?.copy(avatarUrl = res.data),
+                            successMessage = "Аватар успішно оновлено!"
+                        )
+                    }
+                }
+                is Resource.Error -> {
+                    _uiState.update {
+                        it.copy(
+                            isUploadingAvatar = false,
+                            errorMessage = res.message
+                        )
+                    }
                 }
             }
         }
