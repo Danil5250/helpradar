@@ -2,6 +2,7 @@ package ua.helpradar.app.presentation.map
 
 import android.Manifest
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Canvas
@@ -10,6 +11,8 @@ import android.graphics.Path
 import android.graphics.drawable.BitmapDrawable
 import android.location.Geocoder
 import android.location.Location
+import android.location.LocationManager
+import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -31,18 +34,22 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.WarningAmber
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -76,6 +83,52 @@ private data class AnnouncementCluster(
     val items: List<AnnouncementItem>
 )
 
+// Збереження останньої позиції камери та обраного радіуса при переході в деталі оголошення
+private object MapCameraMemory {
+    var lastCameraCenter: GeoPoint? = null
+    var lastZoom: Double? = null
+    var lastSearchCenter: GeoPoint? = null
+    var lastRadiusKm: Int? = 10
+}
+
+private val DEFAULT_UKRAINE_CENTER = GeoPoint(49.9935, 36.2304)
+
+private fun isLocationEnabled(context: Context): Boolean {
+    val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager
+        ?: return false
+    return try {
+        locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) ||
+                locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
+    } catch (_: Exception) {
+        false
+    }
+}
+
+private fun hasLocationPermission(context: Context): Boolean {
+    val hasFine = ContextCompat.checkSelfPermission(
+        context,
+        Manifest.permission.ACCESS_FINE_LOCATION
+    ) == PackageManager.PERMISSION_GRANTED
+    val hasCoarse = ContextCompat.checkSelfPermission(
+        context,
+        Manifest.permission.ACCESS_COARSE_LOCATION
+    ) == PackageManager.PERMISSION_GRANTED
+    return hasFine || hasCoarse
+}
+
+private fun zoomForRadiusKm(radiusKm: Int?): Double {
+    return when (radiusKm) {
+        1 -> 14.5
+        3 -> 13.0
+        5 -> 12.2
+        10 -> 11.2
+        25 -> 10.0
+        50 -> 9.0
+        null -> 6.2
+        else -> 11.2
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MapScreen(
@@ -85,6 +138,7 @@ fun MapScreen(
 ) {
     val state by feedViewModel.uiState.collectAsState()
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
     val coroutineScope = rememberCoroutineScope()
 
     var mapViewRef by remember { mutableStateOf<MapView?>(null) }
@@ -93,23 +147,56 @@ fun MapScreen(
     var selectedCluster by remember { mutableStateOf<List<AnnouncementItem>>(emptyList()) }
     var selectedClusterIndex by remember { mutableIntStateOf(0) }
 
-    var searchCenterPoint by remember { mutableStateOf<GeoPoint?>(null) }
-    var currentZoom by remember { mutableDoubleStateOf(13.0) }
+    var searchCenterPoint by remember { mutableStateOf<GeoPoint?>(MapCameraMemory.lastSearchCenter) }
+    var currentZoom by remember {
+        mutableDoubleStateOf(MapCameraMemory.lastZoom ?: zoomForRadiusKm(MapCameraMemory.lastRadiusKm))
+    }
 
     // Радіуси пошуку згідно з SRS 3.2.19.2 (null = вся мапа)
     val availableRadii = listOf(null, 1, 3, 5, 10, 25, 50)
-    var selectedRadiusKm by remember { mutableStateOf<Int?>(10) }
+    var selectedRadiusKm by remember { mutableStateOf<Int?>(MapCameraMemory.lastRadiusKm) }
 
     var searchQuery by remember { mutableStateOf("") }
     var isSearching by remember { mutableStateOf(false) }
 
+    var locationErrorBanner by remember { mutableStateOf<String?>(null) }
+    var isPermissionDenied by remember { mutableStateOf(false) }
+
     val blueArrowBitmap = remember { createBlueArrowBitmap() }
     val blueDotBitmap = remember { createBlueDotBitmap() }
+
+    fun refreshLocationStatus() {
+        val permGranted = hasLocationPermission(context)
+        val gpsOn = isLocationEnabled(context)
+        isPermissionDenied = !permGranted
+        locationErrorBanner = when {
+            !permGranted -> "Не вдалося визначити місцезнаходження: доступ до геолокації заборонено."
+            !gpsOn -> "Не вдалося завантажити поточну геолокацію: GPS вимкнено на пристрої."
+            else -> null
+        }
+    }
 
     // Конфігурація osmdroid
     LaunchedEffect(Unit) {
         Configuration.getInstance().load(context, context.getSharedPreferences("osmdroid", Context.MODE_PRIVATE))
         Configuration.getInstance().userAgentValue = context.packageName
+        refreshLocationStatus()
+    }
+
+    // Перевірка стану GPS при поверненні з налаштувань
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                refreshLocationStatus()
+                if (hasLocationPermission(context) && isLocationEnabled(context)) {
+                    userLocationOverlay?.enableMyLocation()
+                }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
     }
 
     // Запит дозволів на геолокацію
@@ -118,32 +205,58 @@ fun MapScreen(
     ) { permissions ->
         val granted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
                 permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
-        if (granted) {
+        refreshLocationStatus()
+        if (granted && isLocationEnabled(context)) {
             userLocationOverlay?.enableMyLocation()
-            userLocationOverlay?.enableFollowLocation()
             userLocationOverlay?.runOnFirstFix {
                 val loc = userLocationOverlay?.myLocation
                 if (loc != null) {
-                    searchCenterPoint = loc
-                    coroutineScope.launch(Dispatchers.Main) {
-                        mapViewRef?.controller?.animateTo(loc, 14.0, 1000L)
+                    val hadSavedCamera = MapCameraMemory.lastCameraCenter != null
+                    if (searchCenterPoint == null) {
+                        searchCenterPoint = loc
+                        MapCameraMemory.lastSearchCenter = loc
+                    }
+                    if (!hadSavedCamera) {
+                        val targetZoom = zoomForRadiusKm(selectedRadiusKm)
+                        MapCameraMemory.lastCameraCenter = loc
+                        MapCameraMemory.lastZoom = targetZoom
+                        coroutineScope.launch(Dispatchers.Main) {
+                            currentZoom = targetZoom
+                            mapViewRef?.controller?.animateTo(loc, targetZoom, 900L)
+                        }
                     }
                 }
             }
+        } else if (searchCenterPoint == null && MapCameraMemory.lastCameraCenter == null) {
+            searchCenterPoint = DEFAULT_UKRAINE_CENTER
+            mapViewRef?.controller?.setCenter(DEFAULT_UKRAINE_CENTER)
         }
     }
 
     LaunchedEffect(Unit) {
-        val hasFine = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
-        val hasCoarse = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
-        if (!hasFine && !hasCoarse) {
-            permissionLauncher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
+        if (!hasLocationPermission(context)) {
+            permissionLauncher.launch(
+                arrayOf(
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+                )
+            )
+        } else if (!isLocationEnabled(context) && searchCenterPoint == null && MapCameraMemory.lastCameraCenter == null) {
+            searchCenterPoint = DEFAULT_UKRAINE_CENTER
         }
     }
 
-    // Звільнення ресурсів osmdroid при закритті екрана мапи
+    // Звільнення ресурсів osmdroid при закритті екрана мапи (зі збереженням камери)
     DisposableEffect(Unit) {
         onDispose {
+            mapViewRef?.let { mv ->
+                val center = mv.mapCenter
+                MapCameraMemory.lastCameraCenter = GeoPoint(center.latitude, center.longitude)
+                MapCameraMemory.lastZoom = mv.zoomLevelDouble
+            }
+            MapCameraMemory.lastSearchCenter = searchCenterPoint
+            MapCameraMemory.lastRadiusKm = selectedRadiusKm
+
             userLocationOverlay?.disableMyLocation()
             userLocationOverlay?.disableFollowLocation()
             mapViewRef?.onPause()
@@ -170,7 +283,12 @@ fun MapScreen(
             isSearching = false
             if (point != null) {
                 searchCenterPoint = point
-                mapViewRef?.controller?.animateTo(point, 13.0, 1000L)
+                MapCameraMemory.lastSearchCenter = point
+                val targetZoom = zoomForRadiusKm(selectedRadiusKm)
+                currentZoom = targetZoom
+                MapCameraMemory.lastCameraCenter = point
+                MapCameraMemory.lastZoom = targetZoom
+                mapViewRef?.controller?.animateTo(point, targetZoom, 900L)
             } else {
                 Toast.makeText(context, "Місто чи адресу «$cityName» не знайдено", Toast.LENGTH_SHORT).show()
             }
@@ -243,15 +361,26 @@ fun MapScreen(
                     MapView(ctx).apply {
                         setTileSource(TileSourceFactory.MAPNIK)
                         setMultiTouchControls(true)
-                        controller.setZoom(13.0)
+
+                        val initialZoom = MapCameraMemory.lastZoom ?: zoomForRadiusKm(selectedRadiusKm)
+                        val initialCenter = MapCameraMemory.lastCameraCenter
+                            ?: searchCenterPoint
+                            ?: DEFAULT_UKRAINE_CENTER
+                        controller.setZoom(initialZoom)
+                        controller.setCenter(initialCenter)
 
                         addMapListener(
                             DelayedMapListener(
                                 object : MapListener {
-                                    override fun onScroll(event: ScrollEvent?): Boolean = false
+                                    override fun onScroll(event: ScrollEvent?): Boolean {
+                                        val c = mapCenter
+                                        MapCameraMemory.lastCameraCenter = GeoPoint(c.latitude, c.longitude)
+                                        return false
+                                    }
 
                                     override fun onZoom(event: ZoomEvent?): Boolean {
                                         val z = event?.zoomLevel ?: zoomLevelDouble
+                                        MapCameraMemory.lastZoom = z
                                         if (abs(z - currentZoom) >= 0.3) {
                                             currentZoom = z
                                         }
@@ -263,7 +392,9 @@ fun MapScreen(
                         )
 
                         val myLoc = MyLocationNewOverlay(GpsMyLocationProvider(ctx), this).apply {
-                            enableMyLocation()
+                            if (hasLocationPermission(ctx) && isLocationEnabled(ctx)) {
+                                enableMyLocation()
+                            }
                             setDirectionIcon(blueArrowBitmap)
                             setDirectionAnchor(0.5f, 0.5f)
                             setPersonIcon(blueDotBitmap)
@@ -271,11 +402,19 @@ fun MapScreen(
                             runOnFirstFix {
                                 val loc = myLocation
                                 if (loc != null) {
+                                    val hadSavedCamera = MapCameraMemory.lastCameraCenter != null
                                     if (searchCenterPoint == null) {
                                         searchCenterPoint = loc
+                                        MapCameraMemory.lastSearchCenter = loc
                                     }
-                                    coroutineScope.launch(Dispatchers.Main) {
-                                        controller.animateTo(loc, 14.0, 1000L)
+                                    if (!hadSavedCamera) {
+                                        val targetZoom = zoomForRadiusKm(selectedRadiusKm)
+                                        MapCameraMemory.lastCameraCenter = loc
+                                        MapCameraMemory.lastZoom = targetZoom
+                                        coroutineScope.launch(Dispatchers.Main) {
+                                            currentZoom = targetZoom
+                                            controller.animateTo(loc, targetZoom, 900L)
+                                        }
                                     }
                                 }
                             }
@@ -329,6 +468,8 @@ fun MapScreen(
                             setOnMarkerClickListener { _, _ ->
                                 selectedCluster = cluster.items
                                 selectedClusterIndex = 0
+                                MapCameraMemory.lastCameraCenter = position
+                                MapCameraMemory.lastZoom = mapView.zoomLevelDouble
                                 mapView.controller.animateTo(position)
                                 true
                             }
@@ -341,7 +482,7 @@ fun MapScreen(
                 modifier = Modifier.fillMaxSize()
             )
 
-            // Верхній блок: Пошук міста + Фільтр радіуса
+            // Верхній блок: Пошук міста + Фільтр радіуса + Повідомлення про помилку геолокації
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -390,7 +531,7 @@ fun MapScreen(
                     }
                 }
 
-                // Вибір радіуса пошуку (1, 3, 5, 10, 25, 50 км)
+                // Вибір радіуса пошуку з автоматичним підлаштуванням масштабу
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -401,7 +542,21 @@ fun MapScreen(
                         val isSelected = selectedRadiusKm == radius
                         FilterChip(
                             selected = isSelected,
-                            onClick = { selectedRadiusKm = radius },
+                            onClick = {
+                                selectedRadiusKm = radius
+                                MapCameraMemory.lastRadiusKm = radius
+                                val targetZoom = zoomForRadiusKm(radius)
+                                currentZoom = targetZoom
+                                MapCameraMemory.lastZoom = targetZoom
+                                val focusCenter = searchCenterPoint
+                                    ?: mapViewRef?.mapCenter?.let { GeoPoint(it.latitude, it.longitude) }
+                                if (focusCenter != null) {
+                                    MapCameraMemory.lastCameraCenter = focusCenter
+                                    mapViewRef?.controller?.animateTo(focusCenter, targetZoom, 650L)
+                                } else {
+                                    mapViewRef?.controller?.setZoom(targetZoom)
+                                }
+                            },
                             label = {
                                 Text(
                                     text = if (radius == null) "Вся мапа" else "$radius км",
@@ -416,6 +571,63 @@ fun MapScreen(
                                 containerColor = Color.White.copy(alpha = 0.9f)
                             )
                         )
+                    }
+                }
+
+                // Попередження/помилка, якщо геолокацію вимкнено або дозвіл не надано
+                locationErrorBanner?.let { errorText ->
+                    Card(
+                        shape = RoundedCornerShape(10.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.errorContainer
+                        ),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.WarningAmber,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Text(
+                                text = errorText,
+                                fontFamily = Montserrat,
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onErrorContainer,
+                                modifier = Modifier.weight(1f)
+                            )
+                            TextButton(
+                                onClick = {
+                                    if (isPermissionDenied) {
+                                        permissionLauncher.launch(
+                                            arrayOf(
+                                                Manifest.permission.ACCESS_FINE_LOCATION,
+                                                Manifest.permission.ACCESS_COARSE_LOCATION
+                                            )
+                                        )
+                                    } else {
+                                        context.startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
+                                    }
+                                },
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                            ) {
+                                Text(
+                                    text = "Увімкнути",
+                                    fontFamily = Montserrat,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                            }
+                        }
                     }
                 }
 
@@ -442,10 +654,33 @@ fun MapScreen(
             val hasPopup = selectedCluster.isNotEmpty()
             FloatingActionButton(
                 onClick = {
+                    refreshLocationStatus()
+                    if (!hasLocationPermission(context)) {
+                        permissionLauncher.launch(
+                            arrayOf(
+                                Manifest.permission.ACCESS_FINE_LOCATION,
+                                Manifest.permission.ACCESS_COARSE_LOCATION
+                            )
+                        )
+                        return@FloatingActionButton
+                    }
+                    if (!isLocationEnabled(context)) {
+                        Toast.makeText(
+                            context,
+                            "Увімкніть геолокацію (GPS) у налаштуваннях пристрою",
+                            Toast.LENGTH_LONG
+                        ).show()
+                        return@FloatingActionButton
+                    }
                     val myLoc = userLocationOverlay?.myLocation
                     if (myLoc != null) {
                         searchCenterPoint = myLoc
-                        mapViewRef?.controller?.animateTo(myLoc, 15.0, 800L)
+                        MapCameraMemory.lastSearchCenter = myLoc
+                        val targetZoom = zoomForRadiusKm(selectedRadiusKm ?: 5)
+                        currentZoom = targetZoom
+                        MapCameraMemory.lastCameraCenter = myLoc
+                        MapCameraMemory.lastZoom = targetZoom
+                        mapViewRef?.controller?.animateTo(myLoc, targetZoom, 800L)
                     } else {
                         Toast.makeText(context, "Визначаємо GPS координати...", Toast.LENGTH_SHORT).show()
                         userLocationOverlay?.enableMyLocation()
@@ -497,7 +732,16 @@ fun MapScreen(
                             selectedCluster = emptyList()
                             selectedClusterIndex = 0
                         },
-                        onDetailsClick = { onAnnouncementClick(currentItem.id) }
+                        onDetailsClick = {
+                            mapViewRef?.let { mv ->
+                                val c = mv.mapCenter
+                                MapCameraMemory.lastCameraCenter = GeoPoint(c.latitude, c.longitude)
+                                MapCameraMemory.lastZoom = mv.zoomLevelDouble
+                            }
+                            MapCameraMemory.lastSearchCenter = searchCenterPoint
+                            MapCameraMemory.lastRadiusKm = selectedRadiusKm
+                            onAnnouncementClick(currentItem.id)
+                        }
                     )
                 }
             }
@@ -529,7 +773,6 @@ private fun MapAnnouncementPopupCard(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            // Панель перемикання, якщо в одну точку злилося декілька оголошень
             if (totalCount > 1) {
                 Row(
                     modifier = Modifier
@@ -733,7 +976,6 @@ private fun clusterAnnouncements(
     return clusters
 }
 
-// Генерація круглого маркера кластера з кількістю оголошень
 private fun createClusterBitmap(count: Int): Bitmap {
     val size = 84
     val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
@@ -770,7 +1012,6 @@ private fun createClusterBitmap(count: Int): Bitmap {
     return bitmap
 }
 
-// Генерація векторної синьої стрілки напрямку з білою обводкою
 private fun createBlueArrowBitmap(): Bitmap {
     val size = 64
     val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
@@ -797,7 +1038,6 @@ private fun createBlueArrowBitmap(): Bitmap {
     return bitmap
 }
 
-// Генерація синьої крапки користувача в стані спокою
 private fun createBlueDotBitmap(): Bitmap {
     val size = 48
     val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)

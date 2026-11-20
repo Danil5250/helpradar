@@ -1,7 +1,11 @@
 package ua.helpradar.app.presentation.profile
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -9,6 +13,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.LocationOn
@@ -21,28 +26,48 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.SubcomposeAsyncImage
+import coil.request.ImageRequest
+import ua.helpradar.app.presentation.feed.AnnouncementItem
+import ua.helpradar.app.presentation.feed.AnnouncementType
 import ua.helpradar.app.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
     onNavigateBack: () -> Unit,
+    onAnnouncementClick: (Int) -> Unit = {},
     viewModel: ProfileViewModel = viewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
     val profile = state.profile
+    val context = LocalContext.current
 
-    val initialLetter = remember(profile?.firstName, profile?.email) {
-        val source = profile?.firstName?.ifBlank { null } ?: profile?.email.orEmpty()
-        source.firstOrNull()?.uppercaseChar()?.toString() ?: "U"
+    val avatarPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            viewModel.uploadAvatar(context, uri)
+        }
     }
 
-    // Підготовка повного URL аватара
+    val initialLetter = remember(profile?.firstName, profile?.lastName, profile?.email) {
+        val first = profile?.firstName?.trim()?.firstOrNull()?.uppercaseChar()
+        val last = profile?.lastName?.trim()?.firstOrNull()?.uppercaseChar()
+        when {
+            first != null && last != null -> "$first$last"
+            first != null -> first.toString()
+            else -> profile?.email?.firstOrNull()?.uppercaseChar()?.toString() ?: "U"
+        }
+    }
+
     val fullAvatarUrl = remember(profile?.avatarUrl) {
         val raw = profile?.avatarUrl?.trim()
         if (!raw.isNullOrBlank() && !raw.contains("default")) {
@@ -101,54 +126,123 @@ fun ProfileScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Аватар профілю: завантажене фото або фолбек на літеру
-                // Динамічний круглий аватар (ідеальне центрування)
+                // Аватар профілю з можливістю зміни фото у режимі редагування
                 Box(
-                    modifier = Modifier
-                        .size(88.dp)
-                        .clip(CircleShape)
-                        .background(TacticalOlive),
-                    contentAlignment = Alignment.Center
+                    contentAlignment = Alignment.BottomEnd,
+                    modifier = Modifier.size(96.dp)
                 ) {
-                    if (fullAvatarUrl != null) {
-                        SubcomposeAsyncImage(
-                            model = fullAvatarUrl,
-                            contentDescription = "Аватар користувача",
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier.fillMaxSize(),
-                            error = {
-                                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                    Text(
-                                        text = initialLetter,
-                                        fontFamily = Montserrat,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color.White,
-                                        fontSize = 36.sp,
-                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                                    )
-                                }
+                    Box(
+                        modifier = Modifier
+                            .size(92.dp)
+                            .align(Alignment.Center)
+                            .clip(CircleShape)
+                            .background(TacticalOlive)
+                            .clickable(enabled = state.isEditing && !state.isUploadingAvatar) {
+                                avatarPickerLauncher.launch("image/*")
                             },
-                            loading = {
-                                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                    Text(
-                                        text = initialLetter,
-                                        fontFamily = Montserrat,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color.White,
-                                        fontSize = 36.sp,
-                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                                    )
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (fullAvatarUrl != null) {
+                            SubcomposeAsyncImage(
+                                model = ImageRequest.Builder(context)
+                                    .data(fullAvatarUrl)
+                                    .crossfade(true)
+                                    .build(),
+                                contentDescription = "Аватар користувача",
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize(),
+                                error = {
+                                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                        Text(
+                                            text = initialLetter,
+                                            fontFamily = Montserrat,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color.White,
+                                            fontSize = 32.sp,
+                                            textAlign = TextAlign.Center
+                                        )
+                                    }
+                                },
+                                loading = {
+                                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                        CircularProgressIndicator(
+                                            color = Color.White,
+                                            strokeWidth = 2.dp,
+                                            modifier = Modifier.size(24.dp)
+                                        )
+                                    }
                                 }
+                            )
+                        } else {
+                            Text(
+                                text = initialLetter,
+                                fontFamily = Montserrat,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White,
+                                fontSize = 32.sp,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+
+                        if (state.isUploadingAvatar) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(Color.Black.copy(alpha = 0.45f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator(
+                                    color = Color.White,
+                                    strokeWidth = 2.5.dp,
+                                    modifier = Modifier.size(28.dp)
+                                )
                             }
+                        }
+                    }
+
+                    if (state.isEditing) {
+                        Surface(
+                            shape = CircleShape,
+                            color = RadarOrange,
+                            shadowElevation = 3.dp,
+                            modifier = Modifier
+                                .size(30.dp)
+                                .border(2.dp, DesertSand, CircleShape)
+                                .clickable(enabled = !state.isUploadingAvatar) {
+                                    avatarPickerLauncher.launch("image/*")
+                                }
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Default.CameraAlt,
+                                    contentDescription = "Змінити аватар",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                if (state.isEditing) {
+                    TextButton(
+                        onClick = { avatarPickerLauncher.launch("image/*") },
+                        enabled = !state.isUploadingAvatar,
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 2.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CameraAlt,
+                            contentDescription = null,
+                            tint = OliveGreen,
+                            modifier = Modifier.size(16.dp)
                         )
-                    } else {
+                        Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = initialLetter,
+                            text = if (state.isUploadingAvatar) "Завантаження фото..." else "Змінити фото профілю",
                             fontFamily = Montserrat,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White,
-                            fontSize = 36.sp,
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 13.sp,
+                            color = OliveGreen
                         )
                     }
                 }
@@ -256,6 +350,13 @@ fun ProfileScreen(
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("Редагувати профіль", fontFamily = Montserrat, fontWeight = FontWeight.Bold, color = Color.White)
                     }
+
+                    // Блок "Мої оголошення" згідно з макетом Figma
+                    MyAnnouncementsProfileCard(
+                        announcements = state.myAnnouncements,
+                        isLoading = state.isLoadingAnnouncements,
+                        onAnnouncementClick = onAnnouncementClick
+                    )
                 } else {
                     Card(
                         shape = RoundedCornerShape(14.dp),
@@ -336,6 +437,181 @@ fun ProfileScreen(
                             }
                         }
                     }
+
+                    // Блок "Мої оголошення" також доступний під формою редагування профілю
+                    MyAnnouncementsProfileCard(
+                        announcements = state.myAnnouncements,
+                        isLoading = state.isLoadingAnnouncements,
+                        onAnnouncementClick = onAnnouncementClick
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MyAnnouncementsProfileCard(
+    announcements: List<AnnouncementItem>,
+    isLoading: Boolean,
+    onAnnouncementClick: (Int) -> Unit
+) {
+    Card(
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.85f)),
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(1.dp, BorderSand, RoundedCornerShape(14.dp))
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Text(
+                text = "Мої оголошення",
+                fontFamily = Montserrat,
+                fontWeight = FontWeight.Bold,
+                fontSize = 17.sp,
+                color = CharcoalDark
+            )
+
+            when {
+                isLoading -> {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 16.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(color = OliveGreen, modifier = Modifier.size(24.dp))
+                    }
+                }
+                announcements.isEmpty() -> {
+                    Text(
+                        text = "У вас поки немає створених оголошень.",
+                        fontFamily = Montserrat,
+                        fontSize = 13.sp,
+                        color = DeepSage
+                    )
+                }
+                else -> {
+                    announcements.forEach { item ->
+                        ProfileAnnouncementItemRow(
+                            item = item,
+                            onClick = { onAnnouncementClick(item.id) }
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ProfileAnnouncementItemRow(
+    item: AnnouncementItem,
+    onClick: () -> Unit
+) {
+    val isOffer = item.type == AnnouncementType.OFFER
+    val isClosed = item.status.equals("Closed", ignoreCase = true) ||
+            item.status.equals("Resolved", ignoreCase = true)
+
+    val statusText = when {
+        item.status.equals("Closed", ignoreCase = true) -> "Закрито"
+        item.status.equals("Resolved", ignoreCase = true) -> "Вирішено"
+        else -> "Активне"
+    }
+
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = DesertSand.copy(alpha = 0.65f),
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(1.dp, BorderSand.copy(alpha = 0.7f), RoundedCornerShape(12.dp))
+            .clickable { onClick() }
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
+            ) {
+                Text(
+                    text = item.title,
+                    fontFamily = Montserrat,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp,
+                    color = CharcoalDark,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(end = 8.dp)
+                )
+
+                Surface(
+                    shape = RoundedCornerShape(6.dp),
+                    color = if (isOffer) OliveGreen.copy(alpha = 0.16f) else RadarOrange.copy(alpha = 0.16f)
+                ) {
+                    Text(
+                        text = if (isOffer) "Пропозиція" else "Потреба",
+                        fontFamily = Montserrat,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 11.sp,
+                        color = if (isOffer) OliveGreen else RadarOrange,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                    )
+                }
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = TacticalOlive.copy(alpha = 0.35f)
+                    ) {
+                        Text(
+                            text = item.categoryName,
+                            fontFamily = Montserrat,
+                            fontWeight = FontWeight.Medium,
+                            fontSize = 11.sp,
+                            color = CharcoalDark,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                        )
+                    }
+
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = if (isClosed) Color.Gray.copy(alpha = 0.18f) else DeepSage.copy(alpha = 0.15f)
+                    ) {
+                        Text(
+                            text = statusText,
+                            fontFamily = Montserrat,
+                            fontWeight = FontWeight.Medium,
+                            fontSize = 11.sp,
+                            color = if (isClosed) Color.DarkGray else DeepSage,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                        )
+                    }
+                }
+
+                if (!item.createdDateFormatted.isNullOrBlank()) {
+                    Text(
+                        text = item.createdDateFormatted,
+                        fontFamily = Montserrat,
+                        fontSize = 11.sp,
+                        color = DeepSage
+                    )
                 }
             }
         }

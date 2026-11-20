@@ -128,6 +128,9 @@ fun AppNavHost(
             ProfileScreen(
                 onNavigateBack = {
                     navController.popBackStack()
+                },
+                onAnnouncementClick = { id ->
+                    navController.navigate("announcement_details/$id")
                 }
             )
         }
