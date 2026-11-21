@@ -14,6 +14,7 @@ interface AnnouncementApiService {
     suspend fun getAnnouncements(
         @Query("page") page: Int = 1,
         @Query("sort") sort: String = "newest",
+        @Query("type") type: String? = null,
         @Query("lat") lat: Double? = null,
         @Query("lng") lng: Double? = null
     ): Response<AnnouncementListResponse>

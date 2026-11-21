@@ -1,11 +1,7 @@
 package ua.helpradar.app.presentation.feed
 
+import android.location.Geocoder
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -45,25 +41,24 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import ua.helpradar.app.R
 import ua.helpradar.app.data.local.SessionManager
+import ua.helpradar.app.data.network.ApiClient
 import ua.helpradar.app.ui.theme.*
 import ua.helpradar.app.util.ShareUtils.shareAnnouncement
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.ui.unit.IntOffset
-import kotlin.math.roundToInt
-import android.location.Geocoder
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import ua.helpradar.app.data.network.ApiClient
 import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -335,7 +330,7 @@ fun FeedScreen(
                     state.errorMessage != null -> {
                         FeedErrorView(
                             errorMessage = state.errorMessage ?: "Не вдалося завантажити оголошення",
-                            onRetry = { viewModel.loadFeed() }
+                            onRetry = { viewModel.loadFeed(reset = true) }
                         )
                     }
                     state.announcements.isEmpty() -> {
@@ -350,7 +345,7 @@ fun FeedScreen(
                     else -> {
                         LazyColumn(
                             modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(16.dp),
+                            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 84.dp),
                             verticalArrangement = Arrangement.spacedBy(14.dp)
                         ) {
                             items(state.announcements, key = { it.id }) { item ->
@@ -361,6 +356,49 @@ fun FeedScreen(
                                     onEditClick = onEditClick,
                                     onCardClick = { onAnnouncementClick(item.id) }
                                 )
+                            }
+
+                            if (state.hasMore && !state.onlyMyAnnouncements) {
+                                item(key = "load_more_footer") {
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 8.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Text(
+                                            text = "Показано ${state.announcements.size} оголошень (сторінка ${state.currentPage})",
+                                            fontFamily = Montserrat,
+                                            fontSize = 12.sp,
+                                            color = DeepSage
+                                        )
+                                        Button(
+                                            onClick = { viewModel.loadMoreAnnouncements() },
+                                            enabled = !state.isLoadingMore,
+                                            colors = ButtonDefaults.buttonColors(containerColor = OliveGreen),
+                                            shape = RoundedCornerShape(12.dp),
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .height(46.dp)
+                                        ) {
+                                            if (state.isLoadingMore) {
+                                                CircularProgressIndicator(
+                                                    color = Color.White,
+                                                    strokeWidth = 2.dp,
+                                                    modifier = Modifier.size(20.dp)
+                                                )
+                                            } else {
+                                                Text(
+                                                    text = "Завантажити ще",
+                                                    fontFamily = Montserrat,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = Color.White
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
                     }

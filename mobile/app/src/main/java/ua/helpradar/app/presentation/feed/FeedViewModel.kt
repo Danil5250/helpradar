@@ -22,6 +22,9 @@ data class FeedUiState(
     val onlyMyAnnouncements: Boolean = false,
     val announcements: List<AnnouncementItem> = emptyList(),
     val isLoading: Boolean = false,
+    val isLoadingMore: Boolean = false,
+    val currentPage: Int = 1,
+    val hasMore: Boolean = false,
     val errorMessage: String? = null,
     val userAvatarUrl: String? = SessionManager.currentUserAvatarUrl,
     val userName: String = SessionManager.currentUserName
@@ -61,31 +64,81 @@ class FeedViewModel(
         }
     }
 
-    fun loadFeed() {
+    private fun apiTypeFilter(): String? = when (_uiState.value.selectedType) {
+        AnnouncementType.OFFER -> "helpOffer"
+        AnnouncementType.REQUEST -> "helpRequest"
+        null -> null
+    }
+
+    fun loadFeed(reset: Boolean = true) {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
-            val result = if (_uiState.value.onlyMyAnnouncements) {
-                repository.getMyAnnouncements()
-            } else {
-                repository.getAnnouncements()
-            }
-            when (result) {
-                is Resource.Success -> {
-                    rawBackendAnnouncements = result.data
-                    applyFilters()
-                    _uiState.update { it.copy(isLoading = false) }
+            if (_uiState.value.onlyMyAnnouncements) {
+                _uiState.update { it.copy(isLoading = true, errorMessage = null, hasMore = false, currentPage = 1) }
+                when (val result = repository.getMyAnnouncements()) {
+                    is Resource.Success -> {
+                        rawBackendAnnouncements = result.data
+                        applyFilters()
+                        _uiState.update { it.copy(isLoading = false) }
+                    }
+                    is Resource.Error -> {
+                        rawBackendAnnouncements = emptyList()
+                        _uiState.update {
+                            it.copy(announcements = emptyList(), isLoading = false, errorMessage = result.message)
+                        }
+                    }
                 }
-                is Resource.Error -> {
-                    rawBackendAnnouncements = emptyList()
+                return@launch
+            }
+
+            val targetPage = if (reset) 1 else _uiState.value.currentPage + 1
+            if (reset) {
+                _uiState.update { it.copy(isLoading = true, errorMessage = null, currentPage = 1) }
+            } else {
+                if (_uiState.value.isLoadingMore || !_uiState.value.hasMore) return@launch
+                _uiState.update { it.copy(isLoadingMore = true) }
+            }
+
+            when (val result = repository.getAnnouncements(page = targetPage, type = apiTypeFilter())) {
+                is Resource.Success -> {
+                    val pageData = result.data
+                    rawBackendAnnouncements = if (reset) {
+                        pageData.items
+                    } else {
+                        (rawBackendAnnouncements + pageData.items).distinctBy { it.id }
+                    }
+                    applyFilters()
                     _uiState.update {
                         it.copy(
-                            announcements = emptyList(),
                             isLoading = false,
-                            errorMessage = result.message
+                            isLoadingMore = false,
+                            currentPage = pageData.page,
+                            hasMore = pageData.hasMore
                         )
                     }
                 }
+                is Resource.Error -> {
+                    if (reset) {
+                        rawBackendAnnouncements = emptyList()
+                        _uiState.update {
+                            it.copy(
+                                announcements = emptyList(),
+                                isLoading = false,
+                                isLoadingMore = false,
+                                hasMore = false,
+                                errorMessage = result.message
+                            )
+                        }
+                    } else {
+                        _uiState.update { it.copy(isLoadingMore = false) }
+                    }
+                }
             }
+        }
+    }
+
+    fun loadMoreAnnouncements() {
+        if (!_uiState.value.onlyMyAnnouncements && _uiState.value.hasMore && !_uiState.value.isLoadingMore) {
+            loadFeed(reset = false)
         }
     }
 
@@ -144,7 +197,7 @@ class FeedViewModel(
 
     fun onToggleOnlyMy(onlyMy: Boolean) {
         _uiState.update { it.copy(onlyMyAnnouncements = onlyMy) }
-        loadFeed()
+        loadFeed(reset = true)
     }
 
     fun onCloseAnnouncement(id: Int) {
@@ -152,7 +205,7 @@ class FeedViewModel(
             _uiState.update { it.copy(isLoading = true) }
             when (val result = repository.closeAnnouncement(id)) {
                 is Resource.Success -> {
-                    loadFeed()
+                    loadFeed(reset = true)
                 }
                 is Resource.Error -> {
                     _uiState.update { it.copy(isLoading = false, errorMessage = result.message) }

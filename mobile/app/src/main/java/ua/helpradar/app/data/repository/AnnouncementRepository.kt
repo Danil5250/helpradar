@@ -16,6 +16,13 @@ import ua.helpradar.app.presentation.feed.AnnouncementType
 import ua.helpradar.app.presentation.feed.formatIsoDate
 import java.io.ByteArrayOutputStream
 
+data class PagedAnnouncementsResult(
+    val items: List<AnnouncementItem>,
+    val page: Int,
+    val pageSize: Int,
+    val hasMore: Boolean
+)
+
 class AnnouncementRepository(
     private val api: AnnouncementApiService = ApiClient.announcementApiService
 ) {
@@ -33,11 +40,15 @@ class AnnouncementRepository(
         }
     }
 
-    suspend fun getAnnouncements(): Resource<List<AnnouncementItem>> {
+    suspend fun getAnnouncements(
+        page: Int = 1,
+        type: String? = null
+    ): Resource<PagedAnnouncementsResult> {
         return try {
-            val response = api.getAnnouncements()
-            if (response.isSuccessful && response.body() != null) {
-                val items = response.body()!!.items.map { dto ->
+            val response = api.getAnnouncements(page = page, type = type)
+            val body = response.body()
+            if (response.isSuccessful && body != null) {
+                val items = body.items.map { dto ->
                     AnnouncementItem(
                         id = dto.id,
                         title = dto.title,
@@ -61,7 +72,14 @@ class AnnouncementRepository(
                         longitude = dto.approxLocation?.longitude
                     )
                 }
-                Resource.Success(items)
+                Resource.Success(
+                    PagedAnnouncementsResult(
+                        items = items,
+                        page = body.page,
+                        pageSize = body.pageSize,
+                        hasMore = body.hasMore
+                    )
+                )
             } else {
                 Resource.Error("Помилка завантаження оголошень: ${response.code()}", response.code())
             }
