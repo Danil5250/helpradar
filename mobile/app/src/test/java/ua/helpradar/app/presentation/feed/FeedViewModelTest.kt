@@ -3,6 +3,7 @@ package ua.helpradar.app.presentation.feed
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -14,8 +15,10 @@ import ua.helpradar.app.MainDispatcherRule
 import ua.helpradar.app.data.network.Resource
 import ua.helpradar.app.data.network.dto.CategoryDto
 import ua.helpradar.app.data.repository.AnnouncementRepository
+import ua.helpradar.app.data.repository.PagedAnnouncementsResult
 import ua.helpradar.app.data.repository.ProfileRepository
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class FeedViewModelTest {
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
@@ -28,7 +31,9 @@ class FeedViewModelTest {
             item(1, "Терміново потрібна їжа", "Допомога родині", "Їжа", AnnouncementType.REQUEST),
             item(2, "Пропоную одяг", "Є теплі речі", "Одяг", AnnouncementType.OFFER)
         )
-        coEvery { announcementRepository.getAnnouncements() } returns Resource.Success(items)
+        coEvery { announcementRepository.getAnnouncements(any(), any()) } returns Resource.Success(
+            PagedAnnouncementsResult(items = items, page = 1, pageSize = 20, hasMore = false)
+        )
         coEvery { announcementRepository.getCategories() } returns Resource.Success(listOf(CategoryDto(1, "Їжа")))
         coEvery { profileRepository.getProfile() } returns Resource.Error("Offline")
         val viewModel = FeedViewModel(announcementRepository, profileRepository)
@@ -39,6 +44,7 @@ class FeedViewModelTest {
         viewModel.onSearchQueryChange(" РОДИНІ ")
         viewModel.onCategorySelect("їжа")
         viewModel.onTypeSelect(AnnouncementType.REQUEST)
+        advanceUntilIdle()
 
         assertEquals(listOf(1), viewModel.uiState.value.announcements.map { it.id })
         viewModel.onSearchQueryChange("відсутнє")
@@ -49,7 +55,7 @@ class FeedViewModelTest {
     fun feedErrorClearsItemsAndOnlyMineUsesOwnEndpoint() = runTest(mainDispatcherRule.dispatcher) {
         val announcementRepository = mockk<AnnouncementRepository>()
         val profileRepository = mockk<ProfileRepository>()
-        coEvery { announcementRepository.getAnnouncements() } returns Resource.Error("Сервер недоступний")
+        coEvery { announcementRepository.getAnnouncements(any(), any()) } returns Resource.Error("Сервер недоступний")
         coEvery { announcementRepository.getMyAnnouncements() } returns Resource.Success(listOf(item(9)))
         coEvery { announcementRepository.getCategories() } returns Resource.Error("Categories unavailable")
         coEvery { profileRepository.getProfile() } returns Resource.Error("Offline")

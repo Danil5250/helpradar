@@ -93,14 +93,14 @@ class RepositoryTest {
             createdAt = "2026-11-08T14:30:00Z",
             author = AuthorDto(9, "Іван")
         )
-        coEvery { api.getAnnouncements(any(), any(), any(), any()) } returns Response.success(
+        coEvery { api.getAnnouncements(any(), any(), any(), any(), any()) } returns Response.success(
             AnnouncementListResponse(listOf(announcement), page = 1, pageSize = 10, hasMore = false)
         )
 
         val result = AnnouncementRepository(api).getAnnouncements()
 
         assertTrue(result is Resource.Success)
-        val mapped = (result as Resource.Success).data.single()
+        val mapped = (result as Resource.Success).data.items.single()
         assertEquals(4, mapped.id)
         assertEquals("Є речі для родини", mapped.description)
         assertEquals("Одяг", mapped.categoryName)
