@@ -2,29 +2,36 @@ package ua.helpradar.app.data.network.api
 
 import okhttp3.MultipartBody
 import retrofit2.Response
-import retrofit2.http.Body
-import retrofit2.http.GET
-import retrofit2.http.Multipart
-import retrofit2.http.PATCH
-import retrofit2.http.POST
-import retrofit2.http.Part
-import ua.helpradar.app.data.network.dto.ProfileResponse
-import ua.helpradar.app.data.network.dto.ProfileUpdatedResponse
-import ua.helpradar.app.data.network.dto.UpdateProfileRequest
-import ua.helpradar.app.data.network.dto.UploadAvatarResponse
+import retrofit2.http.*
+import ua.helpradar.app.data.network.dto.*
 
 interface ProfileApiService {
     @GET("api/profile")
     suspend fun getProfile(): Response<ProfileResponse>
 
     @PATCH("api/profile")
-    suspend fun updateProfile(
-        @Body request: UpdateProfileRequest
-    ): Response<ProfileUpdatedResponse>
+    suspend fun updateProfile(@Body request: UpdateProfileRequest): Response<ProfileUpdatedResponse>
 
     @Multipart
     @POST("api/profile/avatar")
-    suspend fun uploadAvatar(
-        @Part avatar: MultipartBody.Part
-    ): Response<UploadAvatarResponse>
+    suspend fun uploadAvatar(@Part file: MultipartBody.Part): Response<UploadAvatarResponse>
+
+    @GET("api/users/{id}")
+    suspend fun getPublicProfile(@Path("id") userId: Int): Response<PublicProfileResponse>
+
+    @GET("api/users/{id}/comments")
+    suspend fun getUserComments(
+        @Path("id") userId: Int,
+        @Query("page") page: Int = 1,
+        @Query("pageSize") pageSize: Int = 10
+    ): Response<CommentsPageResponse>
+
+    @POST("api/users/{id}/comments")
+    suspend fun createUserComment(
+        @Path("id") userId: Int,
+        @Body request: CreateCommentRequest
+    ): Response<CommentSavedResponse>
+
+    @DELETE("api/comments/{id}")
+    suspend fun deleteComment(@Path("id") commentId: Int): Response<CommentSavedResponse>
 }

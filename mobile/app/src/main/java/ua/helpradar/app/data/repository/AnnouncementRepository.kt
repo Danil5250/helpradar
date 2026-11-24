@@ -63,7 +63,9 @@ class AnnouncementRepository(
                         postedTimeAgo = dto.datePosted ?: "нещодавно",
                         authorId = dto.author?.id,
                         authorName = dto.author?.name ?: "Користувач",
-                        authorRating = dto.author?.rating ?: 5.0,
+                        authorRating = dto.author?.rating
+                            ?: dto.author?.id?.let { ProfileRepository.getCachedRating(it) }
+                            ?: 0.0,
                         isUrgent = dto.isUrgent,
                         createdDateFormatted = formatIsoDate(dto.createdAt ?: dto.datePosted),
                         expiryDateFormatted = formatIsoDate(dto.expiresAt),

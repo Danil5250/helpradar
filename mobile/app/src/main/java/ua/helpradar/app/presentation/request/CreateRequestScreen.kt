@@ -8,6 +8,7 @@ import android.view.MotionEvent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -38,6 +39,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -293,7 +295,7 @@ fun CreateRequestScreen(
                 maxLines = 6
             )
 
-            // Блок вибору тривалості / подовження оголошення
+            // Блок вибору тривалості / подовження оголошення (усі 4 варіанти в 1 рядок)
             val isEditMode = state.editingAnnouncementId != null
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
@@ -314,27 +316,37 @@ fun CreateRequestScreen(
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     state.availableExpiryDays.forEach { days ->
                         val isSelected = if (isEditMode) state.extendDays == days else state.expiryDays == days
                         val prefix = if (isEditMode) "+" else ""
-                        FilterChip(
-                            selected = isSelected,
+                        OutlinedButton(
                             onClick = { viewModel.onExpiryDaysChange(days) },
-                            label = {
-                                Text(
-                                    text = "$prefix$days ${if (days == 3) "дні" else "днів"}",
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                                )
-                            },
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = OliveGreen,
-                                selectedLabelColor = Color.White
+                            shape = RoundedCornerShape(10.dp),
+                            contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
+                            border = BorderStroke(
+                                width = if (isSelected) 2.dp else 1.dp,
+                                color = if (isSelected) OliveGreen else BorderSand
                             ),
-                            shape = RoundedCornerShape(8.dp),
-                            modifier = Modifier.weight(1f)
-                        )
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                containerColor = if (isSelected) OliveGreen else Color.White.copy(alpha = 0.7f)
+                            ),
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(40.dp)
+                        ) {
+                            Text(
+                                text = "$prefix$days ${if (days == 3) "дні" else "днів"}",
+                                fontFamily = Montserrat,
+                                fontSize = 12.sp,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                color = if (isSelected) Color.White else CharcoalDark,
+                                maxLines = 1,
+                                softWrap = false,
+                                overflow = TextOverflow.Clip
+                            )
+                        }
                     }
                 }
 
