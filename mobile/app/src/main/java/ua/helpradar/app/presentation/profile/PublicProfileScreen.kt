@@ -2,7 +2,6 @@ package ua.helpradar.app.presentation.profile
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -12,7 +11,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.CalendarToday
-import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.StarBorder
@@ -29,7 +27,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
-import ua.helpradar.app.data.local.SessionManager
 import ua.helpradar.app.data.network.dto.PublicProfileResponse
 import ua.helpradar.app.data.network.dto.UserCommentDto
 import ua.helpradar.app.presentation.feed.formatIsoDate
@@ -46,7 +43,7 @@ fun PublicProfileScreen(
     val state by viewModel.uiState.collectAsState()
 
     LaunchedEffect(userId) {
-        viewModel.load(userId)
+        viewModel.load(userId, forceReload = true)
     }
 
     Scaffold(
@@ -127,31 +124,6 @@ fun PublicProfileScreen(
                         PublicProfileHeaderCard(profile = profile)
                     }
 
-                    if (state.canLeaveReview) {
-                        item(key = "review_form") {
-                            LeaveReviewCard(
-                                selectedRating = state.selectedRating,
-                                commentText = state.commentText,
-                                isSubmitting = state.isSubmittingReview,
-                                errorMessage = state.reviewError,
-                                successMessage = state.reviewSuccessMessage,
-                                onRatingSelect = viewModel::onRatingSelect,
-                                onCommentChange = viewModel::onCommentTextChange,
-                                onSubmit = viewModel::submitReview
-                            )
-                        }
-                    } else if (state.reviewError != null || state.reviewSuccessMessage != null) {
-                        item(key = "review_feedback") {
-                            val isError = state.reviewError != null
-                            Text(
-                                text = state.reviewError ?: state.reviewSuccessMessage.orEmpty(),
-                                fontFamily = Montserrat,
-                                fontSize = 13.sp,
-                                color = if (isError) MaterialTheme.colorScheme.error else OliveGreen
-                            )
-                        }
-                    }
-
                     item(key = "reviews_title") {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -198,12 +170,7 @@ fun PublicProfileScreen(
                         }
                     } else {
                         items(state.comments, key = { it.id }) { comment ->
-                            ReviewItemCard(
-                                comment = comment,
-                                isOwnComment = comment.author?.id != null && comment.author.id == SessionManager.currentUserId,
-                                isDeleting = state.deletingCommentId == comment.id,
-                                onDeleteClick = { viewModel.deleteReview(comment.id) }
-                            )
+                            ReviewItemCard(comment = comment)
                         }
                     }
                 }
@@ -421,146 +388,15 @@ private fun PublicProfileHeaderCard(profile: PublicProfileResponse) {
 }
 
 @Composable
-private fun LeaveReviewCard(
-    selectedRating: Int,
-    commentText: String,
-    isSubmitting: Boolean,
-    errorMessage: String?,
-    successMessage: String?,
-    onRatingSelect: (Int) -> Unit,
-    onCommentChange: (String) -> Unit,
-    onSubmit: () -> Unit
-) {
-    Card(
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = SelectedRoleBg.copy(alpha = 0.85f)),
-        modifier = Modifier
-            .fillMaxWidth()
-            .border(1.dp, OliveGreen.copy(alpha = 0.45f), RoundedCornerShape(16.dp))
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            Text(
-                text = "Залишити відгук волонтеру",
-                fontFamily = KharkivTone,
-                fontSize = 17.sp,
-                color = CharcoalDark
-            )
-
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                (1..5).forEach { star ->
-                    IconButton(
-                        onClick = { onRatingSelect(star) },
-                        modifier = Modifier.size(36.dp)
-                    ) {
-                        Icon(
-                            imageVector = if (star <= selectedRating) Icons.Filled.Star else Icons.Outlined.StarBorder,
-                            contentDescription = "Оцінка $star",
-                            tint = RadarOrange,
-                            modifier = Modifier.size(28.dp)
-                        )
-                    }
-                }
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                    text = "$selectedRating / 5",
-                    fontFamily = Montserrat,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 14.sp,
-                    color = CharcoalDark
-                )
-            }
-
-            OutlinedTextField(
-                value = commentText,
-                onValueChange = onCommentChange,
-                placeholder = {
-                    Text(
-                        text = "Поділіться враженням про співпрацю з волонтером...",
-                        fontFamily = Montserrat,
-                        fontSize = 13.sp,
-                        color = PlaceholderSage
-                    )
-                },
-                minLines = 2,
-                maxLines = 4,
-                shape = RoundedCornerShape(12.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = Color.White,
-                    unfocusedContainerColor = Color.White,
-                    focusedBorderColor = OliveGreen,
-                    unfocusedBorderColor = BorderSand
-                ),
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            if (errorMessage != null) {
-                Text(
-                    text = errorMessage,
-                    fontFamily = Montserrat,
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.error
-                )
-            }
-
-            if (successMessage != null) {
-                Text(
-                    text = successMessage,
-                    fontFamily = Montserrat,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = OliveGreen
-                )
-            }
-
-            Button(
-                onClick = onSubmit,
-                enabled = !isSubmitting,
-                colors = ButtonDefaults.buttonColors(containerColor = OliveGreen),
-                shape = RoundedCornerShape(10.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(44.dp)
-            ) {
-                if (isSubmitting) {
-                    CircularProgressIndicator(
-                        color = Color.White,
-                        strokeWidth = 2.dp,
-                        modifier = Modifier.size(20.dp)
-                    )
-                } else {
-                    Text(
-                        text = "Опублікувати відгук",
-                        fontFamily = Montserrat,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun ReviewItemCard(
-    comment: UserCommentDto,
-    isOwnComment: Boolean,
-    isDeleting: Boolean,
-    onDeleteClick: () -> Unit
-) {
+private fun ReviewItemCard(comment: UserCommentDto) {
     val authorName = comment.author?.name?.takeIf { it.isNotBlank() }
         ?: listOfNotNull(comment.author?.firstName, comment.author?.lastName)
             .filter { it.isNotBlank() }
             .joinToString(" ")
             .ifBlank { "Користувач" }
 
-    val formattedDate = remember(comment.createdAt) {
-        formatIsoDate(comment.createdAt) ?: ""
+    val formattedDate = remember(comment.dateCreated) {
+        formatIsoDate(comment.dateCreated) ?: ""
     }
 
     Card(
@@ -606,28 +442,12 @@ private fun ReviewItemCard(
                             modifier = Modifier.size(16.dp)
                         )
                     }
-
-                    if (isOwnComment) {
-                        Spacer(modifier = Modifier.width(4.dp))
-                        IconButton(
-                            onClick = onDeleteClick,
-                            enabled = !isDeleting,
-                            modifier = Modifier.size(28.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.DeleteOutline,
-                                contentDescription = "Видалити відгук",
-                                tint = MaterialTheme.colorScheme.error,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-                    }
                 }
             }
 
-            if (!comment.comment.isNullOrBlank()) {
+            if (!comment.description.isNullOrBlank()) {
                 Text(
-                    text = comment.comment,
+                    text = comment.description,
                     fontFamily = Montserrat,
                     fontSize = 14.sp,
                     color = CharcoalDark.copy(alpha = 0.9f)

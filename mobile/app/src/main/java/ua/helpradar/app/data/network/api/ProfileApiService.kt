@@ -22,13 +22,12 @@ interface ProfileApiService {
     @GET("api/users/{id}/comments")
     suspend fun getUserComments(
         @Path("id") userId: Int,
-        @Query("page") page: Int = 1,
-        @Query("pageSize") pageSize: Int = 10
+        @Query("page") page: Int = 1
     ): Response<CommentsPageResponse>
 
-    @POST("api/users/{id}/comments")
-    suspend fun createUserComment(
-        @Path("id") userId: Int,
+    @POST("api/announcements/{id}/comments")
+    suspend fun createAnnouncementComment(
+        @Path("id") announcementId: Int,
         @Body request: CreateCommentRequest
     ): Response<CommentSavedResponse>
 
