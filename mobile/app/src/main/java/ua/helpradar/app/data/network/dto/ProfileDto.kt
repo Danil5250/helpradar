@@ -42,3 +42,56 @@ data class UploadAvatarResponse(
     @SerializedName("message") val message: String,
     @SerializedName("avatarUrl") val avatarUrl: String
 )
+
+data class PublicProfileResponse(
+    @SerializedName("id") val id: Int,
+    @SerializedName("name") val name: String? = null,
+    @SerializedName("firstName") val firstName: String? = null,
+    @SerializedName("lastName") val lastName: String? = null,
+    @SerializedName("role") val role: String? = null,
+    @SerializedName("avatarUrl") val avatarUrl: String? = null,
+    @SerializedName("rating") val rating: Double? = null,
+    @SerializedName("reviewsCount") val reviewsCount: Int? = null,
+    @SerializedName("city") val city: String? = null,
+    @SerializedName("district") val district: String? = null,
+    @SerializedName("supportTypes") val supportTypes: List<String>? = null,
+    @SerializedName("workingDays") val workingDays: List<String>? = null,
+    @SerializedName("workingHours") val workingHours: String? = null
+)
+
+data class CommentAuthorDto(
+    @SerializedName("id") val id: Int,
+    @SerializedName("name") val name: String? = null,
+    @SerializedName("firstName") val firstName: String? = null,
+    @SerializedName("lastName") val lastName: String? = null,
+    @SerializedName("avatarUrl") val avatarUrl: String? = null
+)
+
+data class UserCommentDto(
+    @SerializedName("id") val id: Int,
+    @SerializedName("rating") val rating: Int,
+    @SerializedName("comment") val comment: String? = null,
+    @SerializedName("createdAt") val createdAt: String? = null,
+    @SerializedName("updatedAt") val updatedAt: String? = null,
+    @SerializedName("author") val author: CommentAuthorDto? = null
+)
+
+data class CommentsPageResponse(
+    @SerializedName("items") val items: List<UserCommentDto> = emptyList(),
+    @SerializedName("page") val page: Int = 1,
+    @SerializedName("pageSize") val pageSize: Int = 10,
+    @SerializedName("total") val total: Int = 0,
+    @SerializedName("hasMore") val hasMore: Boolean = false
+)
+
+data class CreateCommentRequest(
+    @SerializedName("rating") val rating: Int,
+    @SerializedName("comment") val comment: String
+)
+
+data class CommentSavedResponse(
+    @SerializedName("id") val id: Int? = null,
+    @SerializedName("message") val message: String? = null,
+    @SerializedName("rating") val rating: Double? = null,
+    @SerializedName("reviewsCount") val reviewsCount: Int? = null
+)

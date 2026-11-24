@@ -8,4 +8,8 @@ sealed class Screen(val route: String) {
     object Feed : Screen("feed")
     object CreateRequest : Screen("create_request")
     object Profile : Screen("profile")
+
+    data object PublicProfile : Screen("public_profile/{userId}") {
+        fun createRoute(userId: Int) = "public_profile/$userId"
+    }
 }

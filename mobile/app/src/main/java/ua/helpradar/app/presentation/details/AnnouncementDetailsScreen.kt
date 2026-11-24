@@ -15,6 +15,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Chat
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -34,6 +35,8 @@ import coil.compose.SubcomposeAsyncImage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import ua.helpradar.app.data.local.SessionManager
+import ua.helpradar.app.data.network.ApiClient
+import ua.helpradar.app.data.repository.ProfileRepository
 import ua.helpradar.app.ui.theme.*
 import java.util.Locale
 
@@ -42,6 +45,7 @@ import java.util.Locale
 fun AnnouncementDetailsScreen(
     announcementId: Int,
     onNavigateBack: () -> Unit,
+    onAuthorClick: (Int) -> Unit = {},
     viewModel: AnnouncementDetailsViewModel = viewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -162,6 +166,28 @@ fun AnnouncementDetailsScreen(
                     val isOffer = item.type.equals("help_offer", ignoreCase = true) ||
                             item.type.equals("HelpOffer", ignoreCase = true) ||
                             item.type.equals("offer", ignoreCase = true)
+
+                    // Підтягуємо актуальний рейтинг автора, якщо він не прийшов у деталях оголошення
+                    var authorRating by remember(item.author.id, item.author.rating) {
+                        mutableStateOf(
+                            item.author.rating ?: ProfileRepository.getCachedRating(item.author.id)
+                        )
+                    }
+
+                    LaunchedEffect(item.author.id) {
+                        if (authorRating == null) {
+                            try {
+                                val resp = ApiClient.profileService.getPublicProfile(item.author.id)
+                                val r = resp.body()?.rating
+                                if (resp.isSuccessful && r != null) {
+                                    ProfileRepository.cacheRating(item.author.id, r)
+                                    authorRating = r
+                                }
+                            } catch (_: Exception) {
+                                // Ігноруємо мережеві помилки при підвантаженні рейтингу
+                            }
+                        }
+                    }
 
                     // Визначення назви адреси/міста за координатами через Geocoder
                     var resolvedAddress by remember(item.id) {
@@ -298,12 +324,15 @@ fun AnnouncementDetailsScreen(
                             }
                         }
 
-                        // 4. Блок автора з надійним відображенням аватара (ініціалу)
+                        // 4. Клікабельний блок автора з переходом у його профіль
                         Card(
                             shape = RoundedCornerShape(12.dp),
                             colors = CardDefaults.cardColors(containerColor = Color.White),
                             border = androidx.compose.foundation.BorderStroke(1.dp, BorderSand),
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .clickable { onAuthorClick(item.author.id) }
                         ) {
                             Row(
                                 modifier = Modifier.padding(14.dp),
@@ -368,25 +397,43 @@ fun AnnouncementDetailsScreen(
                                         fontSize = 15.sp,
                                         color = CharcoalDark
                                     )
-                                    if (item.author.rating != null) {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Icon(
-                                                imageVector = Icons.Default.Star,
-                                                contentDescription = null,
-                                                tint = Color(0xFFFFB300),
-                                                modifier = Modifier.size(14.dp)
-                                            )
-                                            Spacer(modifier = Modifier.width(3.dp))
-                                            Text(
-                                                text = String.format(Locale.US, "%.1f", item.author.rating),
-                                                fontFamily = Montserrat,
-                                                fontSize = 12.sp,
-                                                fontWeight = FontWeight.Medium,
-                                                color = CharcoalDark
-                                            )
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        if (authorRating != null) {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Star,
+                                                    contentDescription = null,
+                                                    tint = RadarOrange,
+                                                    modifier = Modifier.size(14.dp)
+                                                )
+                                                Spacer(modifier = Modifier.width(3.dp))
+                                                Text(
+                                                    text = String.format(Locale.US, "%.1f", authorRating),
+                                                    fontFamily = Montserrat,
+                                                    fontSize = 12.sp,
+                                                    fontWeight = FontWeight.SemiBold,
+                                                    color = CharcoalDark
+                                                )
+                                            }
                                         }
+                                        Text(
+                                            text = "Переглянути профіль",
+                                            fontFamily = Montserrat,
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Medium,
+                                            color = OliveGreen
+                                        )
                                     }
                                 }
+
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                    contentDescription = "Відкрити профіль",
+                                    tint = DeepSage
+                                )
                             }
                         }
 

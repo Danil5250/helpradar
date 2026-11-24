@@ -2,6 +2,9 @@ package ua.helpradar.app.presentation.feed
 
 import android.location.Geocoder
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -51,11 +54,9 @@ import kotlinx.coroutines.withContext
 import ua.helpradar.app.R
 import ua.helpradar.app.data.local.SessionManager
 import ua.helpradar.app.data.network.ApiClient
+import ua.helpradar.app.data.repository.ProfileRepository
 import ua.helpradar.app.ui.theme.*
 import ua.helpradar.app.util.ShareUtils.shareAnnouncement
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
 import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.roundToInt
@@ -69,6 +70,7 @@ fun FeedScreen(
     onSignOutClick: () -> Unit = {},
     onAnnouncementClick: (Int) -> Unit = {},
     onEditClick: (AnnouncementItem) -> Unit = {},
+    onAuthorClick: (Int) -> Unit = {},
     viewModel: FeedViewModel = viewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -354,7 +356,8 @@ fun FeedScreen(
                                     isMyAnnouncement = state.onlyMyAnnouncements || (item.authorId != null && item.authorId == SessionManager.currentUserId),
                                     onCloseClick = { viewModel.onCloseAnnouncement(item.id) },
                                     onEditClick = onEditClick,
-                                    onCardClick = { onAnnouncementClick(item.id) }
+                                    onCardClick = { onAnnouncementClick(item.id) },
+                                    onAuthorClick = onAuthorClick
                                 )
                             }
 
@@ -643,7 +646,8 @@ fun AnnouncementCard(
     isMyAnnouncement: Boolean = false,
     onCloseClick: () -> Unit = {},
     onEditClick: (AnnouncementItem) -> Unit = {},
-    onCardClick: () -> Unit = {}
+    onCardClick: () -> Unit = {},
+    onAuthorClick: (Int) -> Unit = {}
 ) {
     val isOffer = item.type == AnnouncementType.OFFER
     val context = LocalContext.current
@@ -661,6 +665,26 @@ fun AnnouncementCard(
     }
     var placeName by remember(coordKey) {
         mutableStateOf(coordKey?.let { cardLocationCache[it] })
+    }
+
+    var authorRating by remember(item.authorId, item.authorRating) {
+        mutableDoubleStateOf(
+            item.authorId?.let { ProfileRepository.getCachedRating(it) } ?: item.authorRating
+        )
+    }
+
+    LaunchedEffect(item.authorId) {
+        val uid = item.authorId
+        if (uid != null && ProfileRepository.getCachedRating(uid) == null) {
+            try {
+                val resp = ApiClient.profileService.getPublicProfile(uid)
+                val r = resp.body()?.rating
+                if (resp.isSuccessful && r != null) {
+                    ProfileRepository.cacheRating(uid, r)
+                    authorRating = r
+                }
+            } catch (_: Exception) { /* ігноруємо мережеві збої для бейджа рейтингу */ }
+        }
     }
 
     LaunchedEffect(coordKey) {
@@ -917,13 +941,23 @@ fun AnnouncementCard(
                     )
                 }
 
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .then(
+                            if (item.authorId != null) {
+                                Modifier.clickable { onAuthorClick(item.authorId) }
+                            } else Modifier
+                        )
+                        .padding(horizontal = 4.dp, vertical = 2.dp)
+                ) {
                     Text(
                         text = item.authorName,
                         fontFamily = Montserrat,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium,
-                        color = CharcoalDark
+                        color = if (item.authorId != null) OliveGreen else CharcoalDark
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Icon(
@@ -933,7 +967,7 @@ fun AnnouncementCard(
                         modifier = Modifier.size(15.dp)
                     )
                     Text(
-                        text = item.authorRating.toString(),
+                        text = String.format(Locale.US, "%.1f", authorRating),
                         fontFamily = Montserrat,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
@@ -985,7 +1019,9 @@ fun AnnouncementCard(
                         shape = RoundedCornerShape(10.dp),
                         border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.error),
                         colors = ButtonDefaults.outlinedButtonColors(containerColor = Color.White.copy(alpha = 0.8f)),
-                        modifier = Modifier.weight(1f).height(44.dp)
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(44.dp)
                     ) {
                         Text(
                             text = "Позначити як виконане",

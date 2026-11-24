@@ -3,27 +3,36 @@ package ua.helpradar.app.navigation
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.navArgument
 import ua.helpradar.app.data.local.SessionManager
 import ua.helpradar.app.data.repository.AuthRepository
 import ua.helpradar.app.presentation.auth.ForgotPasswordScreen
 import ua.helpradar.app.presentation.auth.LoginScreen
 import ua.helpradar.app.presentation.auth.RegisterScreen
+import ua.helpradar.app.presentation.details.AnnouncementDetailsScreen
 import ua.helpradar.app.presentation.feed.FeedScreen
 import ua.helpradar.app.presentation.map.MapScreen
 import ua.helpradar.app.presentation.profile.ProfileScreen
+import ua.helpradar.app.presentation.profile.PublicProfileScreen
 import ua.helpradar.app.presentation.request.CreateRequestScreen
 import ua.helpradar.app.presentation.splash.SplashScreen
-import androidx.navigation.NavType
-import androidx.navigation.navArgument
-import ua.helpradar.app.presentation.details.AnnouncementDetailsScreen
 
 @Composable
 fun AppNavHost(
     navController: NavHostController,
     modifier: Modifier = Modifier
 ) {
+    val navigateToUserProfile: (Int) -> Unit = { targetUserId ->
+        if (targetUserId == SessionManager.currentUserId) {
+            navController.navigate(Screen.Profile.route)
+        } else {
+            navController.navigate(Screen.PublicProfile.createRoute(targetUserId))
+        }
+    }
+
     NavHost(
         navController = navController,
         startDestination = Screen.Splash.route,
@@ -105,9 +114,10 @@ fun AppNavHost(
                     }
                 },
                 onMapClick = { navController.navigate("map") },
-                onAnnouncementClick = { id -> // <-- ОСЬ СЮДИ
+                onAnnouncementClick = { id ->
                     navController.navigate("announcement_details/$id")
-                }
+                },
+                onAuthorClick = navigateToUserProfile
             )
         }
 
@@ -135,6 +145,17 @@ fun AppNavHost(
             )
         }
 
+        composable(
+            route = Screen.PublicProfile.route,
+            arguments = listOf(navArgument("userId") { type = NavType.IntType })
+        ) { backStackEntry ->
+            val userId = backStackEntry.arguments?.getInt("userId") ?: return@composable
+            PublicProfileScreen(
+                userId = userId,
+                onBackClick = { navController.popBackStack() }
+            )
+        }
+
         composable("map") {
             MapScreen(
                 onNavigateBack = { navController.popBackStack() },
@@ -151,7 +172,8 @@ fun AppNavHost(
             val id = backStackEntry.arguments?.getInt("id") ?: 0
             AnnouncementDetailsScreen(
                 announcementId = id,
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = { navController.popBackStack() },
+                onAuthorClick = navigateToUserProfile
             )
         }
     }
