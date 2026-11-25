@@ -99,6 +99,30 @@ class ProfileRepository(
                 userRatingCache[userId] = rating
             }
         }
+
+        fun parseErrorMessage(errorJson: String?, fallback: String): String {
+            if (errorJson.isNullOrBlank()) return fallback
+            return try {
+                val obj = JSONObject(errorJson)
+                val rawMessage = obj.optString("message").trim()
+                localizeBackendMessage(rawMessage, fallback)
+            } catch (_: Exception) {
+                fallback
+            }
+        }
+
+        fun localizeBackendMessage(rawMessage: String, fallback: String): String = when {
+            rawMessage.isEmpty() -> fallback
+            rawMessage.equals("The requested resource was not found.", ignoreCase = true) ->
+                "Запитуваний ресурс не знайдено"
+            rawMessage.equals("Please correct the highlighted fields.", ignoreCase = true) ->
+                "Перевірте правильність заповнення полів"
+            rawMessage.equals("Unauthorized", ignoreCase = true) ->
+                "Необхідна авторизація"
+            rawMessage.equals("Forbidden", ignoreCase = true) ->
+                "Доступ заборонено"
+            else -> rawMessage
+        }
     }
 
     suspend fun getPublicProfile(userId: Int): Resource<PublicProfileResponse> {
@@ -172,28 +196,6 @@ class ProfileRepository(
             }
         } catch (_: Exception) {
             Resource.Error("Помилка з'єднання з сервером")
-        }
-    }
-
-    private fun parseErrorMessage(errorJson: String?, fallback: String): String {
-        if (errorJson.isNullOrBlank()) return fallback
-        return try {
-            val obj = JSONObject(errorJson)
-            val rawMessage = obj.optString("message").trim()
-            when {
-                rawMessage.isEmpty() -> fallback
-                rawMessage.equals("The requested resource was not found.", ignoreCase = true) ->
-                    "Запитуваний ресурс не знайдено"
-                rawMessage.equals("Please correct the highlighted fields.", ignoreCase = true) ->
-                    "Перевірте правильність заповнення полів"
-                rawMessage.equals("Unauthorized", ignoreCase = true) ->
-                    "Необхідна авторизація"
-                rawMessage.equals("Forbidden", ignoreCase = true) ->
-                    "Доступ заборонено"
-                else -> rawMessage
-            }
-        } catch (_: Exception) {
-            fallback
         }
     }
 }

@@ -68,14 +68,7 @@ class HelpRepository(
         if (errorJson.isNullOrBlank()) return fallback
         return try {
             val msg = JSONObject(errorJson).optString("message").trim()
-            when {
-                msg.isEmpty() -> fallback
-                msg.equals("Please correct the highlighted fields.", ignoreCase = true) ->
-                    "Перевірте правильність заповнення полів"
-                msg.equals("The requested resource was not found.", ignoreCase = true) ->
-                    "Запитуваний ресурс не знайдено"
-                else -> msg
-            }
+            ProfileRepository.localizeBackendMessage(msg, fallback)
         } catch (_: Exception) {
             fallback
         }

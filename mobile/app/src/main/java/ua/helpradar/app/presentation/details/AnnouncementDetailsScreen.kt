@@ -644,38 +644,12 @@ private fun HelpInteractionSection(
                 }
 
                 if (overview?.canRespond == true) {
-                    Button(
-                        onClick = onRespondToRequest,
-                        enabled = !state.isSubmittingHelp,
-                        colors = ButtonDefaults.buttonColors(containerColor = OliveGreen),
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(48.dp)
-                    ) {
-                        if (state.isSubmittingHelp) {
-                            CircularProgressIndicator(
-                                color = Color.White,
-                                strokeWidth = 2.dp,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        } else {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.Chat,
-                                contentDescription = null,
-                                tint = Color.White,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = "Допомогти",
-                                fontFamily = Montserrat,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 15.sp,
-                                color = Color.White
-                            )
-                        }
-                    }
+                    HelpSubmitButton(
+                        text = "Допомогти",
+                        containerColor = OliveGreen,
+                        isLoading = state.isSubmittingHelp,
+                        onClick = onRespondToRequest
+                    )
                 }
 
                 if (overview?.canReceiveOffer == true) {
@@ -718,38 +692,12 @@ private fun HelpInteractionSection(
                         }
                     }
 
-                    Button(
-                        onClick = onReceiveOffer,
-                        enabled = !state.isSubmittingHelp,
-                        colors = ButtonDefaults.buttonColors(containerColor = DeepSage),
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(48.dp)
-                    ) {
-                        if (state.isSubmittingHelp) {
-                            CircularProgressIndicator(
-                                color = Color.White,
-                                strokeWidth = 2.dp,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        } else {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.Chat,
-                                contentDescription = null,
-                                tint = Color.White,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = "Зв'язатися з волонтером",
-                                fontFamily = Montserrat,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 15.sp,
-                                color = Color.White
-                            )
-                        }
-                    }
+                    HelpSubmitButton(
+                        text = "Зв'язатися з волонтером",
+                        containerColor = DeepSage,
+                        isLoading = state.isSubmittingHelp,
+                        onClick = onReceiveOffer
+                    )
                 }
 
                 if (!isCurrentAuthor && overview != null && !overview.canRespond && !overview.canReceiveOffer && connections.isEmpty()) {
@@ -1028,53 +976,106 @@ private fun HelpConnectionCard(
                             else -> Triple(action, false, false)
                         }
 
-                        if (isPrimary) {
-                            Button(
-                                onClick = { onAction(action) },
-                                colors = ButtonDefaults.buttonColors(containerColor = OliveGreen),
-                                shape = RoundedCornerShape(8.dp),
-                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(44.dp)
-                            ) {
-                                Text(
-                                    text = label,
-                                    fontFamily = Montserrat,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 13.sp,
-                                    color = Color.White,
-                                    maxLines = 1,
-                                    softWrap = false
-                                )
-                            }
-                        } else {
-                            OutlinedButton(
-                                onClick = { onAction(action) },
-                                border = BorderStroke(
-                                    1.dp,
-                                    if (isDestructive) MaterialTheme.colorScheme.error else BorderSand
-                                ),
-                                shape = RoundedCornerShape(8.dp),
-                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(44.dp)
-                            ) {
-                                Text(
-                                    text = label,
-                                    fontFamily = Montserrat,
-                                    fontWeight = FontWeight.SemiBold,
-                                    fontSize = 13.sp,
-                                    color = if (isDestructive) MaterialTheme.colorScheme.error else CharcoalDark,
-                                    maxLines = 1,
-                                    softWrap = false
-                                )
-                            }
-                        }
+                        ConnectionActionButton(
+                            label = label,
+                            isPrimary = isPrimary,
+                            isDestructive = isDestructive,
+                            onClick = { onAction(action) }
+                        )
                     }
                 }
             }
         }
     }
+}
+
+@Composable
+private fun HelpSubmitButton(
+    text: String,
+    containerColor: Color,
+    isLoading: Boolean,
+    onClick: () -> Unit
+) {
+    Button(
+        onClick = onClick,
+        enabled = !isLoading,
+        colors = ButtonDefaults.buttonColors(containerColor = containerColor),
+        shape = RoundedCornerShape(12.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(48.dp)
+    ) {
+        if (isLoading) {
+            CircularProgressIndicator(
+                color = Color.White,
+                strokeWidth = 2.dp,
+                modifier = Modifier.size(20.dp)
+            )
+        } else {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.Chat,
+                contentDescription = null,
+                tint = Color.White,
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = text,
+                fontFamily = Montserrat,
+                fontWeight = FontWeight.Bold,
+                fontSize = 15.sp,
+                color = Color.White
+            )
+        }
+    }
+}
+
+@Composable
+private fun RowScope.ConnectionActionButton(
+    label: String,
+    isPrimary: Boolean,
+    isDestructive: Boolean,
+    onClick: () -> Unit
+) {
+    val btnModifier = Modifier
+        .weight(1f)
+        .height(44.dp)
+    val btnShape = RoundedCornerShape(8.dp)
+    val padding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+
+    if (isPrimary) {
+        Button(
+            onClick = onClick,
+            colors = ButtonDefaults.buttonColors(containerColor = OliveGreen),
+            shape = btnShape,
+            contentPadding = padding,
+            modifier = btnModifier
+        ) {
+            ActionButtonLabel(text = label, color = Color.White, isBold = true)
+        }
+    } else {
+        val accentColor = if (isDestructive) MaterialTheme.colorScheme.error else CharcoalDark
+        OutlinedButton(
+            onClick = onClick,
+            border = BorderStroke(1.dp, if (isDestructive) MaterialTheme.colorScheme.error else BorderSand),
+            shape = btnShape,
+            contentPadding = padding,
+            modifier = btnModifier
+        ) {
+            ActionButtonLabel(text = label, color = accentColor, isBold = false)
+        }
+    }
+}
+
+@Composable
+private fun ActionButtonLabel(text: String, color: Color, isBold: Boolean) {
+    Text(
+        text = text,
+        fontFamily = Montserrat,
+        fontWeight = if (isBold) FontWeight.Bold else FontWeight.SemiBold,
+        fontSize = 13.sp,
+        color = color,
+        maxLines = 1,
+        softWrap = false
+    )
 }
