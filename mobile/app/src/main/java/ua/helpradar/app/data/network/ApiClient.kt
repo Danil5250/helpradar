@@ -10,6 +10,7 @@ import retrofit2.converter.gson.GsonConverterFactory
 import ua.helpradar.app.data.network.api.AnnouncementApiService
 import ua.helpradar.app.data.network.api.AuthApiService
 import ua.helpradar.app.data.network.api.GeocodingApiService
+import ua.helpradar.app.data.network.api.HelpApiService
 import ua.helpradar.app.data.network.api.ProfileApiService
 
 object ApiClient {
@@ -68,5 +69,8 @@ object ApiClient {
 
     val profileService: ProfileApiService by lazy {
         retrofit.create(ProfileApiService::class.java)
+    }
+    val helpService: HelpApiService by lazy {
+        retrofit.create(HelpApiService::class.java)
     }
 }

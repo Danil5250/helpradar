@@ -99,6 +99,30 @@ class ProfileRepository(
                 userRatingCache[userId] = rating
             }
         }
+
+        fun parseErrorMessage(errorJson: String?, fallback: String): String {
+            if (errorJson.isNullOrBlank()) return fallback
+            return try {
+                val obj = JSONObject(errorJson)
+                val rawMessage = obj.optString("message").trim()
+                localizeBackendMessage(rawMessage, fallback)
+            } catch (_: Exception) {
+                fallback
+            }
+        }
+
+        fun localizeBackendMessage(rawMessage: String, fallback: String): String = when {
+            rawMessage.isEmpty() -> fallback
+            rawMessage.equals("The requested resource was not found.", ignoreCase = true) ->
+                "Запитуваний ресурс не знайдено"
+            rawMessage.equals("Please correct the highlighted fields.", ignoreCase = true) ->
+                "Перевірте правильність заповнення полів"
+            rawMessage.equals("Unauthorized", ignoreCase = true) ->
+                "Необхідна авторизація"
+            rawMessage.equals("Forbidden", ignoreCase = true) ->
+                "Доступ заборонено"
+            else -> rawMessage
+        }
     }
 
     suspend fun getPublicProfile(userId: Int): Resource<PublicProfileResponse> {
@@ -119,9 +143,9 @@ class ProfileRepository(
         }
     }
 
-    suspend fun getUserComments(userId: Int, page: Int = 1, pageSize: Int = 10): Resource<CommentsPageResponse> {
+    suspend fun getUserComments(userId: Int, page: Int = 1): Resource<CommentsPageResponse> {
         return try {
-            val response = api.getUserComments(userId, page, pageSize)
+            val response = api.getUserComments(userId, page)
             val body = response.body()
             if (response.isSuccessful && body != null) {
                 Resource.Success(body)
@@ -131,74 +155,47 @@ class ProfileRepository(
                     response.code()
                 )
             }
-        } catch (e: Exception) {
-            Resource.Error("Помилка з'єднання: ${e.localizedMessage ?: "невідома помилка"}")
-        }
-    }
-
-    suspend fun createUserComment(userId: Int, rating: Int, comment: String): Resource<CommentSavedResponse> {
-        return try {
-            val response = api.createUserComment(
-                userId,
-                CreateCommentRequest(rating = rating, comment = comment.trim())
-            )
-            val body = response.body()
-            if (response.isSuccessful && body != null) {
-                cacheRating(userId, body.rating)
-                Resource.Success(body)
-            } else {
-                val localizedError = when (response.code()) {
-                    404 -> "Ви можете залишити відгук лише після підтвердженої взаємодії з цим волонтером"
-                    403 -> "Недостатньо прав для додавання відгуку"
-                    409 -> "Ви вже залишали відгук цьому волонтеру"
-                    400 -> "Перевірте коректність оцінки та тексту відгуку"
-                    401 -> "Увійдіть в акаунт, щоб залишити відгук"
-                    else -> parseErrorMessage(response.errorBody()?.string(), "Не вдалося залишити відгук")
-                }
-                Resource.Error(localizedError, response.code())
-            }
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             Resource.Error("Помилка з'єднання з сервером")
         }
     }
 
-    suspend fun deleteComment(commentId: Int, targetUserId: Int): Resource<CommentSavedResponse> {
+    suspend fun createAnnouncementComment(
+        announcementId: Int,
+        volunteerUserId: Int?,
+        rating: Int,
+        description: String
+    ): Resource<CommentSavedResponse> {
         return try {
-            val response = api.deleteComment(commentId)
+            val response = api.createAnnouncementComment(
+                announcementId,
+                CreateCommentRequest(rating = rating, description = description.trim())
+            )
             val body = response.body()
             if (response.isSuccessful && body != null) {
-                cacheRating(targetUserId, body.rating)
+                if (volunteerUserId != null) {
+                    try {
+                        val profileResp = api.getPublicProfile(volunteerUserId)
+                        val newRating = profileResp.body()?.rating
+                        if (profileResp.isSuccessful && newRating != null) {
+                            cacheRating(volunteerUserId, newRating)
+                        }
+                    } catch (_: Exception) {
+                    }
+                }
                 Resource.Success(body)
             } else {
-                Resource.Error(
-                    parseErrorMessage(response.errorBody()?.string(), "Не вдалося видалити відгук"),
-                    response.code()
-                )
-            }
-        } catch (e: Exception) {
-            Resource.Error("Помилка з'єднання: ${e.localizedMessage ?: "невідома помилка"}")
-        }
-    }
-
-    private fun parseErrorMessage(errorJson: String?, fallback: String): String {
-        if (errorJson.isNullOrBlank()) return fallback
-        return try {
-            val obj = JSONObject(errorJson)
-            val rawMessage = obj.optString("message").trim()
-            when {
-                rawMessage.isEmpty() -> fallback
-                rawMessage.equals("The requested resource was not found.", ignoreCase = true) ->
-                    "Запитуваний ресурс не знайдено"
-                rawMessage.equals("Please correct the highlighted fields.", ignoreCase = true) ->
-                    "Перевірте правильність заповнення полів"
-                rawMessage.equals("Unauthorized", ignoreCase = true) ->
-                    "Необхідна авторизація"
-                rawMessage.equals("Forbidden", ignoreCase = true) ->
-                    "Доступ заборонено"
-                else -> rawMessage
+                val localizedError = when (response.code()) {
+                    403 -> "Ви можете залишити відгук лише після підтвердженої допомоги за цим оголошенням"
+                    409 -> "Ви вже залишали відгук за цим оголошенням"
+                    400 -> parseErrorMessage(response.errorBody()?.string(), "Перевірте оцінку та текст відгуку")
+                    404 -> "Оголошення не знайдено або недоступне"
+                    else -> parseErrorMessage(response.errorBody()?.string(), "Не вдалося опублікувати відгук")
+                }
+                Resource.Error(localizedError, response.code())
             }
         } catch (_: Exception) {
-            fallback
+            Resource.Error("Помилка з'єднання з сервером")
         }
     }
 }

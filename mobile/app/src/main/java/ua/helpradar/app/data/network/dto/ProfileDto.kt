@@ -70,9 +70,9 @@ data class CommentAuthorDto(
 data class UserCommentDto(
     @SerializedName("id") val id: Int,
     @SerializedName("rating") val rating: Int,
-    @SerializedName("comment") val comment: String? = null,
-    @SerializedName("createdAt") val createdAt: String? = null,
-    @SerializedName("updatedAt") val updatedAt: String? = null,
+    @SerializedName("description") val description: String? = null,
+    @SerializedName("dateCreated") val dateCreated: String? = null,
+    @SerializedName("announcementId") val announcementId: Int? = null,
     @SerializedName("author") val author: CommentAuthorDto? = null
 )
 
@@ -80,18 +80,16 @@ data class CommentsPageResponse(
     @SerializedName("items") val items: List<UserCommentDto> = emptyList(),
     @SerializedName("page") val page: Int = 1,
     @SerializedName("pageSize") val pageSize: Int = 10,
-    @SerializedName("total") val total: Int = 0,
     @SerializedName("hasMore") val hasMore: Boolean = false
 )
 
 data class CreateCommentRequest(
     @SerializedName("rating") val rating: Int,
-    @SerializedName("comment") val comment: String
+    @SerializedName("description") val description: String
 )
 
 data class CommentSavedResponse(
-    @SerializedName("id") val id: Int? = null,
+    @SerializedName("code") val code: String? = null,
     @SerializedName("message") val message: String? = null,
-    @SerializedName("rating") val rating: Double? = null,
-    @SerializedName("reviewsCount") val reviewsCount: Int? = null
+    @SerializedName("comment") val comment: UserCommentDto? = null
 )

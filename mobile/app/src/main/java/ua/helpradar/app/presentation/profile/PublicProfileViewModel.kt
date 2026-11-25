@@ -7,7 +7,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import ua.helpradar.app.data.local.SessionManager
 import ua.helpradar.app.data.network.Resource
 import ua.helpradar.app.data.network.dto.PublicProfileResponse
 import ua.helpradar.app.data.network.dto.UserCommentDto
@@ -18,23 +17,8 @@ data class PublicProfileUiState(
     val profile: PublicProfileResponse? = null,
     val comments: List<UserCommentDto> = emptyList(),
     val isLoadingComments: Boolean = false,
-    val errorMessage: String? = null,
-    val selectedRating: Int = 5,
-    val commentText: String = "",
-    val isSubmittingReview: Boolean = false,
-    val reviewError: String? = null,
-    val reviewSuccessMessage: String? = null,
-    val deletingCommentId: Int? = null
-) {
-    val isOwnProfile: Boolean
-        get() = profile?.id != null && profile.id == SessionManager.currentUserId
-
-    val isVolunteer: Boolean
-        get() = profile?.role?.equals("Volunteer", ignoreCase = true) == true
-
-    val canLeaveReview: Boolean
-        get() = profile != null && !isOwnProfile && isVolunteer && SessionManager.isLoggedIn
-}
+    val errorMessage: String? = null
+)
 
 class PublicProfileViewModel(
     private val repository: ProfileRepository = ProfileRepository()
@@ -50,14 +34,7 @@ class PublicProfileViewModel(
         loadedUserId = userId
 
         viewModelScope.launch {
-            _uiState.update {
-                it.copy(
-                    isLoading = true,
-                    errorMessage = null,
-                    reviewError = null,
-                    reviewSuccessMessage = null
-                )
-            }
+            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
 
             when (val profileRes = repository.getPublicProfile(userId)) {
                 is Resource.Success -> {
@@ -94,115 +71,7 @@ class PublicProfileViewModel(
             }
             is Resource.Error -> {
                 _uiState.update {
-                    it.copy(
-                        isLoadingComments = false
-                    )
-                }
-            }
-        }
-    }
-
-    fun onRatingSelect(rating: Int) {
-        _uiState.update {
-            it.copy(
-                selectedRating = rating.coerceIn(1, 5),
-                reviewError = null,
-                reviewSuccessMessage = null
-            )
-        }
-    }
-
-    fun onCommentTextChange(text: String) {
-        _uiState.update {
-            it.copy(
-                commentText = text,
-                reviewError = null,
-                reviewSuccessMessage = null
-            )
-        }
-    }
-
-    fun submitReview() {
-        val userId = loadedUserId ?: return
-        val currentState = _uiState.value
-        val trimmed = currentState.commentText.trim()
-
-        if (trimmed.isEmpty()) {
-            _uiState.update { it.copy(reviewError = "Введіть текст відгуку") }
-            return
-        }
-
-        viewModelScope.launch {
-            _uiState.update {
-                it.copy(
-                    isSubmittingReview = true,
-                    reviewError = null,
-                    reviewSuccessMessage = null
-                )
-            }
-
-            when (val res = repository.createUserComment(userId, currentState.selectedRating, trimmed)) {
-                is Resource.Success -> {
-                    val updatedProfile = _uiState.value.profile?.copy(
-                        rating = res.data.rating ?: _uiState.value.profile?.rating,
-                        reviewsCount = res.data.reviewsCount ?: _uiState.value.profile?.reviewsCount
-                    )
-                    _uiState.update {
-                        it.copy(
-                            isSubmittingReview = false,
-                            profile = updatedProfile,
-                            commentText = "",
-                            selectedRating = 5,
-                            reviewSuccessMessage = "Відгук успішно опубліковано"
-                        )
-                    }
-                    loadComments(userId)
-                }
-                is Resource.Error -> {
-                    _uiState.update {
-                        it.copy(
-                            isSubmittingReview = false,
-                            reviewError = res.message
-                        )
-                    }
-                }
-            }
-        }
-    }
-
-    fun deleteReview(commentId: Int) {
-        val userId = loadedUserId ?: return
-        viewModelScope.launch {
-            _uiState.update {
-                it.copy(
-                    deletingCommentId = commentId,
-                    reviewError = null,
-                    reviewSuccessMessage = null
-                )
-            }
-
-            when (val res = repository.deleteComment(commentId, userId)) {
-                is Resource.Success -> {
-                    val updatedProfile = _uiState.value.profile?.copy(
-                        rating = res.data.rating ?: _uiState.value.profile?.rating,
-                        reviewsCount = res.data.reviewsCount ?: _uiState.value.profile?.reviewsCount
-                    )
-                    _uiState.update {
-                        it.copy(
-                            deletingCommentId = null,
-                            profile = updatedProfile,
-                            comments = it.comments.filterNot { c -> c.id == commentId },
-                            reviewSuccessMessage = "Відгук видалено"
-                        )
-                    }
-                }
-                is Resource.Error -> {
-                    _uiState.update {
-                        it.copy(
-                            deletingCommentId = null,
-                            reviewError = res.message
-                        )
-                    }
+                    it.copy(isLoadingComments = false)
                 }
             }
         }
